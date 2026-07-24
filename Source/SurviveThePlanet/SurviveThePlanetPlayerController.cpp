@@ -22,6 +22,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Gameplay/SelectableWorldActor.h"
 #include "Gameplay/Buildings/EnergyModule.h"
+#include "Gameplay/Cables/CableNetworkManager.h"
 #include "Gameplay/Planet/PlanetSurfaceManager.h"
 #include "Gameplay/Work/ConstructionJobQueueSubsystem.h"
 #include "SurviveThePlanet.h"
@@ -53,6 +54,11 @@ void ASurviveThePlanetPlayerController::SetActiveBuildTool(ESTPBuildTool NewBuil
 	if (ActiveBuildTool == NewBuildTool)
 	{
 		return;
+	}
+
+	if (ActiveBuildTool == ESTPBuildTool::EnergyCable)
+	{
+		EndCableDrag();
 	}
 
 	ActiveBuildTool = NewBuildTool;
@@ -188,6 +194,12 @@ void ASurviveThePlanetPlayerController::OnInputStarted()
 	// Update the move destination to wherever the cursor is pointing at
 	UpdateCachedDestination();
 
+	if (!bIsTouch && ActiveBuildTool == ESTPBuildTool::EnergyCable)
+	{
+		BeginCableDragAtCursor();
+		return;
+	}
+
 	if (!bIsTouch)
 	{
 		if (ActiveBuildTool != ESTPBuildTool::None)
@@ -206,6 +218,12 @@ void ASurviveThePlanetPlayerController::OnSetDestinationTriggered()
 	
 	// Update the move destination to wherever the cursor is pointing at
 	UpdateCachedDestination();
+
+	if (!bIsTouch && ActiveBuildTool == ESTPBuildTool::EnergyCable)
+	{
+		UpdateCableDragAtCursor();
+		return;
+	}
 	
 	// Only a real gameplay character should move toward click/touch destinations.
 	ASurviveThePlanetCharacter* ControlledCharacter = GetControlledSurviveCharacter();
@@ -223,6 +241,13 @@ void ASurviveThePlanetPlayerController::OnSetDestinationTriggered()
 void ASurviveThePlanetPlayerController::OnSetDestinationReleased()
 {
 	UE_LOG(LogSurviveThePlanet, Warning, TEXT("STP_SELECT OnSetDestinationReleased: FollowTime=%.3f ShortPressThreshold=%.3f"), FollowTime, ShortPressThreshold);
+
+	if (!bIsTouch && ActiveBuildTool == ESTPBuildTool::EnergyCable)
+	{
+		EndCableDrag();
+		FollowTime = 0.0f;
+		return;
+	}
 
 	if (FollowTime <= ShortPressThreshold)
 	{
@@ -269,7 +294,6 @@ bool ASurviveThePlanetPlayerController::TryHandleActiveBuildToolClick()
 	case ESTPBuildTool::EnergyModule:
 		return TryPlaceEnergyModuleAtCursor();
 	case ESTPBuildTool::EnergyCable:
-		UE_LOG(LogSurviveThePlanet, Warning, TEXT("STP_BUILD Energy Cable tool is selected, but cable placement is not implemented yet."));
 		return true;
 	case ESTPBuildTool::None:
 	default:
@@ -844,6 +868,62 @@ APlanetSurfaceManager* ASurviveThePlanetPlayerController::FindPlanetSurfaceManag
 
 	return nullptr;
 }
+ACableNetworkManager* ASurviveThePlanetPlayerController::FindOrCreateCableNetworkManager()
+{
+	if (IsValid(CableNetworkManager))
+	{
+		return CableNetworkManager;
+	}
+
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return nullptr;
+	}
+
+	for (TActorIterator<ACableNetworkManager> It(World); It; ++It)
+	{
+		CableNetworkManager = *It;
+		return CableNetworkManager;
+	}
+
+	FActorSpawnParameters SpawnParameters;
+	SpawnParameters.Owner = this;
+	SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	CableNetworkManager = World->SpawnActor<ACableNetworkManager>(
+		ACableNetworkManager::StaticClass(),
+		FVector::ZeroVector,
+		FRotator::ZeroRotator,
+		SpawnParameters);
+
+	return CableNetworkManager;
+}
+
+bool ASurviveThePlanetPlayerController::BeginCableDragAtCursor()
+{
+	FVector WorldLocation;
+	ACableNetworkManager* Manager = FindOrCreateCableNetworkManager();
+	return Manager
+		&& TryGetCursorWorldLocation(WorldLocation)
+		&& Manager->BeginCableDrag(WorldLocation);
+}
+
+bool ASurviveThePlanetPlayerController::UpdateCableDragAtCursor()
+{
+	FVector WorldLocation;
+	return IsValid(CableNetworkManager)
+		&& TryGetCursorWorldLocation(WorldLocation)
+		&& CableNetworkManager->UpdateCableDrag(WorldLocation);
+}
+
+void ASurviveThePlanetPlayerController::EndCableDrag()
+{
+	if (IsValid(CableNetworkManager))
+	{
+		CableNetworkManager->EndCableDrag();
+	}
+}
+
 ASurviveThePlanetCharacter* ASurviveThePlanetPlayerController::GetControlledSurviveCharacter() const
 {
 	return Cast<ASurviveThePlanetCharacter>(GetPawn());

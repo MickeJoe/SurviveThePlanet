@@ -5,6 +5,7 @@
 AEnergyModule::AEnergyModule()
 {
 	BuildingTag = TEXT("EnergyModule");
+	BuildingType = ESTPBuildingType::EnergyModule;
 	EnergyCapacity = 250.0f;
 	ConstructionProgress = 0.0f;
 	GridFootprint = FIntPoint(2, 2);

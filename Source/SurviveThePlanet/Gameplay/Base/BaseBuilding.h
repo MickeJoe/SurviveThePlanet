@@ -8,6 +8,14 @@ class USceneComponent;
 class UStaticMeshComponent;
 class UWidgetComponent;
 
+UENUM(BlueprintType)
+enum class ESTPBuildingType : uint8
+{
+	BaseModule UMETA(DisplayName = "Base Module"),
+	EnergyModule UMETA(DisplayName = "Energy Module"),
+	Other UMETA(DisplayName = "Other")
+};
+
 UCLASS(Blueprintable)
 class SURVIVETHEPLANET_API ABaseBuilding : public ASelectableWorldActor
 {
@@ -31,6 +39,9 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Grid")
 	FIntPoint GetGridFootprint() const { return GridFootprint; }
 
+	UFUNCTION(BlueprintPure, Category = "Base Building")
+	ESTPBuildingType GetBuildingType() const { return BuildingType; }
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
@@ -46,6 +57,9 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Base Building")
 	FName BuildingTag = TEXT("BaseModule");
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Base Building")
+	ESTPBuildingType BuildingType = ESTPBuildingType::BaseModule;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Base Building", meta = (ClampMin = "0.0", UIMin = "0.0"))
 	float MaxHealth = 1000.0f;

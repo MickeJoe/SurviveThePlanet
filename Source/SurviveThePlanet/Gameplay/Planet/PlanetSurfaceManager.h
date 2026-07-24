@@ -83,8 +83,26 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Planet Surface|Grid")
 	void ReleaseCells(AActor* Occupier);
 
+	UFUNCTION(BlueprintCallable, Category = "Planet Surface|Grid")
+	bool FindNearestFreeCellAdjacentToActor(AActor* Actor, FIntPoint Footprint, FSTPGridCell& OutCell, FVector& OutWorldLocation) const;
+
+	UFUNCTION(BlueprintCallable, Category = "Planet Surface|Grid")
+	bool TryGetActorOriginCell(AActor* Actor, FSTPGridCell& OutOriginCell) const;
+
+	UFUNCTION(BlueprintCallable, Category = "Planet Surface|Grid")
+	bool FindNearestFreeCellAdjacentToFootprint(FSTPGridCell OriginCell, FIntPoint OccupiedFootprint, FIntPoint SearchFootprint, FSTPGridCell& OutCell, FVector& OutWorldLocation) const;
+
 	UFUNCTION(BlueprintPure, Category = "Planet Surface|Grid")
 	float GetTileSpacing() const { return TileSpacing; }
+
+	UFUNCTION(BlueprintPure, Category = "Planet Surface|Grid")
+	bool GetCellForWorldLocation(const FVector& WorldLocation, FSTPGridCell& OutCell) const;
+
+	UFUNCTION(BlueprintPure, Category = "Planet Surface|Grid")
+	FVector GetWorldLocationForCell(FSTPGridCell Cell) const;
+
+	UFUNCTION(BlueprintPure, Category = "Planet Surface|Grid")
+	bool IsCellInBounds(FSTPGridCell Cell) const;
 
 protected:
 	UPROPERTY(EditAnywhere, Category = "Planet Surface")
@@ -116,6 +134,7 @@ private:
 	FVector GetTileLocation(int32 X, int32 Y) const;
 	FVector2D GetGridOffset() const;
 	FVector GetWorldLocationForOriginCell(FSTPGridCell OriginCell, FIntPoint Footprint) const;
+	bool FindOccupiedCellsForActor(AActor* Actor, TArray<FSTPGridCell>& OutCells) const;
 	int32 MakeCellKey(FSTPGridCell Cell) const;
 	FIntPoint SanitizeFootprint(FIntPoint Footprint) const;
 };

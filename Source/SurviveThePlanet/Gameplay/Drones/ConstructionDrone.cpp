@@ -78,6 +78,8 @@ bool AConstructionDrone::AssignConstructionJob(const FSTPConstructionJob& Job)
 		return false;
 	}
 
+	ClearIdleDestination();
+
 	OngoingConstructionJob = FSTPOngoingConstructionJob();
 	OngoingConstructionJob.Job = Job;
 	OngoingConstructionJob.Phase = ESTPConstructionJobPhase::TravelToBuilding;
@@ -124,6 +126,38 @@ void AConstructionDrone::ClearOngoingConstructionJob()
 	bHasOngoingConstructionJob = false;
 }
 
+
+void AConstructionDrone::SetIdleDestination(FSTPGridCell Cell, const FVector& WorldLocation)
+{
+	IdleCell = Cell;
+	IdleDestination = WorldLocation;
+	bHasIdleDestination = true;
+}
+
+void AConstructionDrone::ClearIdleDestination()
+{
+	IdleCell = FSTPGridCell();
+	IdleDestination = FVector::ZeroVector;
+	bHasIdleDestination = false;
+}
+
+void AConstructionDrone::TickIdleMovement(float DeltaSeconds)
+{
+	if (!bHasIdleDestination || bHasOngoingConstructionJob)
+	{
+		return;
+	}
+
+	const FVector CurrentLocation = GetActorLocation();
+	const float Distance = FVector::Dist(CurrentLocation, IdleDestination);
+	if (Distance <= WorkRange)
+	{
+		return;
+	}
+
+	const FVector NewLocation = FMath::VInterpConstantTo(CurrentLocation, IdleDestination, DeltaSeconds, MoveSpeed);
+	SetActorLocation(NewLocation);
+}
 void AConstructionDrone::ConfigureMesh()
 {
 	DroneMesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);

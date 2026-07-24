@@ -5,6 +5,8 @@
 #include "ConstructionDroneCoordinatorSubsystem.generated.h"
 
 class AConstructionDrone;
+class ABaseBuilding;
+class APlanetSurfaceManager;
 
 UCLASS()
 class SURVIVETHEPLANET_API UConstructionDroneCoordinatorSubsystem : public UTickableWorldSubsystem
@@ -29,4 +31,7 @@ private:
 	TArray<TObjectPtr<AConstructionDrone>> ConstructionDrones;
 
 	void RemoveInvalidDrones();
+	void EnsureDroneHasIdleDestination(AConstructionDrone* Drone);
+	ABaseBuilding* FindBaseModule() const;
+	APlanetSurfaceManager* FindPlanetSurfaceManager() const;
 };

@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "Gameplay/SelectableWorldActor.h"
 #include "Gameplay/Work/ConstructionJobQueueSubsystem.h"
+#include "Gameplay/Planet/PlanetSurfaceManager.h"
 #include "ConstructionDrone.generated.h"
 
 class ABaseBuilding;
@@ -48,6 +49,9 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Construction Drone|Jobs")
 	ABaseBuilding* GetConstructionTarget() const { return OngoingConstructionJob.Job.TargetBuilding; }
 
+	UFUNCTION(BlueprintPure, Category = "Construction Drone|Idle")
+	bool HasIdleDestination() const { return bHasIdleDestination; }
+
 	UFUNCTION(BlueprintCallable, Category = "Construction Drone|Jobs")
 	bool AssignConstructionJob(const FSTPConstructionJob& Job);
 
@@ -56,6 +60,15 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Construction Drone|Jobs")
 	void ClearOngoingConstructionJob();
+
+	UFUNCTION(BlueprintCallable, Category = "Construction Drone|Idle")
+	void SetIdleDestination(FSTPGridCell Cell, const FVector& WorldLocation);
+
+	UFUNCTION(BlueprintCallable, Category = "Construction Drone|Idle")
+	void ClearIdleDestination();
+
+	UFUNCTION(BlueprintCallable, Category = "Construction Drone|Idle")
+	void TickIdleMovement(float DeltaSeconds);
 
 protected:
 	virtual void BeginPlay() override;
@@ -93,6 +106,15 @@ protected:
 
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Construction Drone|Jobs")
 	FSTPOngoingConstructionJob OngoingConstructionJob;
+
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Construction Drone|Idle")
+	bool bHasIdleDestination = false;
+
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Construction Drone|Idle")
+	FSTPGridCell IdleCell;
+
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Construction Drone|Idle")
+	FVector IdleDestination = FVector::ZeroVector;
 
 private:
 	void ConfigureMesh();

@@ -17,6 +17,7 @@ class ASurviveThePlanetCharacter;
 class ASelectableWorldActor;
 class AEnergyModule;
 class APlanetSurfaceManager;
+class ACableNetworkManager;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogTemplateCharacter, Log, All);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FBuildToolChangedSignature, ESTPBuildTool, NewBuildTool);
@@ -151,7 +152,14 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<AEnergyModule> EnergyModulePlacementPreview;
 
+	UPROPERTY(Transient)
+	TObjectPtr<ACableNetworkManager> CableNetworkManager;
+
 	APlanetSurfaceManager* FindPlanetSurfaceManager() const;
+	ACableNetworkManager* FindOrCreateCableNetworkManager();
+	bool BeginCableDragAtCursor();
+	bool UpdateCableDragAtCursor();
+	void EndCableDrag();
 
 	ASurviveThePlanetCharacter* GetControlledSurviveCharacter() const;
 	USpringArmComponent* GetControlledCameraBoom() const;
