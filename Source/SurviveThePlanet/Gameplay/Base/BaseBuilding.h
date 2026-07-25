@@ -5,6 +5,7 @@
 #include "BaseBuilding.generated.h"
 
 class USceneComponent;
+class UStaticMesh;
 class UStaticMeshComponent;
 class UWidgetComponent;
 
@@ -43,6 +44,7 @@ public:
 	ESTPBuildingType GetBuildingType() const { return BuildingType; }
 
 protected:
+	virtual void OnConstruction(const FTransform& Transform) override;
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
@@ -51,6 +53,9 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	TObjectPtr<UStaticMeshComponent> BuildingMesh;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Base Building|Visuals")
+	TObjectPtr<UStaticMesh> BaseModuleMesh;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	TObjectPtr<UWidgetComponent> ConstructionProgressBar;

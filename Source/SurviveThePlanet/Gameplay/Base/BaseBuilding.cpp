@@ -30,10 +30,21 @@ ABaseBuilding::ABaseBuilding()
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> BuildingMeshAsset(TEXT("/Game/Models/Buildings/BaseModule/BaseModule.BaseModule"));
 	if (BuildingMeshAsset.Succeeded())
 	{
-		BuildingMesh->SetStaticMesh(BuildingMeshAsset.Object);
+		BaseModuleMesh = BuildingMeshAsset.Object;
+		BuildingMesh->SetStaticMesh(BaseModuleMesh);
 	}
 
 	ConfigureMesh();
+}
+
+void ABaseBuilding::OnConstruction(const FTransform& Transform)
+{
+	Super::OnConstruction(Transform);
+
+	if (BuildingMesh)
+	{
+		BuildingMesh->SetStaticMesh(BaseModuleMesh);
+	}
 }
 
 void ABaseBuilding::BeginPlay()
