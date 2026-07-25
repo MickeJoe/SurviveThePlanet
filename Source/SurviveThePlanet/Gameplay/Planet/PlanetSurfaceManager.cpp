@@ -1,15 +1,21 @@
 #include "PlanetSurfaceManager.h"
 
+#include "Components/StaticMeshComponent.h"
+#include "Engine/StaticMesh.h"
 #include "Engine/World.h"
 
 APlanetSurfaceManager::APlanetSurfaceManager()
 {
 	PrimaryActorTick.bCanEverTick = false;
+
+	USceneComponent* SceneRoot = CreateDefaultSubobject<USceneComponent>(TEXT("SceneRoot"));
+	SetRootComponent(SceneRoot);
 }
 
 void APlanetSurfaceManager::OnConstruction(const FTransform& Transform)
 {
 	Super::OnConstruction(Transform);
+	UpdateDerivedGridSize();
 
 	if (bBuildInConstructionScript)
 	{
@@ -27,12 +33,26 @@ void APlanetSurfaceManager::Destroyed()
 
 void APlanetSurfaceManager::RebuildSurface()
 {
+	const bool bHasValidChunkMesh = ChunkMeshes.ContainsByPredicate([](const TObjectPtr<UStaticMesh>& ChunkMesh)
+	{
+		return IsValid(ChunkMesh);
+	});
+
+	// Preserve the legacy BP_Surface1 world until the designer has assigned at
+	// least one replacement chunk mesh in the Details panel.
+	if (!bHasValidChunkMesh)
+	{
+		return;
+	}
+
 	ClearSurface();
 	SpawnSurface();
 }
 
 void APlanetSurfaceManager::ClearSurface()
 {
+	ClearChunkComponents();
+
 	for (AActor* Tile : SpawnedTiles)
 	{
 		if (IsValid(Tile))
@@ -73,7 +93,7 @@ bool APlanetSurfaceManager::GetCellForWorldLocation(const FVector& WorldLocation
 		FMath::RoundToInt((LocalLocation.X + Offset.X) / TileSpacing),
 		FMath::RoundToInt((LocalLocation.Y + Offset.Y) / TileSpacing));
 
-	return IsCellInBounds(OutCell);
+	return IsCellPlayable(OutCell);
 }
 
 FVector APlanetSurfaceManager::GetWorldLocationForCell(FSTPGridCell Cell) const
@@ -90,21 +110,16 @@ bool APlanetSurfaceManager::CanOccupyCells(FSTPGridCell OriginCell, FIntPoint Fo
 {
 	Footprint = SanitizeFootprint(Footprint);
 
-	if (OriginCell.X < 0 || OriginCell.Y < 0)
-	{
-		return false;
-	}
-
-	if (OriginCell.X + Footprint.X > GridWidth || OriginCell.Y + Footprint.Y > GridHeight)
-	{
-		return false;
-	}
-
 	for (int32 Y = 0; Y < Footprint.Y; ++Y)
 	{
 		for (int32 X = 0; X < Footprint.X; ++X)
 		{
 			const FSTPGridCell Cell(OriginCell.X + X, OriginCell.Y + Y);
+			if (!IsCellPlayable(Cell))
+			{
+				return false;
+			}
+
 			const TObjectPtr<AActor>* ExistingOccupier = OccupiedCells.Find(MakeCellKey(Cell));
 			if (ExistingOccupier && IsValid(ExistingOccupier->Get()))
 			{
@@ -288,53 +303,120 @@ bool APlanetSurfaceManager::FindNearestFreeCellAdjacentToFootprint(FSTPGridCell 
 }
 void APlanetSurfaceManager::SpawnSurface()
 {
-	if (!TileClass)
+	SpawnChunks();
+}
+
+void APlanetSurfaceManager::SpawnChunks()
+{
+	if (ChunkMeshes.IsEmpty() || !GetRootComponent())
 	{
 		return;
 	}
 
-	UWorld* World = GetWorld();
-	if (!World)
+	TArray<UStaticMesh*> ValidMeshes;
+	for (UStaticMesh* ChunkMesh : ChunkMeshes)
 	{
-		return;
-	}
-
-	const FTransform ManagerTransform = GetActorTransform();
-
-	for (int32 Y = 0; Y < GridHeight; ++Y)
-	{
-		for (int32 X = 0; X < GridWidth; ++X)
+		if (IsValid(ChunkMesh))
 		{
-			const FVector LocalLocation = GetTileLocation(X, Y);
-			const FVector WorldTileLocation = ManagerTransform.TransformPosition(LocalLocation);
+			ValidMeshes.Add(ChunkMesh);
+		}
+	}
 
-			FActorSpawnParameters SpawnParameters;
-			SpawnParameters.Owner = this;
-			SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	if (ValidMeshes.IsEmpty())
+	{
+		return;
+	}
 
-			AActor* Tile = World->SpawnActor<AActor>(
-				TileClass,
-				WorldTileLocation,
-				GetActorRotation(),
-				SpawnParameters);
+	const float ChunkWorldSize = CellsPerChunk * TileSpacing;
+	const float MeshScale = ChunkWorldSize / FMath::Max(1.0f, ChunkMeshNativeSize);
+	const float HalfDiameter = (ChunkDiameter - 1) * 0.5f;
+	FRandomStream RandomStream(ChunkRandomSeed);
 
-			if (Tile)
+	for (int32 ChunkY = 0; ChunkY < ChunkDiameter; ++ChunkY)
+	{
+		for (int32 ChunkX = 0; ChunkX < ChunkDiameter; ++ChunkX)
+		{
+			if (!IsChunkInWorld(ChunkX, ChunkY))
 			{
-				Tile->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
-				SpawnedTiles.Add(Tile);
+				continue;
 			}
+
+			const int32 MeshIndex = RandomStream.RandRange(0, ValidMeshes.Num() - 1);
+			const FName ComponentName = MakeUniqueObjectName(
+				this,
+				UStaticMeshComponent::StaticClass(),
+				*FString::Printf(TEXT("SurfaceChunk_%d_%d"), ChunkX, ChunkY));
+
+			UStaticMeshComponent* ChunkComponent = NewObject<UStaticMeshComponent>(
+				this,
+				UStaticMeshComponent::StaticClass(),
+				ComponentName,
+				RF_Transactional);
+
+			ChunkComponent->SetupAttachment(GetRootComponent());
+			ChunkComponent->SetStaticMesh(ValidMeshes[MeshIndex]);
+			ChunkComponent->SetMobility(EComponentMobility::Static);
+			ChunkComponent->SetGenerateOverlapEvents(false);
+			ChunkComponent->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+			ChunkComponent->SetRelativeLocation(FVector(
+				(ChunkX - HalfDiameter) * ChunkWorldSize,
+				(ChunkY - HalfDiameter) * ChunkWorldSize,
+				ChunkHeightOffset));
+			ChunkComponent->SetRelativeScale3D(FVector(MeshScale, MeshScale, 1.0f));
+
+			AddInstanceComponent(ChunkComponent);
+			ChunkComponent->RegisterComponent();
+			SpawnedChunkComponents.Add(ChunkComponent);
 		}
 	}
 }
 
-FVector APlanetSurfaceManager::GetTileLocation(int32 X, int32 Y) const
+void APlanetSurfaceManager::ClearChunkComponents()
 {
-	const FVector2D Offset = GetGridOffset();
+	for (UStaticMeshComponent* ChunkComponent : SpawnedChunkComponents)
+	{
+		if (IsValid(ChunkComponent))
+		{
+			RemoveInstanceComponent(ChunkComponent);
+			ChunkComponent->DestroyComponent();
+		}
+	}
 
-	return FVector(
-		(X * TileSpacing) - Offset.X,
-		(Y * TileSpacing) - Offset.Y,
-		0.0f);
+	SpawnedChunkComponents.Reset();
+}
+
+void APlanetSurfaceManager::UpdateDerivedGridSize()
+{
+	CellsPerChunk = FMath::Max(1, CellsPerChunk);
+	ChunkDiameter = FMath::Max(1, ChunkDiameter);
+	GridWidth = CellsPerChunk * ChunkDiameter;
+	GridHeight = GridWidth;
+}
+
+bool APlanetSurfaceManager::IsChunkInWorld(int32 ChunkX, int32 ChunkY) const
+{
+	if (ChunkX < 0 || ChunkY < 0 || ChunkX >= ChunkDiameter || ChunkY >= ChunkDiameter)
+	{
+		return false;
+	}
+
+	const float Center = (ChunkDiameter - 1) * 0.5f;
+	const float DeltaX = ChunkX - Center;
+	const float DeltaY = ChunkY - Center;
+	const float Radius = ChunkDiameter * 0.5f;
+	return (DeltaX * DeltaX) + (DeltaY * DeltaY) <= Radius * Radius;
+}
+
+bool APlanetSurfaceManager::IsCellPlayable(FSTPGridCell Cell) const
+{
+	if (!IsCellInBounds(Cell))
+	{
+		return false;
+	}
+
+	const int32 ChunkX = Cell.X / FMath::Max(1, CellsPerChunk);
+	const int32 ChunkY = Cell.Y / FMath::Max(1, CellsPerChunk);
+	return IsChunkInWorld(ChunkX, ChunkY);
 }
 
 FVector2D APlanetSurfaceManager::GetGridOffset() const

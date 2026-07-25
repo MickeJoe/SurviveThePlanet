@@ -4,6 +4,9 @@
 #include "GameFramework/Actor.h"
 #include "PlanetSurfaceManager.generated.h"
 
+class UStaticMesh;
+class UStaticMeshComponent;
+
 USTRUCT(BlueprintType)
 struct FSTPGridCell
 {
@@ -105,33 +108,67 @@ public:
 	bool IsCellInBounds(FSTPGridCell Cell) const;
 
 protected:
-	UPROPERTY(EditAnywhere, Category = "Planet Surface")
+	/** Legacy per-cell tile class. Kept temporarily so existing Blueprint defaults remain loadable. */
+	UPROPERTY(EditAnywhere, Category = "Planet Surface|Legacy")
 	TSubclassOf<AActor> TileClass;
 
-	UPROPERTY(EditAnywhere, Category = "Planet Surface", meta = (ClampMin = "1", UIMin = "1"))
-	int32 GridWidth = 25;
+	/** Number of logical 100 cm cells represented by one visual chunk edge. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Planet Surface|Chunks", meta = (ClampMin = "1", UIMin = "1"))
+	int32 CellsPerChunk = 20;
 
-	UPROPERTY(EditAnywhere, Category = "Planet Surface", meta = (ClampMin = "1", UIMin = "1"))
-	int32 GridHeight = 25;
+	/** Diameter of the approximately circular world, measured in whole chunks. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Planet Surface|Chunks", meta = (ClampMin = "1", UIMin = "1"))
+	int32 ChunkDiameter = 10;
 
-	UPROPERTY(EditAnywhere, Category = "Planet Surface", meta = (ClampMin = "1.0", UIMin = "1.0"))
+	/** Candidate meshes. A deterministic random choice is made for every spawned chunk. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Planet Surface|Chunks")
+	TArray<TObjectPtr<UStaticMesh>> ChunkMeshes;
+
+	/** XY size of an imported chunk mesh before actor/component scaling. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Planet Surface|Chunks", meta = (ClampMin = "1.0", UIMin = "1.0", Units = "cm"))
+	float ChunkMeshNativeSize = 2000.0f;
+
+	/** Deterministic seed; identical settings and seed generate identical mesh choices. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Planet Surface|Chunks")
+	int32 ChunkRandomSeed = 1337;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Planet Surface|Chunks", meta = (Units = "cm"))
+	float ChunkHeightOffset = 0.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Planet Surface|Grid", meta = (ClampMin = "1.0", UIMin = "1.0"))
 	float TileSpacing = 100.0f;
 
-	UPROPERTY(EditAnywhere, Category = "Planet Surface")
+	UPROPERTY(EditAnywhere, Category = "Planet Surface|Grid")
 	bool bCenterGridOnActor = true;
 
-	UPROPERTY(EditAnywhere, Category = "Planet Surface")
+	/** Rebuild visual chunks whenever an instance is edited in the level. */
+	UPROPERTY(EditAnywhere, Category = "Planet Surface|Chunks")
 	bool bBuildInConstructionScript = true;
 
-	UPROPERTY(VisibleInstanceOnly, Category = "Planet Surface")
+	/** Derived from CellsPerChunk * ChunkDiameter. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Planet Surface|Grid")
+	int32 GridWidth = 200;
+
+	/** Derived from CellsPerChunk * ChunkDiameter. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Planet Surface|Grid")
+	int32 GridHeight = 200;
+
+	UPROPERTY(VisibleInstanceOnly, Category = "Planet Surface|Legacy")
 	TArray<TObjectPtr<AActor>> SpawnedTiles;
+
+	UPROPERTY(Transient, VisibleInstanceOnly, Category = "Planet Surface|Chunks")
+	TArray<TObjectPtr<UStaticMeshComponent>> SpawnedChunkComponents;
 
 	UPROPERTY(VisibleInstanceOnly, Category = "Planet Surface|Grid")
 	TMap<int32, TObjectPtr<AActor>> OccupiedCells;
 
 private:
 	void SpawnSurface();
-	FVector GetTileLocation(int32 X, int32 Y) const;
+	void SpawnChunks();
+	void ClearChunkComponents();
+	void UpdateDerivedGridSize();
+	bool IsChunkInWorld(int32 ChunkX, int32 ChunkY) const;
+	bool IsCellPlayable(FSTPGridCell Cell) const;
 	FVector2D GetGridOffset() const;
 	FVector GetWorldLocationForOriginCell(FSTPGridCell OriginCell, FIntPoint Footprint) const;
 	bool FindOccupiedCellsForActor(AActor* Actor, TArray<FSTPGridCell>& OutCells) const;
