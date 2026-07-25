@@ -6,6 +6,7 @@
 #include "SurviveThePlanetPlayerController.h"
 #include "Gameplay/Buildings/EnergyModule.h"
 #include "Gameplay/UI/BuildToolbarWidget.h"
+#include "Gameplay/UI/ResourceDisplayWidget.h"
 #include "SurviveThePlanet.h"
 
 ASurviveThePlanetGameMode::ASurviveThePlanetGameMode()
@@ -13,6 +14,7 @@ ASurviveThePlanetGameMode::ASurviveThePlanetGameMode()
 	DefaultPawnClass = ASurviveThePlanetCameraPawn::StaticClass();
 	PlayerControllerClass = ASurviveThePlanetPlayerController::StaticClass();
 	BuildToolbarWidgetClass = UBuildToolbarWidget::StaticClass();
+	ResourceDisplayWidgetClass = UResourceDisplayWidget::StaticClass();
 	EnergyModuleClass = AEnergyModule::StaticClass();
 }
 
@@ -44,6 +46,16 @@ void ASurviveThePlanetGameMode::StartPlay()
 		else
 		{
 			UE_LOG(LogSurviveThePlanet, Warning, TEXT("STP_BUILD BuildToolbarWidgetClass is null; no build toolbar created."));
+		}
+
+		if (ResourceDisplayWidgetClass)
+		{
+			ResourceDisplayWidget = CreateWidget<UResourceDisplayWidget>(
+				PlayerController, ResourceDisplayWidgetClass);
+			if (ResourceDisplayWidget)
+			{
+				ResourceDisplayWidget->AddToViewport(10);
+			}
 		}
 	}
 }

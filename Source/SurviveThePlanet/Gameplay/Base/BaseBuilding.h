@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Gameplay/Resources/ResourceManager.h"
 #include "Gameplay/SelectableWorldActor.h"
 #include "BaseBuilding.generated.h"
 
@@ -43,6 +44,9 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Base Building")
 	ESTPBuildingType GetBuildingType() const { return BuildingType; }
 
+	UFUNCTION(BlueprintPure, Category = "Construction")
+	const TArray<FResourceCost>& GetConstructionCosts() const { return ConstructionCosts; }
+
 protected:
 	virtual void OnConstruction(const FTransform& Transform) override;
 	virtual void BeginPlay() override;
@@ -77,6 +81,10 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Construction", meta = (ClampMin = "0.0", ClampMax = "1.0", UIMin = "0.0", UIMax = "1.0"))
 	float ConstructionProgress = 1.0f;
+
+	/** Resources consumed when this building is constructed. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Construction", meta = (TitleProperty = "Resource"))
+	TArray<FResourceCost> ConstructionCosts;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Grid", meta = (ClampMin = "1", UIMin = "1"))
 	FIntPoint GridFootprint = FIntPoint(2, 2);

@@ -6,7 +6,6 @@
 #include "EngineUtils.h"
 #include "Gameplay/Planet/PlanetSurfaceManager.h"
 #include "Gameplay/UI/ConstructionProgressBarWidget.h"
-#include "UObject/ConstructorHelpers.h"
 
 ABaseBuilding::ABaseBuilding()
 {
@@ -26,13 +25,6 @@ ABaseBuilding::ABaseBuilding()
 	ConstructionProgressBar->SetRelativeLocation(FVector(0.0f, 0.0f, 180.0f));
 	ConstructionProgressBar->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	ConstructionProgressBar->SetHiddenInGame(false);
-
-	static ConstructorHelpers::FObjectFinder<UStaticMesh> BuildingMeshAsset(TEXT("/Game/Models/Buildings/BaseModule/BaseModule.BaseModule"));
-	if (BuildingMeshAsset.Succeeded())
-	{
-		BaseModuleMesh = BuildingMeshAsset.Object;
-		BuildingMesh->SetStaticMesh(BaseModuleMesh);
-	}
 
 	ConfigureMesh();
 }

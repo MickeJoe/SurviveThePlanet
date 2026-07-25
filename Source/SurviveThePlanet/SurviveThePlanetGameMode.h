@@ -7,6 +7,7 @@
 #include "SurviveThePlanetGameMode.generated.h"
 
 class UBuildToolbarWidget;
+class UResourceDisplayWidget;
 class AEnergyModule;
 
 /**
@@ -30,11 +31,17 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "UI")
 	TSubclassOf<UBuildToolbarWidget> BuildToolbarWidgetClass;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "UI")
+	TSubclassOf<UResourceDisplayWidget> ResourceDisplayWidgetClass;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Build Tools")
 	TSubclassOf<AEnergyModule> EnergyModuleClass;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UBuildToolbarWidget> BuildToolbarWidget;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UResourceDisplayWidget> ResourceDisplayWidget;
 };
 
 

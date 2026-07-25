@@ -202,12 +202,7 @@ UClass* ABaseModuleSpawnPoint::GetEffectiveBaseModuleClass() const
 
 UStaticMesh* ABaseModuleSpawnPoint::GetEffectivePreviewMesh() const
 {
-	if (BaseModulePreviewMesh)
-	{
-		return BaseModulePreviewMesh;
-	}
-
-	return LoadObject<UStaticMesh>(nullptr, TEXT("/Game/Models/Buildings/BaseModule/BaseModule.BaseModule"));
+	return BaseModulePreviewMesh;
 }
 
 APlanetSurfaceManager* ABaseModuleSpawnPoint::FindPlanetSurfaceManager() const
