@@ -58,6 +58,14 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Resources")
 	bool TrySpendResource(EResourceType ResourceType, int32 Amount);
 
+	/** Returns true when all costs can be paid. Duplicate resource rows are combined. */
+	UFUNCTION(BlueprintPure, Category = "Resources")
+	bool CanAffordCosts(const TArray<FResourceCost>& Costs) const;
+
+	/** Atomically pays all costs. Nothing is spent unless every cost can be paid. */
+	UFUNCTION(BlueprintCallable, Category = "Resources")
+	bool TrySpendCosts(const TArray<FResourceCost>& Costs);
+
 	UPROPERTY(BlueprintAssignable, Category = "Resources")
 	FResourceAmountChangedSignature OnResourceAmountChanged;
 

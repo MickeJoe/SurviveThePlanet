@@ -60,3 +60,57 @@ bool AResourceManager::TrySpendResource(EResourceType ResourceType, int32 Amount
 	SetResourceAmount(ResourceType, GetResourceAmount(ResourceType) - Amount);
 	return true;
 }
+
+bool AResourceManager::CanAffordCosts(const TArray<FResourceCost>& Costs) const
+{
+	TMap<EResourceType, int32> CombinedCosts;
+	for (const FResourceCost& Entry : Costs)
+	{
+		if (Entry.Cost < 0)
+		{
+			return false;
+		}
+
+		int32& CombinedCost = CombinedCosts.FindOrAdd(Entry.Resource);
+		if (Entry.Cost > MAX_int32 - CombinedCost)
+		{
+			return false;
+		}
+
+		CombinedCost += Entry.Cost;
+	}
+
+	for (const TPair<EResourceType, int32>& Entry : CombinedCosts)
+	{
+		if (!HasResource(Entry.Key, Entry.Value))
+		{
+			return false;
+		}
+	}
+
+	return true;
+}
+
+bool AResourceManager::TrySpendCosts(const TArray<FResourceCost>& Costs)
+{
+	if (!CanAffordCosts(Costs))
+	{
+		return false;
+	}
+
+	TMap<EResourceType, int32> CombinedCosts;
+	for (const FResourceCost& Entry : Costs)
+	{
+		CombinedCosts.FindOrAdd(Entry.Resource) += Entry.Cost;
+	}
+
+	for (const TPair<EResourceType, int32>& Entry : CombinedCosts)
+	{
+		if (Entry.Value > 0)
+		{
+			SetResourceAmount(Entry.Key, GetResourceAmount(Entry.Key) - Entry.Value);
+		}
+	}
+
+	return true;
+}

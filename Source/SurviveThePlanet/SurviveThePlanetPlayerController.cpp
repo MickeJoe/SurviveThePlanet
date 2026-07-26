@@ -24,6 +24,7 @@
 #include "Gameplay/Buildings/EnergyModule.h"
 #include "Gameplay/Cables/CableNetworkManager.h"
 #include "Gameplay/Planet/PlanetSurfaceManager.h"
+#include "Gameplay/Resources/ResourceManager.h"
 #include "Gameplay/Work/ConstructionJobQueueSubsystem.h"
 #include "SurviveThePlanet.h"
 
@@ -332,6 +333,28 @@ bool ASurviveThePlanetPlayerController::TryPlaceEnergyModuleAtCursor()
 
 	const AEnergyModule* DefaultModule = ClassToSpawn->GetDefaultObject<AEnergyModule>();
 	const FIntPoint Footprint = DefaultModule ? DefaultModule->GetGridFootprint() : FIntPoint(2, 2);
+	const TArray<FResourceCost> ConstructionCosts = DefaultModule
+		? DefaultModule->GetConstructionCosts()
+		: TArray<FResourceCost>();
+	AResourceManager* ResourceManager = nullptr;
+	for (TActorIterator<AResourceManager> It(World); It; ++It)
+	{
+		ResourceManager = *It;
+		break;
+	}
+
+	if (ConstructionCosts.Num() > 0 && !ResourceManager)
+	{
+		UE_LOG(LogSurviveThePlanet, Warning, TEXT("STP_BUILD Energy module placement failed: no ResourceManager found."));
+		return true;
+	}
+
+	if (ResourceManager && !ResourceManager->CanAffordCosts(ConstructionCosts))
+	{
+		UE_LOG(LogSurviveThePlanet, Warning, TEXT("STP_BUILD Energy module placement refused: insufficient resources."));
+		return true;
+	}
+
 	const FSTPGridPlacement Placement = SurfaceManager->GetPlacementForWorldLocation(TargetLocation, Footprint);
 	if (!Placement.bValid)
 	{
@@ -364,6 +387,13 @@ bool ASurviveThePlanetPlayerController::TryPlaceEnergyModuleAtCursor()
 	if (!SurfaceManager->ReserveCells(SpawnedModule, Placement.OriginCell, SpawnedModule->GetGridFootprint()))
 	{
 		UE_LOG(LogSurviveThePlanet, Warning, TEXT("STP_BUILD Energy module placement failed: reservation was rejected after spawn."));
+		SpawnedModule->Destroy();
+		return true;
+	}
+
+	if (ResourceManager && !ResourceManager->TrySpendCosts(ConstructionCosts))
+	{
+		UE_LOG(LogSurviveThePlanet, Warning, TEXT("STP_BUILD Energy module placement refused: resources changed before payment."));
 		SpawnedModule->Destroy();
 		return true;
 	}
