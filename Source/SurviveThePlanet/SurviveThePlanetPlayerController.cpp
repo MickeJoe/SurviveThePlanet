@@ -22,9 +22,11 @@
 #include "Kismet/GameplayStatics.h"
 #include "Gameplay/SelectableWorldActor.h"
 #include "Gameplay/Buildings/EnergyModule.h"
+#include "Gameplay/Buildings/MiningMachine.h"
 #include "Gameplay/Cables/CableNetworkManager.h"
 #include "Gameplay/Planet/PlanetSurfaceManager.h"
 #include "Gameplay/Resources/ResourceManager.h"
+#include "Gameplay/Resources/BaseResourceSource.h"
 #include "Gameplay/Work/ConstructionJobQueueSubsystem.h"
 #include "SurviveThePlanet.h"
 
@@ -48,6 +50,7 @@ ASurviveThePlanetPlayerController::ASurviveThePlanetPlayerController()
 	SetDestinationTouchAction = LoadObject<UInputAction>(nullptr, TEXT("/Game/TopDown/Input/Actions/IA_SetDestination_Touch"));
 	FXCursor = LoadObject<UNiagaraSystem>(nullptr, TEXT("/Game/TopDown/Cursor/FX_Cursor_Success"));
 	EnergyModuleClass = AEnergyModule::StaticClass();
+	MiningMachineClass = AMiningMachine::StaticClass();
 }
 
 void ASurviveThePlanetPlayerController::SetActiveBuildTool(ESTPBuildTool NewBuildTool)
@@ -62,14 +65,23 @@ void ASurviveThePlanetPlayerController::SetActiveBuildTool(ESTPBuildTool NewBuil
 		EndCableDrag();
 	}
 
+	DestroyBuildPlacementPreview();
 	ActiveBuildTool = NewBuildTool;
-	if (ActiveBuildTool != ESTPBuildTool::EnergyModule)
-	{
-		DestroyBuildPlacementPreview();
-	}
 
 	OnBuildToolChanged.Broadcast(ActiveBuildTool);
 	UE_LOG(LogSurviveThePlanet, Warning, TEXT("STP_BUILD Active build tool changed to %d"), static_cast<int32>(ActiveBuildTool));
+}
+
+void ASurviveThePlanetPlayerController::SetMiningMachineClass(TSubclassOf<AMiningMachine> NewMiningMachineClass)
+{
+	MiningMachineClass = NewMiningMachineClass;
+	if (!MiningMachineClass)
+	{
+		MiningMachineClass = AMiningMachine::StaticClass();
+	}
+
+	DestroyBuildPlacementPreview();
+	UE_LOG(LogSurviveThePlanet, Warning, TEXT("STP_BUILD MiningMachineClass set to %s"), *GetNameSafe(MiningMachineClass.Get()));
 }
 
 void ASurviveThePlanetPlayerController::SetEnergyModuleClass(TSubclassOf<AEnergyModule> NewEnergyModuleClass)
@@ -294,12 +306,101 @@ bool ASurviveThePlanetPlayerController::TryHandleActiveBuildToolClick()
 	{
 	case ESTPBuildTool::EnergyModule:
 		return TryPlaceEnergyModuleAtCursor();
+	case ESTPBuildTool::MiningMachine:
+		return TryPlaceMiningMachineAtCursor();
 	case ESTPBuildTool::EnergyCable:
 		return true;
 	case ESTPBuildTool::None:
 	default:
 		return false;
 	}
+}
+
+bool ASurviveThePlanetPlayerController::TryPlaceMiningMachineAtCursor()
+{
+	UWorld* World = GetWorld();
+	ABaseResourceSource* ResourceSource = GetResourceSourceUnderCursor();
+	if (!World || !IsValid(ResourceSource))
+	{
+		UE_LOG(LogSurviveThePlanet, Warning, TEXT("STP_BUILD Mining machine placement failed: cursor is not over a resource source."));
+		return true;
+	}
+
+	TSubclassOf<AMiningMachine> ClassToSpawn = MiningMachineClass;
+	if (!ClassToSpawn)
+	{
+		ClassToSpawn = AMiningMachine::StaticClass();
+	}
+
+	const AMiningMachine* DefaultMachine = ClassToSpawn->GetDefaultObject<AMiningMachine>();
+	if (!DefaultMachine || !DefaultMachine->CanMineResourceSource(ResourceSource))
+	{
+		UE_LOG(LogSurviveThePlanet, Warning, TEXT("STP_BUILD Mining machine placement failed: source %s is depleted, reserved, or unsupported. ResourceType=%d"),
+			*GetNameSafe(ResourceSource), static_cast<int32>(ResourceSource->GetResourceType()));
+		return true;
+	}
+
+	const TArray<FResourceCost> ConstructionCosts = DefaultMachine->GetConstructionCosts();
+	AResourceManager* ResourceManager = FindResourceManager();
+	if (ConstructionCosts.Num() > 0 && !ResourceManager)
+	{
+		UE_LOG(LogSurviveThePlanet, Warning, TEXT("STP_BUILD Mining machine placement failed: no ResourceManager found."));
+		return true;
+	}
+
+	if (ResourceManager && !ResourceManager->CanAffordCosts(ConstructionCosts))
+	{
+		UE_LOG(LogSurviveThePlanet, Warning, TEXT("STP_BUILD Mining machine placement refused: insufficient resources."));
+		return true;
+	}
+
+	FActorSpawnParameters SpawnParameters;
+	SpawnParameters.Owner = this;
+	SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+	const FTransform PlacementTransform = DefaultMachine->GetPlacementTransformForSource(ResourceSource);
+	AMiningMachine* SpawnedMachine = World->SpawnActor<AMiningMachine>(
+		ClassToSpawn,
+		PlacementTransform,
+		SpawnParameters);
+
+	if (!SpawnedMachine)
+	{
+		UE_LOG(LogSurviveThePlanet, Warning, TEXT("STP_BUILD Mining machine placement failed: SpawnActor returned null. Class=%s"),
+			*GetNameSafe(ClassToSpawn.Get()));
+		return true;
+	}
+
+	SpawnedMachine->SetPlacementPreview(false);
+	if (!SpawnedMachine->AttachToResourceSource(ResourceSource))
+	{
+		UE_LOG(LogSurviveThePlanet, Warning, TEXT("STP_BUILD Mining machine placement failed: resource reservation was rejected after spawn."));
+		SpawnedMachine->Destroy();
+		return true;
+	}
+
+	if (ResourceManager && !ResourceManager->TrySpendCosts(ConstructionCosts))
+	{
+		UE_LOG(LogSurviveThePlanet, Warning, TEXT("STP_BUILD Mining machine placement refused: resources changed before payment."));
+		SpawnedMachine->Destroy();
+		return true;
+	}
+
+	SpawnedMachine->SetConstructionProgress(0.0f);
+	SpawnedMachine->ShowConstructionProgress();
+
+	if (UConstructionJobQueueSubsystem* ConstructionJobQueue = World->GetSubsystem<UConstructionJobQueueSubsystem>())
+	{
+		ConstructionJobQueue->EnqueueConstructionJob(SpawnedMachine);
+	}
+
+	SetSelectedActor(SpawnedMachine);
+	UE_LOG(LogSurviveThePlanet, Warning, TEXT("STP_BUILD Placed mining machine %s on source %s ResourceType=%d Location=%s"),
+		*GetNameSafe(SpawnedMachine),
+		*GetNameSafe(ResourceSource),
+		static_cast<int32>(ResourceSource->GetResourceType()),
+		*SpawnedMachine->GetActorLocation().ToCompactString());
+	return true;
 }
 
 bool ASurviveThePlanetPlayerController::TryPlaceEnergyModuleAtCursor()
@@ -424,10 +525,91 @@ void ASurviveThePlanetPlayerController::UpdateBuildPlacementPreview()
 	case ESTPBuildTool::EnergyModule:
 		UpdateEnergyModulePlacementPreview();
 		break;
+	case ESTPBuildTool::MiningMachine:
+		UpdateMiningMachinePlacementPreview();
+		break;
 	default:
 		DestroyBuildPlacementPreview();
 		break;
 	}
+}
+
+void ASurviveThePlanetPlayerController::UpdateMiningMachinePlacementPreview()
+{
+	auto LogPreviewState = [this](const FString& Diagnostic)
+	{
+		if (Diagnostic != LastMiningPlacementDiagnostic)
+		{
+			LastMiningPlacementDiagnostic = Diagnostic;
+			UE_LOG(LogSurviveThePlanet, Display, TEXT("STP_MINING_PREVIEW %s"), *Diagnostic);
+		}
+	};
+
+	EnsureMiningMachinePlacementPreview();
+	if (!IsValid(MiningMachinePlacementPreview))
+	{
+		LogPreviewState(TEXT("INVALID reason=\"Preview actor could not be created.\""));
+		return;
+	}
+
+	FHitResult Hit;
+	ABaseResourceSource* ResourceSource = GetResourceSourceUnderCursor(&Hit);
+	if (!Hit.bBlockingHit)
+	{
+		MiningMachinePlacementPreview->SetPreviewResourceSource(nullptr);
+		MiningMachinePlacementPreview->SetActorHiddenInGame(true);
+		LogPreviewState(TEXT("INVALID reason=\"Cursor trace did not hit the world.\""));
+		return;
+	}
+
+	if (!IsValid(ResourceSource))
+	{
+		MiningMachinePlacementPreview->SetPreviewResourceSource(nullptr);
+		MiningMachinePlacementPreview->SetPlacementPreviewValid(false);
+		MiningMachinePlacementPreview->SetActorHiddenInGame(true);
+		LogPreviewState(FString::Printf(
+			TEXT("INVALID reason=\"Cursor is not over a resource source.\" hitActor=%s"),
+			*GetNameSafe(Hit.GetActor())));
+		return;
+	}
+
+	const bool bCanAfford = [&]()
+	{
+		const TArray<FResourceCost>& Costs = MiningMachinePlacementPreview->GetConstructionCosts();
+		AResourceManager* ResourceManager = FindResourceManager();
+		return Costs.Num() == 0 || (ResourceManager && ResourceManager->CanAffordCosts(Costs));
+	}();
+
+	const FTransform PlacementTransform = MiningMachinePlacementPreview->GetPlacementTransformForSource(ResourceSource);
+	MiningMachinePlacementPreview->SetActorTransform(PlacementTransform, false);
+	MiningMachinePlacementPreview->SetPreviewResourceSource(ResourceSource);
+	const bool bCanMineSource = MiningMachinePlacementPreview->CanMineResourceSource(ResourceSource);
+	const bool bValidPlacement = bCanMineSource && bCanAfford;
+	MiningMachinePlacementPreview->SetPlacementPreviewValid(bValidPlacement);
+	MiningMachinePlacementPreview->SetActorHiddenInGame(false);
+
+	FString FailureReason;
+	if (!bCanMineSource)
+	{
+		FailureReason = FString::Printf(
+			TEXT("Source unavailable: remaining=%d resourceType=%d reservedMachine=%s supported=%s"),
+			ResourceSource->GetRemainingAmount(), static_cast<int32>(ResourceSource->GetResourceType()),
+			*GetNameSafe(ResourceSource->GetReservedMiningMachine()),
+			MiningMachinePlacementPreview->CanMineResourceSource(ResourceSource) ? TEXT("true") : TEXT("false"));
+	}
+	else if (!bCanAfford)
+	{
+		FailureReason = TEXT("Insufficient construction resources.");
+	}
+
+	const FString ReasonSuffix = FailureReason.IsEmpty()
+		? FString()
+		: FString::Printf(TEXT(" reason=\"%s\""), *FailureReason);
+	LogPreviewState(FString::Printf(
+		TEXT("%s source=%s%s"),
+		bValidPlacement ? TEXT("VALID") : TEXT("INVALID"),
+		*GetNameSafe(ResourceSource),
+		*ReasonSuffix));
 }
 
 void ASurviveThePlanetPlayerController::UpdateEnergyModulePlacementPreview()
@@ -502,6 +684,41 @@ void ASurviveThePlanetPlayerController::EnsureEnergyModulePlacementPreview()
 	}
 }
 
+void ASurviveThePlanetPlayerController::EnsureMiningMachinePlacementPreview()
+{
+	if (IsValid(MiningMachinePlacementPreview))
+	{
+		return;
+	}
+
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	TSubclassOf<AMiningMachine> ClassToSpawn = MiningMachineClass;
+	if (!ClassToSpawn)
+	{
+		ClassToSpawn = AMiningMachine::StaticClass();
+	}
+
+	FActorSpawnParameters SpawnParameters;
+	SpawnParameters.Owner = this;
+	SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	MiningMachinePlacementPreview = World->SpawnActor<AMiningMachine>(
+		ClassToSpawn, FVector::ZeroVector, FRotator::ZeroRotator, SpawnParameters);
+
+	if (MiningMachinePlacementPreview)
+	{
+		ConfigureMiningMachinePlacementPreview(MiningMachinePlacementPreview);
+		MiningMachinePlacementPreview->SetActorHiddenInGame(true);
+		UE_LOG(LogSurviveThePlanet, Warning, TEXT("STP_BUILD Created mining machine placement preview %s Class=%s"),
+			*GetNameSafe(MiningMachinePlacementPreview),
+			*MiningMachinePlacementPreview->GetClass()->GetPathName());
+	}
+}
+
 void ASurviveThePlanetPlayerController::DestroyBuildPlacementPreview()
 {
 	if (IsValid(EnergyModulePlacementPreview))
@@ -510,6 +727,56 @@ void ASurviveThePlanetPlayerController::DestroyBuildPlacementPreview()
 	}
 
 	EnergyModulePlacementPreview = nullptr;
+
+	if (IsValid(MiningMachinePlacementPreview))
+	{
+		MiningMachinePlacementPreview->Destroy();
+	}
+
+	MiningMachinePlacementPreview = nullptr;
+}
+
+void ASurviveThePlanetPlayerController::ConfigureMiningMachinePlacementPreview(AMiningMachine* PreviewActor) const
+{
+	if (!PreviewActor)
+	{
+		return;
+	}
+
+	PreviewActor->SetPlacementPreview(true);
+	PreviewActor->SetActorTickEnabled(false);
+}
+
+ABaseResourceSource* ASurviveThePlanetPlayerController::GetResourceSourceUnderCursor(FHitResult* OutHit) const
+{
+	FHitResult Hit;
+	if (!GetHitResultUnderCursor(ECC_Visibility, true, Hit))
+	{
+		if (OutHit)
+		{
+			*OutHit = Hit;
+		}
+		return nullptr;
+	}
+
+	if (OutHit)
+	{
+		*OutHit = Hit;
+	}
+	return Cast<ABaseResourceSource>(Hit.GetActor());
+}
+
+AResourceManager* ASurviveThePlanetPlayerController::FindResourceManager() const
+{
+	if (UWorld* World = GetWorld())
+	{
+		for (TActorIterator<AResourceManager> It(World); It; ++It)
+		{
+			return *It;
+		}
+	}
+
+	return nullptr;
 }
 
 void ASurviveThePlanetPlayerController::ConfigureEnergyModulePlacementPreview(AEnergyModule* PreviewActor) const
@@ -815,7 +1082,7 @@ void ASurviveThePlanetPlayerController::SetActorSelectedVisual(AActor* Actor, bo
 
 void ASurviveThePlanetPlayerController::DrawSelectedActorRing() const
 {
-	if (!IsValid(SelectedActor))
+	if (!IsValid(SelectedActor) || SelectedActor->IsA<AMiningMachine>())
 	{
 		return;
 	}

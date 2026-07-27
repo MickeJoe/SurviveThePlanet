@@ -5,6 +5,7 @@
 #include "SurviveThePlanetCameraPawn.h"
 #include "SurviveThePlanetPlayerController.h"
 #include "Gameplay/Buildings/EnergyModule.h"
+#include "Gameplay/Buildings/MiningMachine.h"
 #include "Gameplay/UI/BuildToolbarWidget.h"
 #include "Gameplay/UI/ResourceDisplayWidget.h"
 #include "SurviveThePlanet.h"
@@ -16,6 +17,7 @@ ASurviveThePlanetGameMode::ASurviveThePlanetGameMode()
 	BuildToolbarWidgetClass = UBuildToolbarWidget::StaticClass();
 	ResourceDisplayWidgetClass = UResourceDisplayWidget::StaticClass();
 	EnergyModuleClass = AEnergyModule::StaticClass();
+	MiningMachineClass = AMiningMachine::StaticClass();
 }
 
 void ASurviveThePlanetGameMode::StartPlay()
@@ -32,6 +34,7 @@ void ASurviveThePlanetGameMode::StartPlay()
 		if (ASurviveThePlanetPlayerController* STPPlayerController = Cast<ASurviveThePlanetPlayerController>(PlayerController))
 		{
 			STPPlayerController->SetEnergyModuleClass(EnergyModuleClass);
+			STPPlayerController->SetMiningMachineClass(MiningMachineClass);
 		}
 
 		if (BuildToolbarWidgetClass)

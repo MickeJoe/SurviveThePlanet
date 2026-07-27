@@ -33,7 +33,10 @@ void ABaseBuilding::OnConstruction(const FTransform& Transform)
 {
 	Super::OnConstruction(Transform);
 
-	if (BuildingMesh)
+	// Blueprints may configure the inherited BuildingMesh component directly.
+	// Only apply the optional base-class override when one was explicitly set;
+	// assigning nullptr here would erase the Blueprint component template mesh.
+	if (BuildingMesh && BaseModuleMesh)
 	{
 		BuildingMesh->SetStaticMesh(BaseModuleMesh);
 	}

@@ -64,16 +64,25 @@ protected:
 	TObjectPtr<UButton> EnergyModuleButton;
 
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Build Toolbar|Designed Widgets")
+	TObjectPtr<UButton> MiningBuildingButton;
+
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Build Toolbar|Designed Widgets")
 	TObjectPtr<UImage> EnergyCableIcon;
 
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Build Toolbar|Designed Widgets")
 	TObjectPtr<UImage> EnergyModuleIcon;
 
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Build Toolbar|Designed Widgets")
+	TObjectPtr<UImage> MiningBuildingIcon;
+
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Build Toolbar|Designed Widgets")
 	TObjectPtr<UBorder> EnergyCableBorder;
 
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Build Toolbar|Designed Widgets")
 	TObjectPtr<UBorder> EnergyModuleBorder;
+
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Build Toolbar|Designed Widgets")
+	TObjectPtr<UBorder> MiningBorder;
 
 	UFUNCTION(BlueprintImplementableEvent, Category = "Build Toolbar")
 	void BP_ActiveToolChanged(ESTPBuildTool NewTool);
@@ -89,7 +98,6 @@ private:
 	UWidget* BuildButton(const FBuildToolButtonConfig& Config);
 	bool HasDesignedToolbar() const;
 	void BindDesignedToolbar();
-	void ApplyConfiguredIcons();
 	const FBuildToolButtonConfig* FindButtonConfig(ESTPBuildTool Tool) const;
 	void ApplyIcon(UImage* Icon, ESTPBuildTool Tool) const;
 
@@ -98,6 +106,9 @@ private:
 
 	UFUNCTION()
 	void HandleEnergyModuleClicked();
+
+	UFUNCTION()
+	void HandleMiningMachineClicked();
 
 	UFUNCTION()
 	void HandleControllerBuildToolChanged(ESTPBuildTool NewTool);

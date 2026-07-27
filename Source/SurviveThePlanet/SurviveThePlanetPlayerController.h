@@ -16,6 +16,9 @@ class USpringArmComponent;
 class ASurviveThePlanetCharacter;
 class ASelectableWorldActor;
 class AEnergyModule;
+class AMiningMachine;
+class ABaseResourceSource;
+class AResourceManager;
 class APlanetSurfaceManager;
 class ACableNetworkManager;
 
@@ -122,6 +125,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Build Tools")
 	void SetEnergyModuleClass(TSubclassOf<AEnergyModule> NewEnergyModuleClass);
 
+	UFUNCTION(BlueprintCallable, Category = "Build Tools")
+	void SetMiningMachineClass(TSubclassOf<AMiningMachine> NewMiningMachineClass);
+
 	UPROPERTY(BlueprintAssignable, Category = "Build Tools")
 	FBuildToolChangedSignature OnBuildToolChanged;
 
@@ -153,6 +159,15 @@ private:
 	TObjectPtr<AEnergyModule> EnergyModulePlacementPreview;
 
 	UPROPERTY(Transient)
+	TSubclassOf<AMiningMachine> MiningMachineClass;
+
+	UPROPERTY(Transient)
+	TObjectPtr<AMiningMachine> MiningMachinePlacementPreview;
+
+	/** Last emitted preview diagnostic; avoids writing the same result every frame. */
+	FString LastMiningPlacementDiagnostic;
+
+	UPROPERTY(Transient)
 	TObjectPtr<ACableNetworkManager> CableNetworkManager;
 
 	APlanetSurfaceManager* FindPlanetSurfaceManager() const;
@@ -165,11 +180,17 @@ private:
 	USpringArmComponent* GetControlledCameraBoom() const;
 	bool TryHandleActiveBuildToolClick();
 	bool TryPlaceEnergyModuleAtCursor();
+	bool TryPlaceMiningMachineAtCursor();
 	void UpdateBuildPlacementPreview();
 	void UpdateEnergyModulePlacementPreview();
+	void UpdateMiningMachinePlacementPreview();
 	void EnsureEnergyModulePlacementPreview();
+	void EnsureMiningMachinePlacementPreview();
 	void DestroyBuildPlacementPreview();
 	void ConfigureEnergyModulePlacementPreview(AEnergyModule* PreviewActor) const;
+	void ConfigureMiningMachinePlacementPreview(AMiningMachine* PreviewActor) const;
+	ABaseResourceSource* GetResourceSourceUnderCursor(FHitResult* OutHit = nullptr) const;
+	AResourceManager* FindResourceManager() const;
 	bool TrySelectActorUnderCursor();
 	bool TrySelectActorAtScreenPosition(const FVector2D& ScreenPosition);
 	AActor* FindSelectableActorNearLocation(const FVector& Location) const;

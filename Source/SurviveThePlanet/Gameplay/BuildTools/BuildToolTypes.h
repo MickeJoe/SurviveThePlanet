@@ -8,5 +8,6 @@ enum class ESTPBuildTool : uint8
 {
 	None UMETA(DisplayName = "None"),
 	EnergyCable UMETA(DisplayName = "Energy Cable"),
-	EnergyModule UMETA(DisplayName = "Energy Module")
+	EnergyModule UMETA(DisplayName = "Energy Module"),
+	MiningMachine UMETA(DisplayName = "Mining Machine")
 };

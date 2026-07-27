@@ -15,6 +15,7 @@ enum class ESTPBuildingType : uint8
 {
 	BaseModule UMETA(DisplayName = "Base Module"),
 	EnergyModule UMETA(DisplayName = "Energy Module"),
+	MiningMachine UMETA(DisplayName = "Mining Machine"),
 	Other UMETA(DisplayName = "Other")
 };
 

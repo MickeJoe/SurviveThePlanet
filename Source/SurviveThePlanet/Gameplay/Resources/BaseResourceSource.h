@@ -7,11 +7,12 @@
 #include "BaseResourceSource.generated.h"
 
 class UStaticMeshComponent;
+class AMiningMachine;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FResourceSourceAmountChangedSignature, int32, RemainingAmount);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FResourceSourceDepletedSignature);
 
-/** Base actor for a finite resource deposit occupying one planet grid cell. */
+	/** Base actor for a finite resource deposit with a mesh-derived grid footprint. */
 UCLASS(Abstract, Blueprintable)
 class SURVIVETHEPLANET_API ABaseResourceSource : public AActor
 {
@@ -36,9 +37,28 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Resource Source")
 	FSTPGridCell GetGridCell() const { return GridCell; }
 
+	UFUNCTION(BlueprintPure, Category = "Resource Source|Grid")
+	FIntPoint GetGridFootprint() const;
+
 	/** Removes up to RequestedAmount and returns the amount actually extracted. */
 	UFUNCTION(BlueprintCallable, Category = "Resource Source")
 	int32 ExtractResource(int32 RequestedAmount);
+
+	/** Reserves this deposit for one mining machine. */
+	UFUNCTION(BlueprintCallable, Category = "Resource Source|Mining")
+	bool TryReserveMiningMachine(AMiningMachine* MiningMachine);
+
+	UFUNCTION(BlueprintCallable, Category = "Resource Source|Mining")
+	void ReleaseMiningMachine(AMiningMachine* MiningMachine);
+
+	UFUNCTION(BlueprintPure, Category = "Resource Source|Mining")
+	bool IsReservedForMining() const;
+
+	UFUNCTION(BlueprintPure, Category = "Resource Source|Mining")
+	AMiningMachine* GetReservedMiningMachine() const { return ReservedMiningMachine; }
+
+	/** Temporarily hides the deposit while a combined mine/deposit preview is shown. */
+	void SetPreviewingMiningMachine(AMiningMachine* MiningMachine);
 
 	UPROPERTY(BlueprintAssignable, Category = "Resource Source")
 	FResourceSourceAmountChangedSignature OnRemainingAmountChanged;
@@ -68,4 +88,12 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<APlanetSurfaceManager> SurfaceManager;
+
+	UPROPERTY(Transient)
+	TObjectPtr<AMiningMachine> ReservedMiningMachine;
+
+	UPROPERTY(Transient)
+	TObjectPtr<AMiningMachine> PreviewingMiningMachine;
+
+	void RefreshResourceMeshVisibility();
 };
