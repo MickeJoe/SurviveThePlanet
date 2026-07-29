@@ -4,7 +4,7 @@
 #include "Subsystems/WorldSubsystem.h"
 #include "ConstructionDroneCoordinatorSubsystem.generated.h"
 
-class AConstructionDrone;
+class ABaseDrone;
 class ABaseBuilding;
 class APlanetSurfaceManager;
 
@@ -18,20 +18,20 @@ public:
 	virtual TStatId GetStatId() const override;
 
 	UFUNCTION(BlueprintCallable, Category = "Construction Drones")
-	void RegisterConstructionDrone(AConstructionDrone* Drone);
+	void RegisterDrone(ABaseDrone* Drone);
 
 	UFUNCTION(BlueprintCallable, Category = "Construction Drones")
-	void UnregisterConstructionDrone(AConstructionDrone* Drone);
+	void UnregisterDrone(ABaseDrone* Drone);
 
 	UFUNCTION(BlueprintPure, Category = "Construction Drones")
-	int32 GetRegisteredDroneCount() const { return ConstructionDrones.Num(); }
+	int32 GetRegisteredDroneCount() const { return Drones.Num(); }
 
 private:
 	UPROPERTY()
-	TArray<TObjectPtr<AConstructionDrone>> ConstructionDrones;
+	TArray<TObjectPtr<ABaseDrone>> Drones;
 
 	void RemoveInvalidDrones();
-	void EnsureDroneHasIdleDestination(AConstructionDrone* Drone);
+	void EnsureDroneHasIdleDestination(ABaseDrone* Drone);
 	ABaseBuilding* FindBaseModule() const;
 	APlanetSurfaceManager* FindPlanetSurfaceManager() const;
 };

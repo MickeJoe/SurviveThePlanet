@@ -2,7 +2,7 @@
 
 #include "EngineUtils.h"
 #include "Gameplay/Base/BaseBuilding.h"
-#include "Gameplay/Drones/ConstructionDrone.h"
+#include "Gameplay/Drones/BaseDrone.h"
 #include "Gameplay/Planet/PlanetSurfaceManager.h"
 #include "Gameplay/Work/ConstructionJobQueueSubsystem.h"
 #include "Stats/Stats.h"
@@ -23,9 +23,14 @@ void UConstructionDroneCoordinatorSubsystem::Tick(float DeltaTime)
 		return;
 	}
 
-	for (AConstructionDrone* Drone : ConstructionDrones)
+	for (ABaseDrone* Drone : Drones)
 	{
 		if (!IsValid(Drone))
+		{
+			continue;
+		}
+
+		if (!Drone->CanPerformWork(ESTPDroneWorkType::Construction))
 		{
 			continue;
 		}
@@ -58,28 +63,28 @@ TStatId UConstructionDroneCoordinatorSubsystem::GetStatId() const
 	RETURN_QUICK_DECLARE_CYCLE_STAT(UConstructionDroneCoordinatorSubsystem, STATGROUP_Tickables);
 }
 
-void UConstructionDroneCoordinatorSubsystem::RegisterConstructionDrone(AConstructionDrone* Drone)
+void UConstructionDroneCoordinatorSubsystem::RegisterDrone(ABaseDrone* Drone)
 {
 	if (IsValid(Drone))
 	{
-		ConstructionDrones.AddUnique(Drone);
+		Drones.AddUnique(Drone);
 	}
 }
 
-void UConstructionDroneCoordinatorSubsystem::UnregisterConstructionDrone(AConstructionDrone* Drone)
+void UConstructionDroneCoordinatorSubsystem::UnregisterDrone(ABaseDrone* Drone)
 {
-	ConstructionDrones.Remove(Drone);
+	Drones.Remove(Drone);
 }
 
 void UConstructionDroneCoordinatorSubsystem::RemoveInvalidDrones()
 {
-	ConstructionDrones.RemoveAll([](const TObjectPtr<AConstructionDrone>& Drone)
+	Drones.RemoveAll([](const TObjectPtr<ABaseDrone>& Drone)
 	{
 		return !IsValid(Drone);
 	});
 }
 
-void UConstructionDroneCoordinatorSubsystem::EnsureDroneHasIdleDestination(AConstructionDrone* Drone)
+void UConstructionDroneCoordinatorSubsystem::EnsureDroneHasIdleDestination(ABaseDrone* Drone)
 {
 	if (!IsValid(Drone) || Drone->HasIdleDestination())
 	{

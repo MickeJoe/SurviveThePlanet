@@ -106,7 +106,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Drone Spawn")
 	ESpawnDifficulty ActiveDifficulty = ESpawnDifficulty::Easy;
 
-	/** Optional per-difficulty spawn options. If empty, DroneClass/fallback ConstructionDrone is used. */
+	/** Optional per-difficulty spawn options. If empty, DroneClass/fallback BaseDrone is used. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Drone Spawn")
 	TArray<FDroneSpawnOption> SpawnOptions;
 

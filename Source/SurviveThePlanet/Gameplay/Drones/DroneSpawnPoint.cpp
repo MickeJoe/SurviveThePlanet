@@ -6,7 +6,7 @@
 #include "Engine/World.h"
 #include "EngineUtils.h"
 #include "Gameplay/Planet/PlanetSurfaceManager.h"
-#include "Gameplay/Drones/ConstructionDrone.h"
+#include "Gameplay/Drones/BaseDrone.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogDroneSpawnPoint, Log, All);
 
@@ -221,7 +221,7 @@ UClass* ADroneSpawnPoint::GetEffectiveDroneClass() const
 		return BestOption->DroneClass.Get();
 	}
 
-	return DroneClass ? DroneClass.Get() : AConstructionDrone::StaticClass();
+	return DroneClass ? DroneClass.Get() : ABaseDrone::StaticClass();
 }
 
 int32 ADroneSpawnPoint::GetEffectiveSpawnCount() const
@@ -275,7 +275,7 @@ FIntPoint ADroneSpawnPoint::GetEffectiveDroneFootprint() const
 {
 	if (const UClass* EffectiveClass = GetEffectiveDroneClass())
 	{
-		if (const AConstructionDrone* DefaultDrone = Cast<AConstructionDrone>(EffectiveClass->GetDefaultObject()))
+		if (const ABaseDrone* DefaultDrone = Cast<ABaseDrone>(EffectiveClass->GetDefaultObject()))
 		{
 			return DefaultDrone->GetGridFootprint();
 		}
