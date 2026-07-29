@@ -21,6 +21,7 @@ class ABaseResourceSource;
 class AResourceManager;
 class APlanetSurfaceManager;
 class ACableNetworkManager;
+class UBuildingInfoWidget;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogTemplateCharacter, Log, All);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FBuildToolChangedSignature, ESTPBuildTool, NewBuildTool);
@@ -169,6 +170,12 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<ACableNetworkManager> CableNetworkManager;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UBuildingInfoWidget> BuildingInfoWidget;
+
+	UPROPERTY(Transient)
+	TSubclassOf<UBuildingInfoWidget> BuildingInfoWidgetClass;
 
 	APlanetSurfaceManager* FindPlanetSurfaceManager() const;
 	ACableNetworkManager* FindOrCreateCableNetworkManager();

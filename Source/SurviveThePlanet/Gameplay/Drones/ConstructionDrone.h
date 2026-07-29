@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Gameplay/SelectableWorldActor.h"
+#include "Gameplay/Drones/BaseDrone.h"
 #include "Gameplay/Work/ConstructionJobQueueSubsystem.h"
 #include "Gameplay/Planet/PlanetSurfaceManager.h"
 #include "ConstructionDrone.generated.h"
@@ -31,7 +31,7 @@ struct FSTPOngoingConstructionJob
 };
 
 UCLASS(Blueprintable)
-class SURVIVETHEPLANET_API AConstructionDrone : public ASelectableWorldActor
+class SURVIVETHEPLANET_API AConstructionDrone : public ABaseDrone
 {
 	GENERATED_BODY()
 
@@ -51,6 +51,8 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Construction Drone|Idle")
 	bool HasIdleDestination() const { return bHasIdleDestination; }
+
+	virtual bool IsAvailableForAssignment() const override;
 
 	UFUNCTION(BlueprintCallable, Category = "Construction Drone|Jobs")
 	bool AssignConstructionJob(const FSTPConstructionJob& Job);
@@ -73,6 +75,7 @@ public:
 protected:
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	virtual void HandleBuildingAssignmentChanged(bool bIsAssigned) override;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	TObjectPtr<USceneComponent> SceneRoot;
@@ -81,13 +84,7 @@ protected:
 	TObjectPtr<UStaticMeshComponent> DroneMesh;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Drone")
-	FName DroneTag = TEXT("Drone");
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Drone")
 	FName DroneTypeTag = TEXT("Construction");
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Drone")
-	float WorkSpeed = 0.1f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Construction Drone|Movement", meta = (ClampMin = "0.0", UIMin = "0.0", Units = "cm/s"))
 	float MoveSpeed = 300.0f;

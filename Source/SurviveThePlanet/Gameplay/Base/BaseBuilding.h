@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Gameplay/Drones/BaseDrone.h"
 #include "Gameplay/Resources/ResourceManager.h"
 #include "Gameplay/SelectableWorldActor.h"
 #include "BaseBuilding.generated.h"
@@ -8,7 +9,12 @@
 class USceneComponent;
 class UStaticMesh;
 class UStaticMeshComponent;
+class UTexture2D;
 class UWidgetComponent;
+class ABaseDrone;
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDroneSlotsChangedSignature, int32, UnlockedSlots);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FDroneAssignmentsChangedSignature);
 
 UENUM(BlueprintType)
 enum class ESTPBuildingType : uint8
@@ -45,6 +51,51 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Base Building")
 	ESTPBuildingType GetBuildingType() const { return BuildingType; }
 
+	UFUNCTION(BlueprintPure, Category = "Base Building|UI")
+	FText GetBuildingDisplayName() const { return BuildingDisplayName; }
+
+	UFUNCTION(BlueprintPure, Category = "Base Building|UI")
+	FText GetBuildingDescription() const { return BuildingDescription; }
+
+	UFUNCTION(BlueprintPure, Category = "Base Building|UI")
+	UTexture2D* GetBuildingThumbnail() const { return BuildingThumbnail; }
+
+	UFUNCTION(BlueprintPure, Category = "Base Building|Drone Slots")
+	int32 GetMaxDroneSlots() const { return MaxDroneSlots; }
+
+	UFUNCTION(BlueprintPure, Category = "Base Building|Drone Slots")
+	int32 GetUnlockedDroneSlots() const { return UnlockedDroneSlots; }
+
+	UFUNCTION(BlueprintCallable, Category = "Base Building|Drone Slots")
+	void SetUnlockedDroneSlots(int32 NewUnlockedSlots);
+
+	UFUNCTION(BlueprintCallable, Category = "Base Building|Drone Slots")
+	void UnlockDroneSlots(int32 SlotsToUnlock = 1);
+
+	UFUNCTION(BlueprintPure, Category = "Base Building|Drone Slots")
+	ABaseDrone* GetAssignedDroneAtSlot(int32 SlotIndex) const;
+
+	UFUNCTION(BlueprintPure, Category = "Base Building|Drone Slots")
+	int32 GetAssignedDroneCount() const;
+
+	UFUNCTION(BlueprintPure, Category = "Base Building|Drone Slots")
+	ESTPDroneWorkType GetDroneWorkType() const { return DroneWorkType; }
+
+	UFUNCTION(BlueprintCallable, Category = "Base Building|Drone Slots")
+	bool TryAssignDrone(ABaseDrone* Drone, int32 PreferredSlot = -1);
+
+	UFUNCTION(BlueprintCallable, Category = "Base Building|Drone Slots")
+	bool UnassignDrone(ABaseDrone* Drone);
+
+	UFUNCTION(BlueprintCallable, Category = "Base Building|Drone Slots")
+	bool UnassignDroneAtSlot(int32 SlotIndex);
+
+	UPROPERTY(BlueprintAssignable, Category = "Base Building|Drone Slots")
+	FDroneSlotsChangedSignature OnDroneSlotsChanged;
+
+	UPROPERTY(BlueprintAssignable, Category = "Base Building|Drone Slots")
+	FDroneAssignmentsChangedSignature OnDroneAssignmentsChanged;
+
 	UFUNCTION(BlueprintPure, Category = "Construction")
 	const TArray<FResourceCost>& GetConstructionCosts() const { return ConstructionCosts; }
 
@@ -70,6 +121,35 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Base Building")
 	ESTPBuildingType BuildingType = ESTPBuildingType::BaseModule;
+
+	/** Shared content displayed by the building information popup. Override in child Blueprints. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Base Building|UI")
+	FText BuildingDisplayName = NSLOCTEXT("SurviveThePlanet", "DefaultBuildingName", "Building");
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Base Building|UI", meta = (MultiLine = "true"))
+	FText BuildingDescription;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Base Building|UI")
+	TObjectPtr<UTexture2D> BuildingThumbnail;
+
+	/** Total slot capacity at the building's highest upgrade level. Zero hides the drone section. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Base Building|Drone Slots", meta = (ClampMin = "0", UIMin = "0"))
+	int32 MaxDroneSlots = 0;
+
+	/** Slots available when a new instance of this building enters play. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Base Building|Drone Slots", meta = (ClampMin = "0", UIMin = "0"))
+	int32 InitiallyUnlockedDroneSlots = 0;
+
+	/** Runtime state changed by building upgrades. */
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Base Building|Drone Slots", SaveGame)
+	int32 UnlockedDroneSlots = 0;
+
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Base Building|Drone Slots")
+	TArray<TObjectPtr<ABaseDrone>> AssignedDrones;
+
+	/** Activity used to calculate drone efficiency in this building. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Base Building|Drone Slots")
+	ESTPDroneWorkType DroneWorkType = ESTPDroneWorkType::Construction;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Base Building", meta = (ClampMin = "0.0", UIMin = "0.0"))
 	float MaxHealth = 1000.0f;

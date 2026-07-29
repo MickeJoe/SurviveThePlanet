@@ -28,6 +28,9 @@
 #include "Gameplay/Resources/ResourceManager.h"
 #include "Gameplay/Resources/BaseResourceSource.h"
 #include "Gameplay/Work/ConstructionJobQueueSubsystem.h"
+#include "Gameplay/Base/BaseBuilding.h"
+#include "Gameplay/UI/BuildingInfoWidget.h"
+#include "Blueprint/UserWidget.h"
 #include "SurviveThePlanet.h"
 
 ASurviveThePlanetPlayerController::ASurviveThePlanetPlayerController()
@@ -51,6 +54,7 @@ ASurviveThePlanetPlayerController::ASurviveThePlanetPlayerController()
 	FXCursor = LoadObject<UNiagaraSystem>(nullptr, TEXT("/Game/TopDown/Cursor/FX_Cursor_Success"));
 	EnergyModuleClass = AEnergyModule::StaticClass();
 	MiningMachineClass = AMiningMachine::StaticClass();
+	BuildingInfoWidgetClass = LoadClass<UBuildingInfoWidget>(nullptr, TEXT("/Game/UI/WBP_BuildingPopup.WBP_BuildingPopup_C"));
 }
 
 void ASurviveThePlanetPlayerController::SetActiveBuildTool(ESTPBuildTool NewBuildTool)
@@ -114,6 +118,16 @@ void ASurviveThePlanetPlayerController::BeginPlay()
 		*GameModeClassName);
 
 	LogSelectableActors(TEXT("BeginPlay"));
+
+	if (IsLocalPlayerController() && BuildingInfoWidgetClass)
+	{
+		BuildingInfoWidget = CreateWidget<UBuildingInfoWidget>(this, BuildingInfoWidgetClass);
+		if (BuildingInfoWidget)
+		{
+			BuildingInfoWidget->AddToViewport(10);
+			BuildingInfoWidget->SetBuilding(nullptr);
+		}
+	}
 }
 
 void ASurviveThePlanetPlayerController::SetupInputComponent()
@@ -291,13 +305,19 @@ void ASurviveThePlanetPlayerController::OnTouchReleased()
 
 void ASurviveThePlanetPlayerController::OnCancelBuildToolPressed()
 {
-	if (ActiveBuildTool == ESTPBuildTool::None)
+	if (ActiveBuildTool != ESTPBuildTool::None)
 	{
-		return;
+		SetActiveBuildTool(ESTPBuildTool::None);
+		UE_LOG(LogSurviveThePlanet, Warning, TEXT("STP_BUILD Placement mode cancelled with Escape."));
 	}
 
-	SetActiveBuildTool(ESTPBuildTool::None);
-	UE_LOG(LogSurviveThePlanet, Warning, TEXT("STP_BUILD Placement mode cancelled with Escape."));
+	// Selection owns the building popup state, so clearing a selected building
+	// closes the popup and removes its selection visual in one consistent step.
+	if (SelectedActor && SelectedActor->IsA<ABaseBuilding>())
+	{
+		SetSelectedActor(nullptr);
+		UE_LOG(LogSurviveThePlanet, Log, TEXT("STP_SELECT Building popup closed with Escape."));
+	}
 }
 
 bool ASurviveThePlanetPlayerController::TryHandleActiveBuildToolClick()
@@ -1048,6 +1068,11 @@ void ASurviveThePlanetPlayerController::SetSelectedActor(AActor* NewSelectedActo
 	SetActorSelectedVisual(SelectedActor, false);
 	SelectedActor = NewSelectedActor;
 	SetActorSelectedVisual(SelectedActor, true);
+
+	if (BuildingInfoWidget)
+	{
+		BuildingInfoWidget->SetBuilding(Cast<ABaseBuilding>(SelectedActor));
+	}
 
 	UE_LOG(LogSurviveThePlanet, Warning, TEXT("STP_SELECT Selection changed to: %s Class=%s"),
 		*GetNameSafe(SelectedActor),

@@ -10,8 +10,11 @@
 
 AConstructionDrone::AConstructionDrone()
 {
-	PrimaryActorTick.bCanEverTick = false;
+	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bStartWithTickEnabled = false;
 	bIsSelectable = false;
+	DroneDisplayName = NSLOCTEXT("SurviveThePlanet", "ConstructionDroneName", "Construction Drone");
+	WorkingRates.FindOrAdd(ESTPDroneWorkType::Construction) = 0.1f;
 
 	SceneRoot = CreateDefaultSubobject<USceneComponent>(TEXT("SceneRoot"));
 	SetRootComponent(SceneRoot);
@@ -29,6 +32,12 @@ AConstructionDrone::AConstructionDrone()
 	ConfigureMesh();
 }
 
+void AConstructionDrone::HandleBuildingAssignmentChanged(bool bIsAssigned)
+{
+	Super::HandleBuildingAssignmentChanged(bIsAssigned);
+	ClearIdleDestination();
+}
+
 void AConstructionDrone::OnConstruction(const FTransform& Transform)
 {
 	Super::OnConstruction(Transform);
@@ -38,11 +47,6 @@ void AConstructionDrone::OnConstruction(const FTransform& Transform)
 void AConstructionDrone::BeginPlay()
 {
 	Super::BeginPlay();
-
-	if (!DroneTag.IsNone())
-	{
-		Tags.AddUnique(DroneTag);
-	}
 
 	if (!DroneTypeTag.IsNone())
 	{
@@ -73,7 +77,7 @@ void AConstructionDrone::EndPlay(const EEndPlayReason::Type EndPlayReason)
 
 bool AConstructionDrone::AssignConstructionJob(const FSTPConstructionJob& Job)
 {
-	if (!IsValid(Job.TargetBuilding))
+	if (IsAssignedToBuilding() || !IsValid(Job.TargetBuilding))
 	{
 		return false;
 	}
@@ -90,6 +94,11 @@ bool AConstructionDrone::AssignConstructionJob(const FSTPConstructionJob& Job)
 		*GetNameSafe(OngoingConstructionJob.Job.TargetBuilding));
 
 	return true;
+}
+
+bool AConstructionDrone::IsAvailableForAssignment() const
+{
+	return Super::IsAvailableForAssignment() && !HasOngoingConstructionJob();
 }
 
 void AConstructionDrone::TickOngoingConstructionJob(float DeltaSeconds)
@@ -210,7 +219,8 @@ void AConstructionDrone::TickBuildTarget(float DeltaSeconds)
 		return;
 	}
 
-	const float NewProgress = TargetBuilding->GetConstructionProgress() + (WorkSpeed * DeltaSeconds);
+	const float NewProgress = TargetBuilding->GetConstructionProgress()
+		+ (GetWorkingRate(ESTPDroneWorkType::Construction) * DeltaSeconds);
 	TargetBuilding->SetConstructionProgress(NewProgress);
 
 	if (TargetBuilding->GetConstructionProgress() >= 1.0f)

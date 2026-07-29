@@ -30,6 +30,11 @@ void UConstructionDroneCoordinatorSubsystem::Tick(float DeltaTime)
 			continue;
 		}
 
+		if (Drone->IsAssignedToBuilding())
+		{
+			continue;
+		}
+
 		if (Drone->HasOngoingConstructionJob())
 		{
 			Drone->TickOngoingConstructionJob(DeltaTime);

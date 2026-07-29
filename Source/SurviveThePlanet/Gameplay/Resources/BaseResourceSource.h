@@ -40,6 +40,9 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Resource Source|Grid")
 	FIntPoint GetGridFootprint() const;
 
+	/** Mesh used to calculate the visual center when a mining building replaces this deposit. */
+	UStaticMeshComponent* GetResourceMeshComponent() const { return ResourceMesh; }
+
 	/** Removes up to RequestedAmount and returns the amount actually extracted. */
 	UFUNCTION(BlueprintCallable, Category = "Resource Source")
 	int32 ExtractResource(int32 RequestedAmount);
