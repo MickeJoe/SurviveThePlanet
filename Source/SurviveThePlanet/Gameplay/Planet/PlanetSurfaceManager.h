@@ -95,6 +95,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Planet Surface|Grid")
 	bool FindNearestFreeCellAdjacentToFootprint(FSTPGridCell OriginCell, FIntPoint OccupiedFootprint, FIntPoint SearchFootprint, FSTPGridCell& OutCell, FVector& OutWorldLocation) const;
 
+	/** Finds a four-direction grid route whose complete footprint avoids reserved cells. */
+	UFUNCTION(BlueprintCallable, Category = "Planet Surface|Grid")
+	bool FindGridPath(const FVector& StartWorldLocation, FSTPGridCell GoalCell, FIntPoint Footprint, TArray<FVector>& OutWorldPath) const;
+
 	UFUNCTION(BlueprintPure, Category = "Planet Surface|Grid")
 	float GetTileSpacing() const { return TileSpacing; }
 

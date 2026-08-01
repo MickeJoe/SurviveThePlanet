@@ -18,6 +18,24 @@ ABaseResourceSource::ABaseResourceSource()
 	ResourceMesh->SetGenerateOverlapEvents(false);
 }
 
+TSubclassOf<AMiningMachine> ABaseResourceSource::GetMineBlueprint() const
+{
+	if (MineBlueprint)
+	{
+		return MineBlueprint;
+	}
+
+	// Actors placed before this property was introduced can contain a serialized
+	// null value. The resource Blueprint remains authoritative for mine selection.
+	const ABaseResourceSource* ClassDefaults = GetClass()->GetDefaultObject<ABaseResourceSource>();
+	if (ClassDefaults && ClassDefaults != this)
+	{
+		return ClassDefaults->MineBlueprint;
+	}
+
+	return TSubclassOf<AMiningMachine>();
+}
+
 void ABaseResourceSource::OnConstruction(const FTransform& Transform)
 {
 	Super::OnConstruction(Transform);

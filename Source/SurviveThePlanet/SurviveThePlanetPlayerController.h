@@ -16,6 +16,7 @@ class USpringArmComponent;
 class ASurviveThePlanetCharacter;
 class ASelectableWorldActor;
 class AEnergyModule;
+class AEnergyStorageBuilding;
 class AMiningMachine;
 class ABaseResourceSource;
 class AResourceManager;
@@ -127,6 +128,9 @@ public:
 	void SetEnergyModuleClass(TSubclassOf<AEnergyModule> NewEnergyModuleClass);
 
 	UFUNCTION(BlueprintCallable, Category = "Build Tools")
+	void SetEnergyStorageClass(TSubclassOf<AEnergyStorageBuilding> NewEnergyStorageClass);
+
+	UFUNCTION(BlueprintCallable, Category = "Build Tools")
 	void SetMiningMachineClass(TSubclassOf<AMiningMachine> NewMiningMachineClass);
 
 	UPROPERTY(BlueprintAssignable, Category = "Build Tools")
@@ -160,6 +164,12 @@ private:
 	TObjectPtr<AEnergyModule> EnergyModulePlacementPreview;
 
 	UPROPERTY(Transient)
+	TSubclassOf<AEnergyStorageBuilding> EnergyStorageClass;
+
+	UPROPERTY(Transient)
+	TObjectPtr<AEnergyStorageBuilding> EnergyStoragePlacementPreview;
+
+	UPROPERTY(Transient)
 	TSubclassOf<AMiningMachine> MiningMachineClass;
 
 	UPROPERTY(Transient)
@@ -187,15 +197,20 @@ private:
 	USpringArmComponent* GetControlledCameraBoom() const;
 	bool TryHandleActiveBuildToolClick();
 	bool TryPlaceEnergyModuleAtCursor();
+	bool TryPlaceEnergyStorageAtCursor();
 	bool TryPlaceMiningMachineAtCursor();
 	void UpdateBuildPlacementPreview();
 	void UpdateEnergyModulePlacementPreview();
+	void UpdateEnergyStoragePlacementPreview();
 	void UpdateMiningMachinePlacementPreview();
 	void EnsureEnergyModulePlacementPreview();
-	void EnsureMiningMachinePlacementPreview();
+	void EnsureEnergyStoragePlacementPreview();
+	void EnsureMiningMachinePlacementPreview(const ABaseResourceSource* ResourceSource = nullptr);
 	void DestroyBuildPlacementPreview();
 	void ConfigureEnergyModulePlacementPreview(AEnergyModule* PreviewActor) const;
+	void ConfigureEnergyStoragePlacementPreview(AEnergyStorageBuilding* PreviewActor) const;
 	void ConfigureMiningMachinePlacementPreview(AMiningMachine* PreviewActor) const;
+	TSubclassOf<AMiningMachine> GetMiningMachineClassForSource(const ABaseResourceSource* ResourceSource) const;
 	ABaseResourceSource* GetResourceSourceUnderCursor(FHitResult* OutHit = nullptr) const;
 	AResourceManager* FindResourceManager() const;
 	bool TrySelectActorUnderCursor();

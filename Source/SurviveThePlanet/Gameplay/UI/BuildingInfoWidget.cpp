@@ -12,6 +12,8 @@
 #include "Components/UniformGridSlot.h"
 #include "EngineUtils.h"
 #include "Gameplay/Base/BaseBuilding.h"
+#include "Gameplay/Cables/CableNetworkManager.h"
+#include "Gameplay/Resources/ResourceManager.h"
 #include "Gameplay/Drones/BaseDrone.h"
 
 void UDroneTypeSelectionButton::Configure(UBuildingInfoWidget* InOwnerWidget, TSubclassOf<ABaseDrone> InDroneClass, int32 InSlotIndex)
@@ -69,6 +71,21 @@ void UBuildingInfoWidget::SetBuilding(ABaseBuilding* NewBuilding)
 
 	Building->OnDroneSlotsChanged.AddUniqueDynamic(this, &UBuildingInfoWidget::HandleDroneSlotsChanged);
 	Building->OnDroneAssignmentsChanged.AddUniqueDynamic(this, &UBuildingInfoWidget::HandleDroneAssignmentsChanged);
+	if (UWorld* World = GetWorld())
+	{
+		for (TActorIterator<ACableNetworkManager> It(World); It; ++It)
+		{
+			CableNetworkManager = *It;
+			CableNetworkManager->OnCableNetworkChanged.AddUniqueDynamic(this, &UBuildingInfoWidget::HandleCableNetworkChanged);
+			break;
+		}
+		for (TActorIterator<AResourceManager> It(World); It; ++It)
+		{
+			ResourceManager = *It;
+			ResourceManager->OnResourceAmountChanged.AddUniqueDynamic(this, &UBuildingInfoWidget::HandleResourceAmountChanged);
+			break;
+		}
+	}
 
 	BuildingNameText->SetText(Building->GetBuildingDisplayName());
 	BuildingDescriptionText->SetText(Building->GetBuildingDescription());
@@ -84,6 +101,27 @@ void UBuildingInfoWidget::SetBuilding(ABaseBuilding* NewBuilding)
 	}
 
 	RefreshDroneSlots();
+	RefreshPowerStatus();
+}
+
+void UBuildingInfoWidget::RefreshPowerStatus()
+{
+	if (!PowerStatusText)
+	{
+		return;
+	}
+	const bool bConnected = IsValid(Building) && Building->IsConnectedToPowerGrid();
+	const bool bOperational = bConnected && Building->IsOperational();
+	PowerStatusText->SetText(!bConnected
+		? NSLOCTEXT("SurviveThePlanet", "PowerDisconnected", "POWER GRID: DISCONNECTED")
+		: (bOperational
+			? NSLOCTEXT("SurviveThePlanet", "PowerOperational", "POWER GRID: CONNECTED — POWERED")
+			: NSLOCTEXT("SurviveThePlanet", "PowerUnavailable", "POWER GRID: CONNECTED — NO POWER")));
+	PowerStatusText->SetColorAndOpacity(FSlateColor(!bConnected
+		? FLinearColor(1.0f, 0.28f, 0.18f, 1.0f)
+		: (bOperational
+			? FLinearColor(0.25f, 0.9f, 0.4f, 1.0f)
+			: FLinearColor(1.0f, 0.65f, 0.1f, 1.0f))));
 }
 
 void UBuildingInfoWidget::NativeDestruct()
@@ -379,10 +417,33 @@ void UBuildingInfoWidget::AssignDroneOfClass(TSubclassOf<ABaseDrone> DroneClass,
 
 void UBuildingInfoWidget::UnbindBuilding()
 {
+	if (CableNetworkManager)
+	{
+		CableNetworkManager->OnCableNetworkChanged.RemoveDynamic(this, &UBuildingInfoWidget::HandleCableNetworkChanged);
+		CableNetworkManager = nullptr;
+	}
+	if (ResourceManager)
+	{
+		ResourceManager->OnResourceAmountChanged.RemoveDynamic(this, &UBuildingInfoWidget::HandleResourceAmountChanged);
+		ResourceManager = nullptr;
+	}
 	if (Building)
 	{
 		Building->OnDroneSlotsChanged.RemoveDynamic(this, &UBuildingInfoWidget::HandleDroneSlotsChanged);
 		Building->OnDroneAssignmentsChanged.RemoveDynamic(this, &UBuildingInfoWidget::HandleDroneAssignmentsChanged);
+	}
+}
+
+void UBuildingInfoWidget::HandleCableNetworkChanged()
+{
+	RefreshPowerStatus();
+}
+
+void UBuildingInfoWidget::HandleResourceAmountChanged(EResourceType ResourceType, int32 NewAmount)
+{
+	if (ResourceType == EResourceType::Energy)
+	{
+		RefreshPowerStatus();
 	}
 }
 

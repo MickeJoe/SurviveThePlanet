@@ -3,6 +3,7 @@
 #include "Components/StaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
 #include "Engine/World.h"
+#include "Gameplay/Base/BaseBuilding.h"
 
 APlanetSurfaceManager::APlanetSurfaceManager()
 {
@@ -301,6 +302,94 @@ bool APlanetSurfaceManager::FindNearestFreeCellAdjacentToFootprint(FSTPGridCell 
 
 	return bFound;
 }
+
+bool APlanetSurfaceManager::FindGridPath(const FVector& StartWorldLocation, FSTPGridCell GoalCell, FIntPoint Footprint, TArray<FVector>& OutWorldPath) const
+{
+	OutWorldPath.Reset();
+	Footprint = SanitizeFootprint(Footprint);
+	if (!IsCellInBounds(GoalCell) || !CanOccupyCells(GoalCell, Footprint))
+	{
+		return false;
+	}
+
+	const FIntPoint Start = GetPlacementForWorldLocation(StartWorldLocation, Footprint).OriginCell.ToIntPoint();
+	const FIntPoint Goal = GoalCell.ToIntPoint();
+	if (Start == Goal)
+	{
+		OutWorldPath.Add(GetWorldLocationForOriginCell(GoalCell, Footprint));
+		return true;
+	}
+
+	TSet<FIntPoint> OpenSet;
+	TSet<FIntPoint> ClosedSet;
+	TMap<FIntPoint, FIntPoint> CameFrom;
+	TMap<FIntPoint, int32> GScore;
+	OpenSet.Add(Start);
+	GScore.Add(Start, 0);
+
+	const FIntPoint Directions[] = {
+		FIntPoint(1, 0), FIntPoint(-1, 0), FIntPoint(0, 1), FIntPoint(0, -1)
+	};
+
+	while (!OpenSet.IsEmpty())
+	{
+		FIntPoint Current = *OpenSet.CreateConstIterator();
+		int32 BestScore = MAX_int32;
+		for (const FIntPoint& Candidate : OpenSet)
+		{
+			const int32 CandidateG = GScore.FindRef(Candidate);
+			const int32 CandidateF = CandidateG + FMath::Abs(Candidate.X - Goal.X) + FMath::Abs(Candidate.Y - Goal.Y);
+			if (CandidateF < BestScore)
+			{
+				BestScore = CandidateF;
+				Current = Candidate;
+			}
+		}
+
+		if (Current == Goal)
+		{
+			TArray<FIntPoint> ReversePath;
+			while (Current != Start)
+			{
+				ReversePath.Add(Current);
+				const FIntPoint* Previous = CameFrom.Find(Current);
+				if (!Previous)
+				{
+					return false;
+				}
+				Current = *Previous;
+			}
+
+			for (int32 Index = ReversePath.Num() - 1; Index >= 0; --Index)
+			{
+				OutWorldPath.Add(GetWorldLocationForOriginCell(FSTPGridCell(ReversePath[Index]), Footprint));
+			}
+			return !OutWorldPath.IsEmpty();
+		}
+
+		OpenSet.Remove(Current);
+		ClosedSet.Add(Current);
+		for (const FIntPoint& Direction : Directions)
+		{
+			const FIntPoint Neighbor = Current + Direction;
+			if (ClosedSet.Contains(Neighbor) || !CanOccupyCells(FSTPGridCell(Neighbor), Footprint))
+			{
+				continue;
+			}
+
+			const int32 TentativeG = GScore.FindRef(Current) + 1;
+			const int32* ExistingG = GScore.Find(Neighbor);
+			if (!ExistingG || TentativeG < *ExistingG)
+			{
+				CameFrom.Add(Neighbor, Current);
+				GScore.Add(Neighbor, TentativeG);
+				OpenSet.Add(Neighbor);
+			}
+		}
+	}
+
+	return false;
+}
 void APlanetSurfaceManager::SpawnSurface()
 {
 	SpawnChunks();
@@ -465,6 +554,27 @@ bool APlanetSurfaceManager::FindOccupiedCellsForActor(AActor* Actor, TArray<FSTP
 			const int32 X = Pair.Key % GridWidth;
 			const int32 Y = Pair.Key / GridWidth;
 			OutCells.Add(FSTPGridCell(X, Y));
+		}
+	}
+
+	if (OutCells.IsEmpty())
+	{
+		if (const ABaseBuilding* Building = Cast<ABaseBuilding>(Actor))
+		{
+			const FIntPoint BuildingFootprint = SanitizeFootprint(Building->GetGridFootprint());
+			const FSTPGridPlacement Placement = GetPlacementForWorldLocation(
+				Building->GetActorLocation(), BuildingFootprint);
+			for (int32 Y = 0; Y < BuildingFootprint.Y; ++Y)
+			{
+				for (int32 X = 0; X < BuildingFootprint.X; ++X)
+				{
+					const FSTPGridCell Cell(Placement.OriginCell.X + X, Placement.OriginCell.Y + Y);
+					if (IsCellInBounds(Cell))
+					{
+						OutCells.Add(Cell);
+					}
+				}
+			}
 		}
 	}
 

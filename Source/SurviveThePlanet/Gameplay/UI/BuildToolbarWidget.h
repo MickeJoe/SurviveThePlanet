@@ -64,6 +64,9 @@ protected:
 	TObjectPtr<UButton> EnergyModuleButton;
 
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Build Toolbar|Designed Widgets")
+	TObjectPtr<UButton> EnergyStorageButton;
+
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Build Toolbar|Designed Widgets")
 	TObjectPtr<UButton> MiningBuildingButton;
 
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Build Toolbar|Designed Widgets")
@@ -73,6 +76,9 @@ protected:
 	TObjectPtr<UImage> EnergyModuleIcon;
 
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Build Toolbar|Designed Widgets")
+	TObjectPtr<UImage> EnergyStorageIcon;
+
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Build Toolbar|Designed Widgets")
 	TObjectPtr<UImage> MiningBuildingIcon;
 
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Build Toolbar|Designed Widgets")
@@ -80,6 +86,9 @@ protected:
 
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Build Toolbar|Designed Widgets")
 	TObjectPtr<UBorder> EnergyModuleBorder;
+
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Build Toolbar|Designed Widgets")
+	TObjectPtr<UBorder> EnergyStorageBorder;
 
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Build Toolbar|Designed Widgets")
 	TObjectPtr<UBorder> MiningBorder;
@@ -106,6 +115,9 @@ private:
 
 	UFUNCTION()
 	void HandleEnergyModuleClicked();
+
+	UFUNCTION()
+	void HandleEnergyStorageClicked();
 
 	UFUNCTION()
 	void HandleMiningMachineClicked();

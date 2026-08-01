@@ -37,6 +37,7 @@ protected:
 	virtual void NativePreConstruct() override;
 	virtual void NativeConstruct() override;
 	virtual void NativeDestruct() override;
+	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 
 	/** Configure labels and icon textures on a Widget Blueprint derived from this class. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Resource Display")
@@ -60,12 +61,39 @@ protected:
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidget), Category = "Resource Display")
 	TObjectPtr<UTextBlock> ControlChipAmountText;
 
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidget), Category = "Resource Display")
+	TObjectPtr<UImage> CopperIcon;
+
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidget), Category = "Resource Display")
+	TObjectPtr<UTextBlock> CopperAmountText;
+
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidget), Category = "Resource Display")
+	TObjectPtr<UImage> StoneIcon;
+
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidget), Category = "Resource Display")
+	TObjectPtr<UTextBlock> StoneAmountText;
+
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Resource Display")
+	TObjectPtr<UTextBlock> EnergyRateText;
+
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Resource Display")
+	TObjectPtr<UTextBlock> IronRateText;
+
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Resource Display")
+	TObjectPtr<UTextBlock> CopperRateText;
+
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Resource Display")
+	TObjectPtr<UTextBlock> StoneRateText;
+
 private:
 	UPROPERTY(Transient)
 	TObjectPtr<AResourceManager> ResourceManager;
 
+	float RateRefreshAccumulator = 0.0f;
+
 	void ResolveResourceManager();
 	void RefreshAllResources();
+	void RefreshResourceRates();
 	void ApplyConfiguredIcons();
 	UImage* GetResourceImage(EResourceType ResourceType) const;
 	UTextBlock* GetResourceAmountText(EResourceType ResourceType) const;

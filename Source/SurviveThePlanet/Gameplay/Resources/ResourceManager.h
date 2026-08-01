@@ -9,7 +9,9 @@ enum class EResourceType : uint8
 {
 	Energy UMETA(DisplayName = "Energy"),
 	Iron UMETA(DisplayName = "Iron"),
-	ControlChip UMETA(DisplayName = "Control Chip")
+	ControlChip UMETA(DisplayName = "Control Chip"),
+	Copper UMETA(DisplayName = "Copper"),
+	Stone UMETA(DisplayName = "Stone")
 };
 
 /** A resource and the amount required for a purchase or construction. */
@@ -66,6 +68,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Resources")
 	bool TrySpendCosts(const TArray<FResourceCost>& Costs);
 
+	UFUNCTION(BlueprintPure, Category = "Resources|Energy")
+	int32 GetEnergyStorageCapacity() const { return EnergyStorageCapacity; }
+
+	UFUNCTION(BlueprintCallable, Category = "Resources|Energy")
+	void SetEnergyStorageCapacity(int32 NewCapacity);
+
 	UPROPERTY(BlueprintAssignable, Category = "Resources")
 	FResourceAmountChangedSignature OnResourceAmountChanged;
 
@@ -79,4 +87,7 @@ protected:
 	/** Current resource amounts during play. */
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Resources")
 	TMap<EResourceType, int32> ResourceAmounts;
+
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Resources|Energy")
+	int32 EnergyStorageCapacity = 1000;
 };

@@ -4,6 +4,7 @@ UDroneDataAsset::UDroneDataAsset()
 {
 	WorkingRates.Add(ESTPDroneWorkType::Construction, 0.0f);
 	WorkingRates.Add(ESTPDroneWorkType::Mining, 0.0f);
+	WorkingRates.Add(ESTPDroneWorkType::EnergyProduction, 0.0f);
 }
 
 float UDroneDataAsset::GetWorkingRate(ESTPDroneWorkType WorkType) const

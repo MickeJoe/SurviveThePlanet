@@ -7,6 +7,8 @@ AResourceManager::AResourceManager()
 	InitialResourceAmounts.Add(EResourceType::Energy, 0);
 	InitialResourceAmounts.Add(EResourceType::Iron, 0);
 	InitialResourceAmounts.Add(EResourceType::ControlChip, 0);
+	InitialResourceAmounts.Add(EResourceType::Copper, 0);
+	InitialResourceAmounts.Add(EResourceType::Stone, 0);
 }
 
 void AResourceManager::BeginPlay()
@@ -28,7 +30,8 @@ int32 AResourceManager::GetResourceAmount(EResourceType ResourceType) const
 
 void AResourceManager::SetResourceAmount(EResourceType ResourceType, int32 NewAmount)
 {
-	const int32 ClampedAmount = FMath::Max(0, NewAmount);
+	const int32 Maximum = ResourceType == EResourceType::Energy ? EnergyStorageCapacity : MAX_int32;
+	const int32 ClampedAmount = FMath::Clamp(NewAmount, 0, Maximum);
 	int32& CurrentAmount = ResourceAmounts.FindOrAdd(ResourceType);
 	if (CurrentAmount == ClampedAmount)
 	{
@@ -37,6 +40,12 @@ void AResourceManager::SetResourceAmount(EResourceType ResourceType, int32 NewAm
 
 	CurrentAmount = ClampedAmount;
 	OnResourceAmountChanged.Broadcast(ResourceType, CurrentAmount);
+}
+
+void AResourceManager::SetEnergyStorageCapacity(int32 NewCapacity)
+{
+	EnergyStorageCapacity = FMath::Max(0, NewCapacity);
+	SetResourceAmount(EResourceType::Energy, GetResourceAmount(EResourceType::Energy));
 }
 
 void AResourceManager::AddResource(EResourceType ResourceType, int32 Amount)

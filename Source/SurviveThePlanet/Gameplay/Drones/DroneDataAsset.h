@@ -10,7 +10,8 @@ UENUM(BlueprintType)
 enum class ESTPDroneWorkType : uint8
 {
 	Construction UMETA(DisplayName = "Construction"),
-	Mining UMETA(DisplayName = "Mining")
+	Mining UMETA(DisplayName = "Mining"),
+	EnergyProduction UMETA(DisplayName = "Energy Production")
 };
 
 /** Shared identity, UI and balance data for one drone type. */

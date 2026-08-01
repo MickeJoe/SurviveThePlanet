@@ -22,6 +22,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Gameplay/SelectableWorldActor.h"
 #include "Gameplay/Buildings/EnergyModule.h"
+#include "Gameplay/Buildings/EnergyStorageBuilding.h"
 #include "Gameplay/Buildings/MiningMachine.h"
 #include "Gameplay/Cables/CableNetworkManager.h"
 #include "Gameplay/Planet/PlanetSurfaceManager.h"
@@ -53,6 +54,11 @@ ASurviveThePlanetPlayerController::ASurviveThePlanetPlayerController()
 	SetDestinationTouchAction = LoadObject<UInputAction>(nullptr, TEXT("/Game/TopDown/Input/Actions/IA_SetDestination_Touch"));
 	FXCursor = LoadObject<UNiagaraSystem>(nullptr, TEXT("/Game/TopDown/Cursor/FX_Cursor_Success"));
 	EnergyModuleClass = AEnergyModule::StaticClass();
+	EnergyStorageClass = LoadClass<AEnergyStorageBuilding>(nullptr, TEXT("/Game/BluePrints/EneryBatteryStorage/BP_EnergyStorageBuilding.BP_EnergyStorageBuilding_C"));
+	if (!EnergyStorageClass)
+	{
+		EnergyStorageClass = AEnergyStorageBuilding::StaticClass();
+	}
 	MiningMachineClass = AMiningMachine::StaticClass();
 	BuildingInfoWidgetClass = LoadClass<UBuildingInfoWidget>(nullptr, TEXT("/Game/UI/WBP_BuildingPopup.WBP_BuildingPopup_C"));
 }
@@ -98,6 +104,16 @@ void ASurviveThePlanetPlayerController::SetEnergyModuleClass(TSubclassOf<AEnergy
 
 	DestroyBuildPlacementPreview();
 	UE_LOG(LogSurviveThePlanet, Warning, TEXT("STP_BUILD EnergyModuleClass set to %s"), *GetNameSafe(EnergyModuleClass.Get()));
+}
+
+void ASurviveThePlanetPlayerController::SetEnergyStorageClass(TSubclassOf<AEnergyStorageBuilding> NewEnergyStorageClass)
+{
+	EnergyStorageClass = NewEnergyStorageClass;
+	if (!EnergyStorageClass)
+	{
+		EnergyStorageClass = AEnergyStorageBuilding::StaticClass();
+	}
+	DestroyBuildPlacementPreview();
 }
 
 void ASurviveThePlanetPlayerController::BeginPlay()
@@ -326,6 +342,8 @@ bool ASurviveThePlanetPlayerController::TryHandleActiveBuildToolClick()
 	{
 	case ESTPBuildTool::EnergyModule:
 		return TryPlaceEnergyModuleAtCursor();
+	case ESTPBuildTool::EnergyStorage:
+		return TryPlaceEnergyStorageAtCursor();
 	case ESTPBuildTool::MiningMachine:
 		return TryPlaceMiningMachineAtCursor();
 	case ESTPBuildTool::EnergyCable:
@@ -334,6 +352,70 @@ bool ASurviveThePlanetPlayerController::TryHandleActiveBuildToolClick()
 	default:
 		return false;
 	}
+}
+
+bool ASurviveThePlanetPlayerController::TryPlaceEnergyStorageAtCursor()
+{
+	FVector TargetLocation;
+	if (!TryGetCursorWorldLocation(TargetLocation))
+	{
+		return true;
+	}
+
+	UWorld* World = GetWorld();
+	APlanetSurfaceManager* SurfaceManager = FindPlanetSurfaceManager();
+	if (!World || !SurfaceManager)
+	{
+		UE_LOG(LogSurviveThePlanet, Warning, TEXT("STP_BUILD Energy storage placement failed: world or PlanetSurfaceManager unavailable."));
+		return true;
+	}
+
+	TSubclassOf<AEnergyStorageBuilding> ClassToSpawn = EnergyStorageClass;
+	if (!ClassToSpawn)
+	{
+		ClassToSpawn = AEnergyStorageBuilding::StaticClass();
+	}
+	const AEnergyStorageBuilding* DefaultStorage = ClassToSpawn->GetDefaultObject<AEnergyStorageBuilding>();
+	const FIntPoint Footprint = DefaultStorage ? DefaultStorage->GetGridFootprint() : FIntPoint(2, 2);
+	const TArray<FResourceCost> Costs = DefaultStorage ? DefaultStorage->GetConstructionCosts() : TArray<FResourceCost>();
+	AResourceManager* ResourceManager = FindResourceManager();
+	if ((Costs.Num() > 0 && !ResourceManager) || (ResourceManager && !ResourceManager->CanAffordCosts(Costs)))
+	{
+		UE_LOG(LogSurviveThePlanet, Warning, TEXT("STP_BUILD Energy storage placement refused: insufficient resources or no ResourceManager."));
+		return true;
+	}
+
+	const FSTPGridPlacement Placement = SurfaceManager->GetPlacementForWorldLocation(TargetLocation, Footprint);
+	if (!Placement.bValid)
+	{
+		return true;
+	}
+
+	FActorSpawnParameters Params;
+	Params.Owner = this;
+	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+	AEnergyStorageBuilding* Storage = World->SpawnActor<AEnergyStorageBuilding>(ClassToSpawn, Placement.WorldLocation, Placement.WorldRotation, Params);
+	if (!Storage)
+	{
+		return true;
+	}
+
+	Storage->SetPlacementPreview(false);
+	if (!SurfaceManager->ReserveCells(Storage, Placement.OriginCell, Storage->GetGridFootprint()) ||
+		(ResourceManager && !ResourceManager->TrySpendCosts(Costs)))
+	{
+		Storage->Destroy();
+		return true;
+	}
+
+	Storage->SetConstructionProgress(0.0f);
+	Storage->ShowConstructionProgress();
+	if (UConstructionJobQueueSubsystem* Queue = World->GetSubsystem<UConstructionJobQueueSubsystem>())
+	{
+		Queue->EnqueueConstructionJob(Storage);
+	}
+	SetSelectedActor(Storage);
+	return true;
 }
 
 bool ASurviveThePlanetPlayerController::TryPlaceMiningMachineAtCursor()
@@ -346,7 +428,7 @@ bool ASurviveThePlanetPlayerController::TryPlaceMiningMachineAtCursor()
 		return true;
 	}
 
-	TSubclassOf<AMiningMachine> ClassToSpawn = MiningMachineClass;
+	TSubclassOf<AMiningMachine> ClassToSpawn = GetMiningMachineClassForSource(ResourceSource);
 	if (!ClassToSpawn)
 	{
 		ClassToSpawn = AMiningMachine::StaticClass();
@@ -545,6 +627,9 @@ void ASurviveThePlanetPlayerController::UpdateBuildPlacementPreview()
 	case ESTPBuildTool::EnergyModule:
 		UpdateEnergyModulePlacementPreview();
 		break;
+	case ESTPBuildTool::EnergyStorage:
+		UpdateEnergyStoragePlacementPreview();
+		break;
 	case ESTPBuildTool::MiningMachine:
 		UpdateMiningMachinePlacementPreview();
 		break;
@@ -552,6 +637,34 @@ void ASurviveThePlanetPlayerController::UpdateBuildPlacementPreview()
 		DestroyBuildPlacementPreview();
 		break;
 	}
+}
+
+void ASurviveThePlanetPlayerController::UpdateEnergyStoragePlacementPreview()
+{
+	EnsureEnergyStoragePlacementPreview();
+	if (!IsValid(EnergyStoragePlacementPreview))
+	{
+		return;
+	}
+
+	FHitResult Hit;
+	if (!GetHitResultUnderCursor(ECC_Visibility, true, Hit))
+	{
+		EnergyStoragePlacementPreview->SetActorHiddenInGame(true);
+		return;
+	}
+
+	APlanetSurfaceManager* SurfaceManager = FindPlanetSurfaceManager();
+	const FSTPGridPlacement Placement = SurfaceManager
+		? SurfaceManager->GetPlacementForWorldLocation(Hit.Location, EnergyStoragePlacementPreview->GetGridFootprint())
+		: FSTPGridPlacement();
+	EnergyStoragePlacementPreview->SetActorLocation(SurfaceManager ? Placement.WorldLocation : Hit.Location, false);
+	if (SurfaceManager)
+	{
+		EnergyStoragePlacementPreview->SetActorRotation(Placement.WorldRotation);
+	}
+	EnergyStoragePlacementPreview->SetPlacementPreviewValid(SurfaceManager && Placement.bValid);
+	EnergyStoragePlacementPreview->SetActorHiddenInGame(false);
 }
 
 void ASurviveThePlanetPlayerController::UpdateMiningMachinePlacementPreview()
@@ -565,15 +678,14 @@ void ASurviveThePlanetPlayerController::UpdateMiningMachinePlacementPreview()
 		}
 	};
 
-	EnsureMiningMachinePlacementPreview();
+	FHitResult Hit;
+	ABaseResourceSource* ResourceSource = GetResourceSourceUnderCursor(&Hit);
+	EnsureMiningMachinePlacementPreview(ResourceSource);
 	if (!IsValid(MiningMachinePlacementPreview))
 	{
 		LogPreviewState(TEXT("INVALID reason=\"Preview actor could not be created.\""));
 		return;
 	}
-
-	FHitResult Hit;
-	ABaseResourceSource* ResourceSource = GetResourceSourceUnderCursor(&Hit);
 	if (!Hit.bBlockingHit)
 	{
 		MiningMachinePlacementPreview->SetPreviewResourceSource(nullptr);
@@ -704,23 +816,33 @@ void ASurviveThePlanetPlayerController::EnsureEnergyModulePlacementPreview()
 	}
 }
 
-void ASurviveThePlanetPlayerController::EnsureMiningMachinePlacementPreview()
+void ASurviveThePlanetPlayerController::EnsureMiningMachinePlacementPreview(const ABaseResourceSource* ResourceSource)
 {
-	if (IsValid(MiningMachinePlacementPreview))
+	TSubclassOf<AMiningMachine> ClassToSpawn = ResourceSource
+		? GetMiningMachineClassForSource(ResourceSource)
+		: MiningMachineClass;
+	if (!ClassToSpawn)
+	{
+		ClassToSpawn = AMiningMachine::StaticClass();
+	}
+
+	if (IsValid(MiningMachinePlacementPreview)
+		&& MiningMachinePlacementPreview->GetClass() == ClassToSpawn.Get())
 	{
 		return;
+	}
+
+	if (IsValid(MiningMachinePlacementPreview))
+	{
+		MiningMachinePlacementPreview->SetPreviewResourceSource(nullptr);
+		MiningMachinePlacementPreview->Destroy();
+		MiningMachinePlacementPreview = nullptr;
 	}
 
 	UWorld* World = GetWorld();
 	if (!World)
 	{
 		return;
-	}
-
-	TSubclassOf<AMiningMachine> ClassToSpawn = MiningMachineClass;
-	if (!ClassToSpawn)
-	{
-		ClassToSpawn = AMiningMachine::StaticClass();
 	}
 
 	FActorSpawnParameters SpawnParameters;
@@ -739,6 +861,44 @@ void ASurviveThePlanetPlayerController::EnsureMiningMachinePlacementPreview()
 	}
 }
 
+TSubclassOf<AMiningMachine> ASurviveThePlanetPlayerController::GetMiningMachineClassForSource(const ABaseResourceSource* ResourceSource) const
+{
+	if (IsValid(ResourceSource) && ResourceSource->GetMineBlueprint())
+	{
+		return ResourceSource->GetMineBlueprint();
+	}
+
+	if (MiningMachineClass)
+	{
+		return MiningMachineClass;
+	}
+
+	return TSubclassOf<AMiningMachine>(AMiningMachine::StaticClass());
+}
+
+void ASurviveThePlanetPlayerController::EnsureEnergyStoragePlacementPreview()
+{
+	if (IsValid(EnergyStoragePlacementPreview) || !GetWorld())
+	{
+		return;
+	}
+
+	TSubclassOf<AEnergyStorageBuilding> ClassToSpawn = EnergyStorageClass;
+	if (!ClassToSpawn)
+	{
+		ClassToSpawn = AEnergyStorageBuilding::StaticClass();
+	}
+	FActorSpawnParameters Params;
+	Params.Owner = this;
+	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	EnergyStoragePlacementPreview = GetWorld()->SpawnActor<AEnergyStorageBuilding>(ClassToSpawn, FVector::ZeroVector, FRotator::ZeroRotator, Params);
+	if (EnergyStoragePlacementPreview)
+	{
+		ConfigureEnergyStoragePlacementPreview(EnergyStoragePlacementPreview);
+		EnergyStoragePlacementPreview->SetActorHiddenInGame(true);
+	}
+}
+
 void ASurviveThePlanetPlayerController::DestroyBuildPlacementPreview()
 {
 	if (IsValid(EnergyModulePlacementPreview))
@@ -747,6 +907,12 @@ void ASurviveThePlanetPlayerController::DestroyBuildPlacementPreview()
 	}
 
 	EnergyModulePlacementPreview = nullptr;
+
+	if (IsValid(EnergyStoragePlacementPreview))
+	{
+		EnergyStoragePlacementPreview->Destroy();
+	}
+	EnergyStoragePlacementPreview = nullptr;
 
 	if (IsValid(MiningMachinePlacementPreview))
 	{
@@ -808,6 +974,15 @@ void ASurviveThePlanetPlayerController::ConfigureEnergyModulePlacementPreview(AE
 
 	PreviewActor->SetPlacementPreview(true);
 	PreviewActor->SetActorTickEnabled(false);
+}
+
+void ASurviveThePlanetPlayerController::ConfigureEnergyStoragePlacementPreview(AEnergyStorageBuilding* PreviewActor) const
+{
+	if (PreviewActor)
+	{
+		PreviewActor->SetPlacementPreview(true);
+		PreviewActor->SetActorTickEnabled(false);
+	}
 }
 
 void ASurviveThePlanetPlayerController::UpdateCachedDestination()

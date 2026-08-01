@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
 #include "Components/Button.h"
+#include "Gameplay/Resources/ResourceManager.h"
 #include "BuildingInfoWidget.generated.h"
 
 class ABaseBuilding;
@@ -10,6 +11,8 @@ class UBorder;
 class UHorizontalBox;
 class UImage;
 class UTextBlock;
+class ACableNetworkManager;
+class AResourceManager;
 class UTexture2D;
 class UBuildingInfoWidget;
 class UUserWidget;
@@ -74,6 +77,9 @@ protected:
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidget), Category = "Building Info")
 	TObjectPtr<UTextBlock> BuildingDescriptionText;
 
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Building Info")
+	TObjectPtr<UTextBlock> PowerStatusText;
+
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidget), Category = "Building Info")
 	TObjectPtr<UBorder> DroneAssignmentSection;
 
@@ -96,7 +102,14 @@ private:
 	UPROPERTY(Transient)
 	TSubclassOf<UUserWidget> DroneSelectionCardClass;
 
+	UPROPERTY(Transient)
+	TObjectPtr<ACableNetworkManager> CableNetworkManager;
+
+	UPROPERTY(Transient)
+	TObjectPtr<AResourceManager> ResourceManager;
+
 	void RefreshDroneSlots();
+	void RefreshPowerStatus();
 	void OpenDroneSelection(int32 SlotIndex);
 
 	UFUNCTION()
@@ -108,4 +121,10 @@ private:
 
 	UFUNCTION()
 	void HandleDroneAssignmentsChanged();
+
+	UFUNCTION()
+	void HandleCableNetworkChanged();
+
+	UFUNCTION()
+	void HandleResourceAmountChanged(EResourceType ResourceType, int32 NewAmount);
 };

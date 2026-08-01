@@ -18,6 +18,7 @@ class SURVIVETHEPLANET_API AMiningMachine : public ABaseBuilding
 
 public:
 	AMiningMachine();
+	virtual void Tick(float DeltaSeconds) override;
 
 	UFUNCTION(BlueprintCallable, Category = "Mining Machine")
 	bool AttachToResourceSource(ABaseResourceSource* NewResourceSource);
@@ -27,6 +28,15 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Mining Machine")
 	ABaseResourceSource* GetResourceSource() const { return ResourceSource; }
+
+	UFUNCTION(BlueprintPure, Category = "Mining Machine|Output")
+	float GetOutputPerMinuteAt100Percent(EResourceType ResourceType) const;
+
+	UFUNCTION(BlueprintPure, Category = "Mining Machine|Output")
+	float GetCurrentOutputPerMinute() const;
+
+	/** Mining machines only draw power while they have a valid source and productive drones. */
+	virtual float GetEnergyConsumptionPerMinute() const override;
 
 	/** Source transform plus an optional art-alignment offset. */
 	UFUNCTION(BlueprintPure, Category = "Mining Machine|Placement")
@@ -48,6 +58,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Mining Machine")
 	TArray<EResourceType> SupportedResourceTypes;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Mining Machine|Output", meta = (TitleProperty = "Resource"))
+	TArray<FSTPResourceOutputRate> OutputPerDroneAt100Percent;
+
 	/** Art-only alignment relative to the resource actor transform. */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Mining Machine|Placement")
 	FTransform SourceTransformOffset = FTransform::Identity;
@@ -61,6 +74,11 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<ABaseResourceSource> PreviewResourceSource;
+	float PendingResourceOutput = 0.0f;
 
 	void RefreshPlacementPreviewVisual();
+	const UMiningBuildingDataAsset* GetMiningBuildingData() const;
+	const TArray<EResourceType>& GetSupportedResourceTypes() const;
+	const TArray<FSTPResourceOutputRate>& GetOutputRates() const;
+	FTransform GetSourceTransformOffset() const;
 };

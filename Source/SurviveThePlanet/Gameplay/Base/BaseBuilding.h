@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Gameplay/Base/BuildingDataAsset.h"
 #include "Gameplay/Drones/BaseDrone.h"
 #include "Gameplay/Resources/ResourceManager.h"
 #include "Gameplay/SelectableWorldActor.h"
@@ -15,15 +16,6 @@ class ABaseDrone;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDroneSlotsChangedSignature, int32, UnlockedSlots);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FDroneAssignmentsChangedSignature);
-
-UENUM(BlueprintType)
-enum class ESTPBuildingType : uint8
-{
-	BaseModule UMETA(DisplayName = "Base Module"),
-	EnergyModule UMETA(DisplayName = "Energy Module"),
-	MiningMachine UMETA(DisplayName = "Mining Machine"),
-	Other UMETA(DisplayName = "Other")
-};
 
 UCLASS(Blueprintable)
 class SURVIVETHEPLANET_API ABaseBuilding : public ASelectableWorldActor
@@ -46,22 +38,41 @@ public:
 	float GetConstructionProgress() const { return ConstructionProgress; }
 
 	UFUNCTION(BlueprintPure, Category = "Grid")
-	FIntPoint GetGridFootprint() const { return GridFootprint; }
+	FIntPoint GetGridFootprint() const;
+
+	/** Computed from connector cells and their route to a completed energy module. */
+	UFUNCTION(BlueprintPure, Category = "Base Building|Power")
+	bool IsConnectedToPowerGrid() const;
+
+	UFUNCTION(BlueprintPure, Category = "Base Building|Power")
+	bool IsOperational() const;
+
+	UFUNCTION(BlueprintPure, Category = "Base Building|Power")
+	virtual float GetEnergyConsumptionPerMinute() const;
+
+	UFUNCTION(BlueprintPure, Category = "Base Building|Power")
+	float GetEnergyProductionPerMinute() const;
+
+	UFUNCTION(BlueprintPure, Category = "Base Building|Power")
+	float GetEnergyStorageCapacity() const;
 
 	UFUNCTION(BlueprintPure, Category = "Base Building")
-	ESTPBuildingType GetBuildingType() const { return BuildingType; }
+	ESTPBuildingType GetBuildingType() const;
+
+	UFUNCTION(BlueprintPure, Category = "Base Building|Data")
+	UBuildingDataAsset* GetBuildingData() const { return BuildingData; }
 
 	UFUNCTION(BlueprintPure, Category = "Base Building|UI")
-	FText GetBuildingDisplayName() const { return BuildingDisplayName; }
+	FText GetBuildingDisplayName() const;
 
 	UFUNCTION(BlueprintPure, Category = "Base Building|UI")
-	FText GetBuildingDescription() const { return BuildingDescription; }
+	FText GetBuildingDescription() const;
 
 	UFUNCTION(BlueprintPure, Category = "Base Building|UI")
-	UTexture2D* GetBuildingThumbnail() const { return BuildingThumbnail; }
+	UTexture2D* GetBuildingThumbnail() const;
 
 	UFUNCTION(BlueprintPure, Category = "Base Building|Drone Slots")
-	int32 GetMaxDroneSlots() const { return MaxDroneSlots; }
+	int32 GetMaxDroneSlots() const;
 
 	UFUNCTION(BlueprintPure, Category = "Base Building|Drone Slots")
 	int32 GetUnlockedDroneSlots() const { return UnlockedDroneSlots; }
@@ -78,8 +89,12 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Base Building|Drone Slots")
 	int32 GetAssignedDroneCount() const;
 
+	/** Sum of the assigned drones' rates for this building's configured work type. */
 	UFUNCTION(BlueprintPure, Category = "Base Building|Drone Slots")
-	ESTPDroneWorkType GetDroneWorkType() const { return DroneWorkType; }
+	float GetCombinedDroneEfficiency() const;
+
+	UFUNCTION(BlueprintPure, Category = "Base Building|Drone Slots")
+	ESTPDroneWorkType GetDroneWorkType() const;
 
 	UFUNCTION(BlueprintCallable, Category = "Base Building|Drone Slots")
 	bool TryAssignDrone(ABaseDrone* Drone, int32 PreferredSlot = -1);
@@ -97,7 +112,7 @@ public:
 	FDroneAssignmentsChangedSignature OnDroneAssignmentsChanged;
 
 	UFUNCTION(BlueprintPure, Category = "Construction")
-	const TArray<FResourceCost>& GetConstructionCosts() const { return ConstructionCosts; }
+	const TArray<FResourceCost>& GetConstructionCosts() const;
 
 protected:
 	virtual void OnConstruction(const FTransform& Transform) override;
@@ -115,6 +130,10 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	TObjectPtr<UWidgetComponent> ConstructionProgressBar;
+
+	/** Canonical identity, visuals and balance configuration for this building type. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Base Building|Data")
+	TObjectPtr<UBuildingDataAsset> BuildingData;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Base Building")
 	FName BuildingTag = TEXT("BaseModule");
@@ -157,8 +176,14 @@ protected:
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Base Building")
 	float CurrentHealth = 1000.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Base Building", meta = (ClampMin = "0.0", UIMin = "0.0"))
-	float EnergyCapacity = 100.0f;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Base Building|Power", meta = (ClampMin = "0.0", UIMin = "0.0"))
+	float EnergyConsumptionPerMinute = 0.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Base Building|Power", meta = (ClampMin = "0.0", UIMin = "0.0"))
+	float EnergyProductionPerMinute = 0.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Base Building|Power", meta = (ClampMin = "0.0", UIMin = "0.0"))
+	float EnergyStorageCapacity = 1000.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Construction", meta = (ClampMin = "0.0", ClampMax = "1.0", UIMin = "0.0", UIMax = "1.0"))
 	float ConstructionProgress = 1.0f;
@@ -167,10 +192,10 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Construction", meta = (TitleProperty = "Resource"))
 	TArray<FResourceCost> ConstructionCosts;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Grid", meta = (ClampMin = "1", UIMin = "1"))
-	FIntPoint GridFootprint = FIntPoint(2, 2);
-
 private:
 	void ConfigureMesh();
 	void RefreshConstructionProgressBar();
+	int32 GetInitiallyUnlockedDroneSlots() const;
+	float GetMaxHealth() const;
+	FName GetBuildingTag() const;
 };

@@ -3,6 +3,8 @@
 #include "Components/SceneComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/World.h"
+#include "Engine/StaticMesh.h"
+#include "EngineUtils.h"
 #include "Gameplay/Base/BaseBuilding.h"
 #include "Gameplay/Drones/ConstructionDroneCoordinatorSubsystem.h"
 #include "SurviveThePlanet.h"
@@ -14,6 +16,7 @@ ABaseDrone::ABaseDrone()
 	PrimaryActorTick.bStartWithTickEnabled = false;
 	WorkingRates.Add(ESTPDroneWorkType::Construction, 0.1f);
 	WorkingRates.Add(ESTPDroneWorkType::Mining, 0.0f);
+	WorkingRates.Add(ESTPDroneWorkType::EnergyProduction, 0.0f);
 
 	SceneRoot = CreateDefaultSubobject<USceneComponent>(TEXT("SceneRoot"));
 	SetRootComponent(SceneRoot);
@@ -91,6 +94,30 @@ void ABaseDrone::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	ClearOngoingConstructionJob();
 	UnassignFromBuilding();
 	Super::EndPlay(EndPlayReason);
+}
+
+FIntPoint ABaseDrone::GetGridFootprint() const
+{
+	if (!DroneMesh || !DroneMesh->GetStaticMesh())
+	{
+		return FIntPoint(1, 1);
+	}
+
+	const FVector Size = DroneMesh->GetStaticMesh()->GetBoundingBox()
+		.TransformBy(DroneMesh->GetRelativeTransform()).GetSize().GetAbs();
+	float CellSize = 100.0f;
+	if (UWorld* World = GetWorld())
+	{
+		for (TActorIterator<APlanetSurfaceManager> It(World); It; ++It)
+		{
+			CellSize = FMath::Max(1.0f, It->GetTileSpacing());
+			break;
+		}
+	}
+
+	return FIntPoint(
+		FMath::Max(1, FMath::CeilToInt((Size.X - KINDA_SMALL_NUMBER) / CellSize)),
+		FMath::Max(1, FMath::CeilToInt((Size.Y - KINDA_SMALL_NUMBER) / CellSize)));
 }
 
 FText ABaseDrone::GetDroneDisplayName() const
@@ -183,6 +210,16 @@ void ABaseDrone::SetIdleDestination(FSTPGridCell Cell, const FVector& WorldLocat
 {
 	IdleCell = Cell;
 	IdleDestination = WorldLocation;
+	IdlePath.Reset();
+	IdlePathIndex = 0;
+	if (UWorld* World = GetWorld())
+	{
+		for (TActorIterator<APlanetSurfaceManager> It(World); It; ++It)
+		{
+			It->FindGridPath(GetActorLocation(), Cell, GetGridFootprint(), IdlePath);
+			break;
+		}
+	}
 	bHasIdleDestination = true;
 }
 
@@ -190,6 +227,8 @@ void ABaseDrone::ClearIdleDestination()
 {
 	IdleCell = FSTPGridCell();
 	IdleDestination = FVector::ZeroVector;
+	IdlePath.Reset();
+	IdlePathIndex = 0;
 	bHasIdleDestination = false;
 }
 
@@ -201,6 +240,21 @@ void ABaseDrone::TickIdleMovement(float DeltaSeconds)
 	}
 
 	const FVector CurrentLocation = GetActorLocation();
+	if (IdlePath.IsValidIndex(IdlePathIndex))
+	{
+		const FVector Waypoint = IdlePath[IdlePathIndex];
+		if (FVector::DistSquared2D(CurrentLocation, Waypoint) <= FMath::Square(10.0f))
+		{
+			++IdlePathIndex;
+			if (!IdlePath.IsValidIndex(IdlePathIndex))
+			{
+				return;
+			}
+		}
+		SetActorLocation(FMath::VInterpConstantTo(CurrentLocation, IdlePath[IdlePathIndex], DeltaSeconds, MoveSpeed));
+		return;
+	}
+
 	if (FVector::Dist(CurrentLocation, IdleDestination) <= WorkRange)
 	{
 		return;
@@ -297,7 +351,21 @@ void ABaseDrone::TickTravelToBuilding(float DeltaSeconds)
 	}
 
 	const FVector CurrentLocation = GetActorLocation();
-	const FVector TargetLocation = TargetBuilding->GetActorLocation();
+	FVector TargetLocation = TargetBuilding->GetActorLocation();
+	if (UWorld* World = GetWorld())
+	{
+		for (TActorIterator<APlanetSurfaceManager> It(World); It; ++It)
+		{
+			FSTPGridCell InteractionCell;
+			FVector InteractionLocation;
+			if (It->FindNearestFreeCellAdjacentToActor(
+				TargetBuilding, GetGridFootprint(), InteractionCell, InteractionLocation))
+			{
+				TargetLocation = InteractionLocation;
+			}
+			break;
+		}
+	}
 	if (FVector::Dist(CurrentLocation, TargetLocation) <= WorkRange)
 	{
 		OngoingConstructionJob.Phase = ESTPConstructionJobPhase::ConstructBuilding;

@@ -45,7 +45,7 @@ public:
 	virtual void OnConstruction(const FTransform& Transform) override;
 
 	UFUNCTION(BlueprintPure, Category = "Grid")
-	FIntPoint GetGridFootprint() const { return GridFootprint; }
+	FIntPoint GetGridFootprint() const;
 
 	UFUNCTION(BlueprintPure, Category = "Drone|UI")
 	FText GetDroneDisplayName() const;
@@ -166,9 +166,6 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Drone|Visual", meta = (ClampMin = "0.01", UIMin = "0.01"))
 	float DroneVisualScale = 0.75f;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Grid", meta = (ClampMin = "1", UIMin = "1"))
-	FIntPoint GridFootprint = FIntPoint(1, 1);
-
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Drone|Construction")
 	bool bHasOngoingConstructionJob = false;
 
@@ -183,6 +180,11 @@ protected:
 
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Drone|Idle")
 	FVector IdleDestination = FVector::ZeroVector;
+
+	UPROPERTY(Transient)
+	TArray<FVector> IdlePath;
+
+	int32 IdlePathIndex = 0;
 
 private:
 	friend class ABaseBuilding;

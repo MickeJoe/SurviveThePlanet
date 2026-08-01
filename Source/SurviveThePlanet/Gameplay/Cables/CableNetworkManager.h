@@ -8,6 +8,9 @@
 class USceneComponent;
 class UStaticMesh;
 class UStaticMeshComponent;
+class ABaseBuilding;
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FSTPCableNetworkChangedSignature);
 
 USTRUCT()
 struct FSTPCableCell
@@ -17,6 +20,7 @@ struct FSTPCableCell
 	UPROPERTY(Transient)
 	TObjectPtr<UStaticMeshComponent> MeshComponent;
 
+	UPROPERTY(SaveGame)
 	uint8 Connections = 0;
 };
 
@@ -27,6 +31,8 @@ class SURVIVETHEPLANET_API ACableNetworkManager : public AActor
 
 public:
 	ACableNetworkManager();
+	virtual void BeginPlay() override;
+	virtual void Tick(float DeltaSeconds) override;
 
 	UFUNCTION(BlueprintCallable, Category = "Cable")
 	bool BeginCableDrag(const FVector& WorldLocation);
@@ -39,6 +45,34 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Cable")
 	bool IsDraggingCable() const { return bIsDragging; }
+
+	/** True when the building's connector component reaches a completed Headquarters. */
+	UFUNCTION(BlueprintPure, Category = "Cable|Power")
+	bool IsBuildingConnectedToPowerGrid(const ABaseBuilding* Building) const;
+
+	UFUNCTION(BlueprintPure, Category = "Cable|Power")
+	bool IsBuildingOperational(const ABaseBuilding* Building) const;
+
+	UFUNCTION(BlueprintPure, Category = "Cable|Power")
+	float GetGridProductionPerMinute() const { return GridProductionPerMinute; }
+
+	UFUNCTION(BlueprintPure, Category = "Cable|Power")
+	float GetGridConsumptionPerMinute() const { return GridConsumptionPerMinute; }
+
+	UFUNCTION(BlueprintPure, Category = "Cable|Power")
+	float GetGridStorageCapacity() const { return GridStorageCapacity; }
+
+	UFUNCTION(BlueprintCallable, Category = "Cable|Power")
+	void RefreshEnergyGrid();
+
+	UFUNCTION(BlueprintPure, Category = "Cable|Grid")
+	bool HasConnectorAtCell(FSTPGridCell Cell) const;
+
+	UFUNCTION(BlueprintCallable, Category = "Cable|Grid")
+	void GetConnectorCells(TArray<FSTPGridCell>& OutCells) const;
+
+	UPROPERTY(BlueprintAssignable, Category = "Cable")
+	FSTPCableNetworkChangedSignature OnCableNetworkChanged;
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Cable")
@@ -94,7 +128,8 @@ private:
 		West = 1 << 3
 	};
 
-	UPROPERTY(Transient)
+	/** Canonical connector occupancy and topology. SaveGame keeps grid cells for future saves. */
+	UPROPERTY(SaveGame)
 	TMap<FIntPoint, FSTPCableCell> CableCells;
 
 	UPROPERTY(Transient)
@@ -104,6 +139,20 @@ private:
 	FIntPoint DragStartCell = FIntPoint::ZeroValue;
 	FIntPoint LastDragCell = FIntPoint::ZeroValue;
 	TMap<FIntPoint, uint8> ConnectionsBeforeDrag;
+	float GridRefreshAccumulator = 0.0f;
+	float PendingEnergyDelta = 0.0f;
+
+	UPROPERTY(VisibleInstanceOnly, Category = "Cable|Power")
+	float GridProductionPerMinute = 0.0f;
+
+	UPROPERTY(VisibleInstanceOnly, Category = "Cable|Power")
+	float GridConsumptionPerMinute = 0.0f;
+
+	UPROPERTY(VisibleInstanceOnly, Category = "Cable|Power")
+	float GridStorageCapacity = 0.0f;
+
+	UPROPERTY(VisibleInstanceOnly, Category = "Cable|Power")
+	bool bCanSupplyAllConsumers = true;
 
 	APlanetSurfaceManager* ResolveSurfaceManager();
 	bool TryGetCell(const FVector& WorldLocation, FIntPoint& OutCell);
@@ -113,4 +162,6 @@ private:
 	void AddConnection(const FIntPoint& Cell, uint8 Direction);
 	void RefreshCableCell(const FIntPoint& Cell);
 	FSTPCableCell& FindOrAddCableCell(const FIntPoint& Cell);
+	void GetTouchingCableCells(const ABaseBuilding* Building, TArray<FIntPoint>& OutCells) const;
+	void GetHeadquartersNetworkCells(TSet<FIntPoint>& OutCells) const;
 };

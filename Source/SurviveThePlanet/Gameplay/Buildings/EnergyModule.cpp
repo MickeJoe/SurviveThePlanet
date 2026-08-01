@@ -6,9 +6,10 @@ AEnergyModule::AEnergyModule()
 {
 	BuildingTag = TEXT("EnergyModule");
 	BuildingType = ESTPBuildingType::EnergyModule;
-	EnergyCapacity = 250.0f;
+	DroneWorkType = ESTPDroneWorkType::EnergyProduction;
+	EnergyStorageCapacity = 0.0f;
+	EnergyProductionPerMinute = 60.0f;
 	ConstructionProgress = 0.0f;
-	GridFootprint = FIntPoint(2, 2);
 }
 
 void AEnergyModule::OnConstruction(const FTransform& Transform)
@@ -48,7 +49,7 @@ void AEnergyModule::SetPlacementPreviewValid(bool bValidPlacement)
 
 void AEnergyModule::ApplyModuleMesh()
 {
-	if (BuildingMesh && ModuleMesh)
+	if (!IsValid(BuildingData) && BuildingMesh && ModuleMesh)
 	{
 		BuildingMesh->SetStaticMesh(ModuleMesh);
 	}

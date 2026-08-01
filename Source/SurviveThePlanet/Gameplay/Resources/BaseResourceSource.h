@@ -60,6 +60,10 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Resource Source|Mining")
 	AMiningMachine* GetReservedMiningMachine() const { return ReservedMiningMachine; }
 
+	/** Building class created when the player constructs a mine on this deposit. */
+	UFUNCTION(BlueprintPure, Category = "Resource Source|Mining")
+	TSubclassOf<AMiningMachine> GetMineBlueprint() const;
+
 	/** Temporarily hides the deposit while a combined mine/deposit preview is shown. */
 	void SetPreviewingMiningMachine(AMiningMachine* MiningMachine);
 
@@ -75,6 +79,9 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Resource Source")
 	EResourceType ResourceType = EResourceType::Iron;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Resource Source|Mining")
+	TSubclassOf<AMiningMachine> MineBlueprint;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Resource Source", meta = (ClampMin = "0", UIMin = "0"))
 	int32 StartingAmount = 100;
