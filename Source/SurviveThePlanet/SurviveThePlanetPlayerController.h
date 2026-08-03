@@ -18,6 +18,7 @@ class ASelectableWorldActor;
 class AEnergyModule;
 class AEnergyStorageBuilding;
 class AMiningMachine;
+class AWaterCollector;
 class ABaseResourceSource;
 class AResourceManager;
 class APlanetSurfaceManager;
@@ -133,6 +134,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Build Tools")
 	void SetMiningMachineClass(TSubclassOf<AMiningMachine> NewMiningMachineClass);
 
+	UFUNCTION(BlueprintCallable, Category = "Build Tools")
+	void SetWaterCollectorClass(TSubclassOf<AWaterCollector> NewWaterCollectorClass);
+
 	UPROPERTY(BlueprintAssignable, Category = "Build Tools")
 	FBuildToolChangedSignature OnBuildToolChanged;
 
@@ -175,6 +179,12 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<AMiningMachine> MiningMachinePlacementPreview;
 
+	UPROPERTY(Transient)
+	TSubclassOf<AWaterCollector> WaterCollectorClass;
+
+	UPROPERTY(Transient)
+	TObjectPtr<AWaterCollector> WaterCollectorPlacementPreview;
+
 	/** Last emitted preview diagnostic; avoids writing the same result every frame. */
 	FString LastMiningPlacementDiagnostic;
 
@@ -199,17 +209,21 @@ private:
 	bool TryPlaceEnergyModuleAtCursor();
 	bool TryPlaceEnergyStorageAtCursor();
 	bool TryPlaceMiningMachineAtCursor();
+	bool TryPlaceWaterCollectorAtCursor();
 	void UpdateBuildPlacementPreview();
 	void UpdateEnergyModulePlacementPreview();
 	void UpdateEnergyStoragePlacementPreview();
 	void UpdateMiningMachinePlacementPreview();
+	void UpdateWaterCollectorPlacementPreview();
 	void EnsureEnergyModulePlacementPreview();
 	void EnsureEnergyStoragePlacementPreview();
 	void EnsureMiningMachinePlacementPreview(const ABaseResourceSource* ResourceSource = nullptr);
+	void EnsureWaterCollectorPlacementPreview();
 	void DestroyBuildPlacementPreview();
 	void ConfigureEnergyModulePlacementPreview(AEnergyModule* PreviewActor) const;
 	void ConfigureEnergyStoragePlacementPreview(AEnergyStorageBuilding* PreviewActor) const;
 	void ConfigureMiningMachinePlacementPreview(AMiningMachine* PreviewActor) const;
+	void ConfigureWaterCollectorPlacementPreview(AWaterCollector* PreviewActor) const;
 	TSubclassOf<AMiningMachine> GetMiningMachineClassForSource(const ABaseResourceSource* ResourceSource) const;
 	ABaseResourceSource* GetResourceSourceUnderCursor(FHitResult* OutHit = nullptr) const;
 	AResourceManager* FindResourceManager() const;

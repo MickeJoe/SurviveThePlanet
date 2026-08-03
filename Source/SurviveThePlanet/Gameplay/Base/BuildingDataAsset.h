@@ -16,7 +16,8 @@ enum class ESTPBuildingType : uint8
 	EnergyModule UMETA(DisplayName = "Energy Module"),
 	EnergyStorage UMETA(DisplayName = "Energy Storage"),
 	MiningMachine UMETA(DisplayName = "Mining Machine"),
-	Other UMETA(DisplayName = "Other")
+	Other UMETA(DisplayName = "Other"),
+	WaterCollector UMETA(DisplayName = "Water Collector")
 };
 
 /** Resource produced by one 100%-efficient drone during one minute. */
@@ -94,6 +95,20 @@ class SURVIVETHEPLANET_API UEnergyStorageBuildingDataAsset : public UBuildingDat
 
 public:
 	UEnergyStorageBuildingDataAsset();
+};
+
+/** Configuration for a building whose water output scales with current rainfall. */
+UCLASS(BlueprintType)
+class SURVIVETHEPLANET_API UWaterCollectorBuildingDataAsset : public UBuildingDataAsset
+{
+	GENERATED_BODY()
+
+public:
+	UWaterCollectorBuildingDataAsset();
+
+	/** Water produced each minute for every millimetre of hourly precipitation. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Water Collection", meta = (ClampMin = "0.0", UIMin = "0.0"))
+	float WaterPerMinutePerMmOfRain = 1.0f;
 };
 
 /** Mining-only configuration kept out of unrelated building data assets. */

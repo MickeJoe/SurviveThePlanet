@@ -24,6 +24,7 @@
 #include "Gameplay/Buildings/EnergyModule.h"
 #include "Gameplay/Buildings/EnergyStorageBuilding.h"
 #include "Gameplay/Buildings/MiningMachine.h"
+#include "Gameplay/Buildings/WaterCollector.h"
 #include "Gameplay/Cables/CableNetworkManager.h"
 #include "Gameplay/Planet/PlanetSurfaceManager.h"
 #include "Gameplay/Resources/ResourceManager.h"
@@ -60,6 +61,7 @@ ASurviveThePlanetPlayerController::ASurviveThePlanetPlayerController()
 		EnergyStorageClass = AEnergyStorageBuilding::StaticClass();
 	}
 	MiningMachineClass = AMiningMachine::StaticClass();
+	WaterCollectorClass = AWaterCollector::StaticClass();
 	BuildingInfoWidgetClass = LoadClass<UBuildingInfoWidget>(nullptr, TEXT("/Game/UI/WBP_BuildingPopup.WBP_BuildingPopup_C"));
 }
 
@@ -104,6 +106,16 @@ void ASurviveThePlanetPlayerController::SetEnergyModuleClass(TSubclassOf<AEnergy
 
 	DestroyBuildPlacementPreview();
 	UE_LOG(LogSurviveThePlanet, Warning, TEXT("STP_BUILD EnergyModuleClass set to %s"), *GetNameSafe(EnergyModuleClass.Get()));
+}
+
+void ASurviveThePlanetPlayerController::SetWaterCollectorClass(TSubclassOf<AWaterCollector> NewWaterCollectorClass)
+{
+	WaterCollectorClass = NewWaterCollectorClass;
+	if (!WaterCollectorClass)
+	{
+		WaterCollectorClass = AWaterCollector::StaticClass();
+	}
+	DestroyBuildPlacementPreview();
 }
 
 void ASurviveThePlanetPlayerController::SetEnergyStorageClass(TSubclassOf<AEnergyStorageBuilding> NewEnergyStorageClass)
@@ -346,12 +358,71 @@ bool ASurviveThePlanetPlayerController::TryHandleActiveBuildToolClick()
 		return TryPlaceEnergyStorageAtCursor();
 	case ESTPBuildTool::MiningMachine:
 		return TryPlaceMiningMachineAtCursor();
+	case ESTPBuildTool::WaterCollector:
+		return TryPlaceWaterCollectorAtCursor();
 	case ESTPBuildTool::EnergyCable:
 		return true;
 	case ESTPBuildTool::None:
 	default:
 		return false;
 	}
+}
+
+bool ASurviveThePlanetPlayerController::TryPlaceWaterCollectorAtCursor()
+{
+	FVector TargetLocation;
+	UWorld* World = GetWorld();
+	APlanetSurfaceManager* SurfaceManager = FindPlanetSurfaceManager();
+	if (!TryGetCursorWorldLocation(TargetLocation) || !World || !SurfaceManager)
+	{
+		return true;
+	}
+
+	TSubclassOf<AWaterCollector> ClassToSpawn = WaterCollectorClass;
+	if (!ClassToSpawn)
+	{
+		ClassToSpawn = AWaterCollector::StaticClass();
+	}
+	const AWaterCollector* DefaultCollector = ClassToSpawn->GetDefaultObject<AWaterCollector>();
+	const FIntPoint Footprint = DefaultCollector ? DefaultCollector->GetGridFootprint() : FIntPoint(2, 2);
+	const TArray<FResourceCost> Costs = DefaultCollector ? DefaultCollector->GetConstructionCosts() : TArray<FResourceCost>();
+	AResourceManager* ResourceManager = FindResourceManager();
+	if ((Costs.Num() > 0 && !ResourceManager) || (ResourceManager && !ResourceManager->CanAffordCosts(Costs)))
+	{
+		return true;
+	}
+
+	const FSTPGridPlacement Placement = SurfaceManager->GetPlacementForWorldLocation(TargetLocation, Footprint);
+	if (!Placement.bValid)
+	{
+		return true;
+	}
+
+	FActorSpawnParameters Params;
+	Params.Owner = this;
+	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+	AWaterCollector* Collector = World->SpawnActor<AWaterCollector>(ClassToSpawn, Placement.WorldLocation, Placement.WorldRotation, Params);
+	if (!Collector)
+	{
+		return true;
+	}
+
+	Collector->SetPlacementPreview(false);
+	if (!SurfaceManager->ReserveCells(Collector, Placement.OriginCell, Collector->GetGridFootprint())
+		|| (ResourceManager && !ResourceManager->TrySpendCosts(Costs)))
+	{
+		Collector->Destroy();
+		return true;
+	}
+
+	Collector->SetConstructionProgress(0.0f);
+	Collector->ShowConstructionProgress();
+	if (UConstructionJobQueueSubsystem* Queue = World->GetSubsystem<UConstructionJobQueueSubsystem>())
+	{
+		Queue->EnqueueConstructionJob(Collector);
+	}
+	SetSelectedActor(Collector);
+	return true;
 }
 
 bool ASurviveThePlanetPlayerController::TryPlaceEnergyStorageAtCursor()
@@ -633,10 +704,41 @@ void ASurviveThePlanetPlayerController::UpdateBuildPlacementPreview()
 	case ESTPBuildTool::MiningMachine:
 		UpdateMiningMachinePlacementPreview();
 		break;
+	case ESTPBuildTool::WaterCollector:
+		UpdateWaterCollectorPlacementPreview();
+		break;
 	default:
 		DestroyBuildPlacementPreview();
 		break;
 	}
+}
+
+void ASurviveThePlanetPlayerController::UpdateWaterCollectorPlacementPreview()
+{
+	EnsureWaterCollectorPlacementPreview();
+	if (!IsValid(WaterCollectorPlacementPreview))
+	{
+		return;
+	}
+
+	FHitResult Hit;
+	if (!GetHitResultUnderCursor(ECC_Visibility, true, Hit))
+	{
+		WaterCollectorPlacementPreview->SetActorHiddenInGame(true);
+		return;
+	}
+
+	APlanetSurfaceManager* SurfaceManager = FindPlanetSurfaceManager();
+	const FSTPGridPlacement Placement = SurfaceManager
+		? SurfaceManager->GetPlacementForWorldLocation(Hit.Location, WaterCollectorPlacementPreview->GetGridFootprint())
+		: FSTPGridPlacement();
+	WaterCollectorPlacementPreview->SetActorLocation(SurfaceManager ? Placement.WorldLocation : Hit.Location, false);
+	if (SurfaceManager)
+	{
+		WaterCollectorPlacementPreview->SetActorRotation(Placement.WorldRotation);
+	}
+	WaterCollectorPlacementPreview->SetPlacementPreviewValid(SurfaceManager && Placement.bValid);
+	WaterCollectorPlacementPreview->SetActorHiddenInGame(false);
 }
 
 void ASurviveThePlanetPlayerController::UpdateEnergyStoragePlacementPreview()
@@ -920,6 +1022,44 @@ void ASurviveThePlanetPlayerController::DestroyBuildPlacementPreview()
 	}
 
 	MiningMachinePlacementPreview = nullptr;
+
+	if (IsValid(WaterCollectorPlacementPreview))
+	{
+		WaterCollectorPlacementPreview->Destroy();
+	}
+	WaterCollectorPlacementPreview = nullptr;
+}
+
+void ASurviveThePlanetPlayerController::EnsureWaterCollectorPlacementPreview()
+{
+	if (IsValid(WaterCollectorPlacementPreview) || !GetWorld())
+	{
+		return;
+	}
+
+	TSubclassOf<AWaterCollector> ClassToSpawn = WaterCollectorClass;
+	if (!ClassToSpawn)
+	{
+		ClassToSpawn = AWaterCollector::StaticClass();
+	}
+	FActorSpawnParameters Params;
+	Params.Owner = this;
+	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	WaterCollectorPlacementPreview = GetWorld()->SpawnActor<AWaterCollector>(ClassToSpawn, FVector::ZeroVector, FRotator::ZeroRotator, Params);
+	if (WaterCollectorPlacementPreview)
+	{
+		ConfigureWaterCollectorPlacementPreview(WaterCollectorPlacementPreview);
+		WaterCollectorPlacementPreview->SetActorHiddenInGame(true);
+	}
+}
+
+void ASurviveThePlanetPlayerController::ConfigureWaterCollectorPlacementPreview(AWaterCollector* PreviewActor) const
+{
+	if (PreviewActor)
+	{
+		PreviewActor->SetPlacementPreview(true);
+		PreviewActor->SetActorTickEnabled(false);
+	}
 }
 
 void ASurviveThePlanetPlayerController::ConfigureMiningMachinePlacementPreview(AMiningMachine* PreviewActor) const

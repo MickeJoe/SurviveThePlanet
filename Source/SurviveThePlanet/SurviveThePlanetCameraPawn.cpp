@@ -10,6 +10,7 @@
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "InputCoreTypes.h"
+#include "Kismet/GameplayStatics.h"
 #include "SurviveThePlanet.h"
 
 ASurviveThePlanetCameraPawn::ASurviveThePlanetCameraPawn()
@@ -35,8 +36,15 @@ void ASurviveThePlanetCameraPawn::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 
-	PanCamera(KeyboardPanInput + GetEdgeScrollInput(), DeltaSeconds);
-	RotateCamera(KeyboardRotationInput, DeltaSeconds);
+	// Navigation is player/UI interaction, not simulation. Undo global time
+	// dilation so camera speed remains constant while paused and at x1-x3.
+	const float GlobalDilation = UGameplayStatics::GetGlobalTimeDilation(this);
+	const float NavigationDeltaSeconds = GlobalDilation > UE_SMALL_NUMBER
+		? DeltaSeconds / GlobalDilation
+		: DeltaSeconds;
+
+	PanCamera(KeyboardPanInput + GetEdgeScrollInput(), NavigationDeltaSeconds);
+	RotateCamera(KeyboardRotationInput, NavigationDeltaSeconds);
 }
 
 void ASurviveThePlanetCameraPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)

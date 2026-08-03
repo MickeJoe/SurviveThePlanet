@@ -20,7 +20,8 @@ UBuildToolbarWidget::UBuildToolbarWidget(const FObjectInitializer& ObjectInitial
 		{ ESTPBuildTool::EnergyCable, NSLOCTEXT("SurviveThePlanet", "BuildToolEnergyCableTooltip", "Energy Cable"), nullptr },
 		{ ESTPBuildTool::EnergyModule, NSLOCTEXT("SurviveThePlanet", "BuildToolEnergyModuleTooltip", "Energy Module"), nullptr },
 		{ ESTPBuildTool::EnergyStorage, NSLOCTEXT("SurviveThePlanet", "BuildToolEnergyStorageTooltip", "Build Battery Storage\nIncreases the connected grid's maximum energy capacity."), nullptr },
-		{ ESTPBuildTool::MiningMachine, NSLOCTEXT("SurviveThePlanet", "BuildToolMiningMachineTooltip", "Build Mining Machine\nPlace on an available resource deposit."), nullptr }
+		{ ESTPBuildTool::MiningMachine, NSLOCTEXT("SurviveThePlanet", "BuildToolMiningMachineTooltip", "Build Mining Machine\nPlace on an available resource deposit."), nullptr },
+		{ ESTPBuildTool::WaterCollector, NSLOCTEXT("SurviveThePlanet", "BuildToolWaterCollectorTooltip", "Build Water Collector\nProduces water according to the current rainfall."), nullptr }
 	};
 }
 
@@ -148,6 +149,10 @@ UWidget* UBuildToolbarWidget::BuildButton(const FBuildToolButtonConfig& Config)
 	{
 		Button->OnClicked.AddDynamic(this, &UBuildToolbarWidget::HandleMiningMachineClicked);
 	}
+	else if (Config.Tool == ESTPBuildTool::WaterCollector)
+	{
+		Button->OnClicked.AddDynamic(this, &UBuildToolbarWidget::HandleWaterCollectorClicked);
+	}
 
 	ButtonBorders.Add(Config.Tool, Border);
 	return SizeBox;
@@ -155,9 +160,9 @@ UWidget* UBuildToolbarWidget::BuildButton(const FBuildToolButtonConfig& Config)
 
 bool UBuildToolbarWidget::HasDesignedToolbar() const
 {
-	return EnergyCableButton || EnergyModuleButton || EnergyStorageButton || MiningBuildingButton
-		|| EnergyCableIcon || EnergyModuleIcon || EnergyStorageIcon || MiningBuildingIcon
-		|| EnergyCableBorder || EnergyModuleBorder || EnergyStorageBorder || MiningBorder;
+	return EnergyCableButton || EnergyModuleButton || EnergyStorageButton || MiningBuildingButton || WaterCollectorButton
+		|| EnergyCableIcon || EnergyModuleIcon || EnergyStorageIcon || MiningBuildingIcon || WaterCollectorIcon
+		|| EnergyCableBorder || EnergyModuleBorder || EnergyStorageBorder || MiningBorder || WaterCollectorBorder;
 }
 
 void UBuildToolbarWidget::BindDesignedToolbar()
@@ -204,6 +209,16 @@ void UBuildToolbarWidget::BindDesignedToolbar()
 		}
 	}
 
+	if (WaterCollectorButton)
+	{
+		WaterCollectorButton->OnClicked.RemoveDynamic(this, &UBuildToolbarWidget::HandleWaterCollectorClicked);
+		WaterCollectorButton->OnClicked.AddDynamic(this, &UBuildToolbarWidget::HandleWaterCollectorClicked);
+		if (const FBuildToolButtonConfig* Config = FindButtonConfig(ESTPBuildTool::WaterCollector))
+		{
+			WaterCollectorButton->SetToolTipText(Config->Tooltip);
+		}
+	}
+
 	if (EnergyCableBorder)
 	{
 		ButtonBorders.Add(ESTPBuildTool::EnergyCable, EnergyCableBorder);
@@ -222,6 +237,11 @@ void UBuildToolbarWidget::BindDesignedToolbar()
 	if (EnergyStorageBorder)
 	{
 		ButtonBorders.Add(ESTPBuildTool::EnergyStorage, EnergyStorageBorder);
+	}
+
+	if (WaterCollectorBorder)
+	{
+		ButtonBorders.Add(ESTPBuildTool::WaterCollector, WaterCollectorBorder);
 	}
 }
 
@@ -272,6 +292,11 @@ void UBuildToolbarWidget::HandleMiningMachineClicked()
 void UBuildToolbarWidget::HandleEnergyStorageClicked()
 {
 	HandleToolClicked(ESTPBuildTool::EnergyStorage);
+}
+
+void UBuildToolbarWidget::HandleWaterCollectorClicked()
+{
+	HandleToolClicked(ESTPBuildTool::WaterCollector);
 }
 
 void UBuildToolbarWidget::HandleControllerBuildToolChanged(ESTPBuildTool NewTool)

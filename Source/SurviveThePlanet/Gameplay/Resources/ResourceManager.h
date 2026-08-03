@@ -11,7 +11,8 @@ enum class EResourceType : uint8
 	Iron UMETA(DisplayName = "Iron"),
 	ControlChip UMETA(DisplayName = "Control Chip"),
 	Copper UMETA(DisplayName = "Copper"),
-	Stone UMETA(DisplayName = "Stone")
+	Stone UMETA(DisplayName = "Stone"),
+	Water UMETA(DisplayName = "Water")
 };
 
 /** A resource and the amount required for a purchase or construction. */

@@ -8,3 +8,14 @@ UEnergyStorageBuildingDataAsset::UEnergyStorageBuildingDataAsset()
 	EnergyStorageCapacity = 500.0f;
 	bOverrideEnergySettings = true;
 }
+
+UWaterCollectorBuildingDataAsset::UWaterCollectorBuildingDataAsset()
+{
+	BuildingType = ESTPBuildingType::WaterCollector;
+	BuildingTag = TEXT("WaterCollector");
+	DisplayName = NSLOCTEXT("SurviveThePlanet", "DefaultWaterCollectorDataName", "Water Collector");
+	EnergyConsumptionPerMinute = 5.0f;
+	EnergyProductionPerMinute = 0.0f;
+	EnergyStorageCapacity = 0.0f;
+	bOverrideEnergySettings = true;
+}

@@ -70,6 +70,9 @@ protected:
 	TObjectPtr<UButton> MiningBuildingButton;
 
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Build Toolbar|Designed Widgets")
+	TObjectPtr<UButton> WaterCollectorButton;
+
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Build Toolbar|Designed Widgets")
 	TObjectPtr<UImage> EnergyCableIcon;
 
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Build Toolbar|Designed Widgets")
@@ -82,6 +85,9 @@ protected:
 	TObjectPtr<UImage> MiningBuildingIcon;
 
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Build Toolbar|Designed Widgets")
+	TObjectPtr<UImage> WaterCollectorIcon;
+
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Build Toolbar|Designed Widgets")
 	TObjectPtr<UBorder> EnergyCableBorder;
 
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Build Toolbar|Designed Widgets")
@@ -92,6 +98,9 @@ protected:
 
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Build Toolbar|Designed Widgets")
 	TObjectPtr<UBorder> MiningBorder;
+
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Build Toolbar|Designed Widgets")
+	TObjectPtr<UBorder> WaterCollectorBorder;
 
 	UFUNCTION(BlueprintImplementableEvent, Category = "Build Toolbar")
 	void BP_ActiveToolChanged(ESTPBuildTool NewTool);
@@ -121,6 +130,9 @@ private:
 
 	UFUNCTION()
 	void HandleMiningMachineClicked();
+
+	UFUNCTION()
+	void HandleWaterCollectorClicked();
 
 	UFUNCTION()
 	void HandleControllerBuildToolChanged(ESTPBuildTool NewTool);
