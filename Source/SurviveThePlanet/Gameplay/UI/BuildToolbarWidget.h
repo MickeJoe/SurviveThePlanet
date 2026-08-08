@@ -73,6 +73,9 @@ protected:
 	TObjectPtr<UButton> WaterCollectorButton;
 
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Build Toolbar|Designed Widgets")
+	TObjectPtr<UButton> ConcretePlantButton;
+
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Build Toolbar|Designed Widgets")
 	TObjectPtr<UImage> EnergyCableIcon;
 
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Build Toolbar|Designed Widgets")
@@ -88,6 +91,9 @@ protected:
 	TObjectPtr<UImage> WaterCollectorIcon;
 
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Build Toolbar|Designed Widgets")
+	TObjectPtr<UImage> ConcretePlantIcon;
+
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Build Toolbar|Designed Widgets")
 	TObjectPtr<UBorder> EnergyCableBorder;
 
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Build Toolbar|Designed Widgets")
@@ -101,6 +107,9 @@ protected:
 
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Build Toolbar|Designed Widgets")
 	TObjectPtr<UBorder> WaterCollectorBorder;
+
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Build Toolbar|Designed Widgets")
+	TObjectPtr<UBorder> ConcretePlantBorder;
 
 	UFUNCTION(BlueprintImplementableEvent, Category = "Build Toolbar")
 	void BP_ActiveToolChanged(ESTPBuildTool NewTool);
@@ -133,6 +142,9 @@ private:
 
 	UFUNCTION()
 	void HandleWaterCollectorClicked();
+
+	UFUNCTION()
+	void HandleConcretePlantClicked();
 
 	UFUNCTION()
 	void HandleControllerBuildToolChanged(ESTPBuildTool NewTool);

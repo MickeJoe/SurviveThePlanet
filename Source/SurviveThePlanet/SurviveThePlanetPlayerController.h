@@ -19,6 +19,7 @@ class AEnergyModule;
 class AEnergyStorageBuilding;
 class AMiningMachine;
 class AWaterCollector;
+class AConcretePlant;
 class ABaseResourceSource;
 class AResourceManager;
 class APlanetSurfaceManager;
@@ -137,6 +138,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Build Tools")
 	void SetWaterCollectorClass(TSubclassOf<AWaterCollector> NewWaterCollectorClass);
 
+	UFUNCTION(BlueprintCallable, Category = "Build Tools")
+	void SetConcretePlantClass(TSubclassOf<AConcretePlant> NewConcretePlantClass);
+
 	UPROPERTY(BlueprintAssignable, Category = "Build Tools")
 	FBuildToolChangedSignature OnBuildToolChanged;
 
@@ -185,6 +189,12 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<AWaterCollector> WaterCollectorPlacementPreview;
 
+	UPROPERTY(Transient)
+	TSubclassOf<AConcretePlant> ConcretePlantClass;
+
+	UPROPERTY(Transient)
+	TObjectPtr<AConcretePlant> ConcretePlantPlacementPreview;
+
 	/** Last emitted preview diagnostic; avoids writing the same result every frame. */
 	FString LastMiningPlacementDiagnostic;
 
@@ -210,20 +220,24 @@ private:
 	bool TryPlaceEnergyStorageAtCursor();
 	bool TryPlaceMiningMachineAtCursor();
 	bool TryPlaceWaterCollectorAtCursor();
+	bool TryPlaceConcretePlantAtCursor();
 	void UpdateBuildPlacementPreview();
 	void UpdateEnergyModulePlacementPreview();
 	void UpdateEnergyStoragePlacementPreview();
 	void UpdateMiningMachinePlacementPreview();
 	void UpdateWaterCollectorPlacementPreview();
+	void UpdateConcretePlantPlacementPreview();
 	void EnsureEnergyModulePlacementPreview();
 	void EnsureEnergyStoragePlacementPreview();
 	void EnsureMiningMachinePlacementPreview(const ABaseResourceSource* ResourceSource = nullptr);
 	void EnsureWaterCollectorPlacementPreview();
+	void EnsureConcretePlantPlacementPreview();
 	void DestroyBuildPlacementPreview();
 	void ConfigureEnergyModulePlacementPreview(AEnergyModule* PreviewActor) const;
 	void ConfigureEnergyStoragePlacementPreview(AEnergyStorageBuilding* PreviewActor) const;
 	void ConfigureMiningMachinePlacementPreview(AMiningMachine* PreviewActor) const;
 	void ConfigureWaterCollectorPlacementPreview(AWaterCollector* PreviewActor) const;
+	void ConfigureConcretePlantPlacementPreview(AConcretePlant* PreviewActor) const;
 	TSubclassOf<AMiningMachine> GetMiningMachineClassForSource(const ABaseResourceSource* ResourceSource) const;
 	ABaseResourceSource* GetResourceSourceUnderCursor(FHitResult* OutHit = nullptr) const;
 	AResourceManager* FindResourceManager() const;

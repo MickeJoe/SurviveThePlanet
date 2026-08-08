@@ -19,3 +19,12 @@ UWaterCollectorBuildingDataAsset::UWaterCollectorBuildingDataAsset()
 	EnergyStorageCapacity = 0.0f;
 	bOverrideEnergySettings = true;
 }
+
+UConcretePlantBuildingDataAsset::UConcretePlantBuildingDataAsset()
+{
+	BuildingType = ESTPBuildingType::ConcretePlant;
+	BuildingTag = TEXT("ConcretePlant");
+	DisplayName = NSLOCTEXT("SurviveThePlanet", "ConcretePlantDataName", "Concrete Plant");
+	EnergyConsumptionPerMinute = 10.0f;
+	bOverrideEnergySettings = true;
+}

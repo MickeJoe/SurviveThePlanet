@@ -25,6 +25,7 @@
 #include "Gameplay/Buildings/EnergyStorageBuilding.h"
 #include "Gameplay/Buildings/MiningMachine.h"
 #include "Gameplay/Buildings/WaterCollector.h"
+#include "Gameplay/Buildings/ConcretePlant.h"
 #include "Gameplay/Cables/CableNetworkManager.h"
 #include "Gameplay/Planet/PlanetSurfaceManager.h"
 #include "Gameplay/Resources/ResourceManager.h"
@@ -62,6 +63,7 @@ ASurviveThePlanetPlayerController::ASurviveThePlanetPlayerController()
 	}
 	MiningMachineClass = AMiningMachine::StaticClass();
 	WaterCollectorClass = AWaterCollector::StaticClass();
+	ConcretePlantClass = AConcretePlant::StaticClass();
 	BuildingInfoWidgetClass = LoadClass<UBuildingInfoWidget>(nullptr, TEXT("/Game/UI/WBP_BuildingPopup.WBP_BuildingPopup_C"));
 }
 
@@ -115,6 +117,13 @@ void ASurviveThePlanetPlayerController::SetWaterCollectorClass(TSubclassOf<AWate
 	{
 		WaterCollectorClass = AWaterCollector::StaticClass();
 	}
+	DestroyBuildPlacementPreview();
+}
+
+void ASurviveThePlanetPlayerController::SetConcretePlantClass(TSubclassOf<AConcretePlant> NewConcretePlantClass)
+{
+	ConcretePlantClass = NewConcretePlantClass;
+	if (!ConcretePlantClass) ConcretePlantClass = AConcretePlant::StaticClass();
 	DestroyBuildPlacementPreview();
 }
 
@@ -360,12 +369,50 @@ bool ASurviveThePlanetPlayerController::TryHandleActiveBuildToolClick()
 		return TryPlaceMiningMachineAtCursor();
 	case ESTPBuildTool::WaterCollector:
 		return TryPlaceWaterCollectorAtCursor();
+	case ESTPBuildTool::ConcretePlant:
+		return TryPlaceConcretePlantAtCursor();
 	case ESTPBuildTool::EnergyCable:
 		return true;
 	case ESTPBuildTool::None:
 	default:
 		return false;
 	}
+}
+
+bool ASurviveThePlanetPlayerController::TryPlaceConcretePlantAtCursor()
+{
+	FVector TargetLocation;
+	UWorld* World = GetWorld();
+	APlanetSurfaceManager* SurfaceManager = FindPlanetSurfaceManager();
+	if (!TryGetCursorWorldLocation(TargetLocation) || !World || !SurfaceManager) return true;
+
+	TSubclassOf<AConcretePlant> ClassToSpawn = ConcretePlantClass;
+	if (!ClassToSpawn) ClassToSpawn = AConcretePlant::StaticClass();
+	const AConcretePlant* Defaults = ClassToSpawn->GetDefaultObject<AConcretePlant>();
+	const FIntPoint Footprint = Defaults ? Defaults->GetGridFootprint() : FIntPoint(2, 2);
+	const TArray<FResourceCost> Costs = Defaults ? Defaults->GetConstructionCosts() : TArray<FResourceCost>();
+	AResourceManager* ResourceManager = FindResourceManager();
+	if ((Costs.Num() > 0 && !ResourceManager) || (ResourceManager && !ResourceManager->CanAffordCosts(Costs))) return true;
+
+	const FSTPGridPlacement Placement = SurfaceManager->GetPlacementForWorldLocation(TargetLocation, Footprint);
+	if (!Placement.bValid) return true;
+	FActorSpawnParameters Params;
+	Params.Owner = this;
+	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+	AConcretePlant* Plant = World->SpawnActor<AConcretePlant>(ClassToSpawn, Placement.WorldLocation, Placement.WorldRotation, Params);
+	if (!Plant) return true;
+	Plant->SetPlacementPreview(false);
+	if (!SurfaceManager->ReserveCells(Plant, Placement.OriginCell, Plant->GetGridFootprint())
+		|| (ResourceManager && !ResourceManager->TrySpendCosts(Costs)))
+	{
+		Plant->Destroy();
+		return true;
+	}
+	Plant->SetConstructionProgress(0.0f);
+	Plant->ShowConstructionProgress();
+	if (UConstructionJobQueueSubsystem* Queue = World->GetSubsystem<UConstructionJobQueueSubsystem>()) Queue->EnqueueConstructionJob(Plant);
+	SetSelectedActor(Plant);
+	return true;
 }
 
 bool ASurviveThePlanetPlayerController::TryPlaceWaterCollectorAtCursor()
@@ -707,10 +754,29 @@ void ASurviveThePlanetPlayerController::UpdateBuildPlacementPreview()
 	case ESTPBuildTool::WaterCollector:
 		UpdateWaterCollectorPlacementPreview();
 		break;
+	case ESTPBuildTool::ConcretePlant:
+		UpdateConcretePlantPlacementPreview();
+		break;
 	default:
 		DestroyBuildPlacementPreview();
 		break;
 	}
+}
+
+void ASurviveThePlanetPlayerController::UpdateConcretePlantPlacementPreview()
+{
+	EnsureConcretePlantPlacementPreview();
+	if (!IsValid(ConcretePlantPlacementPreview)) return;
+	FHitResult Hit;
+	if (!GetHitResultUnderCursor(ECC_Visibility, true, Hit)) { ConcretePlantPlacementPreview->SetActorHiddenInGame(true); return; }
+	APlanetSurfaceManager* SurfaceManager = FindPlanetSurfaceManager();
+	const FSTPGridPlacement Placement = SurfaceManager
+		? SurfaceManager->GetPlacementForWorldLocation(Hit.Location, ConcretePlantPlacementPreview->GetGridFootprint())
+		: FSTPGridPlacement();
+	ConcretePlantPlacementPreview->SetActorLocation(SurfaceManager ? Placement.WorldLocation : Hit.Location, false);
+	if (SurfaceManager) ConcretePlantPlacementPreview->SetActorRotation(Placement.WorldRotation);
+	ConcretePlantPlacementPreview->SetPlacementPreviewValid(SurfaceManager && Placement.bValid);
+	ConcretePlantPlacementPreview->SetActorHiddenInGame(false);
 }
 
 void ASurviveThePlanetPlayerController::UpdateWaterCollectorPlacementPreview()
@@ -1028,6 +1094,30 @@ void ASurviveThePlanetPlayerController::DestroyBuildPlacementPreview()
 		WaterCollectorPlacementPreview->Destroy();
 	}
 	WaterCollectorPlacementPreview = nullptr;
+
+	if (IsValid(ConcretePlantPlacementPreview)) ConcretePlantPlacementPreview->Destroy();
+	ConcretePlantPlacementPreview = nullptr;
+}
+
+void ASurviveThePlanetPlayerController::EnsureConcretePlantPlacementPreview()
+{
+	if (IsValid(ConcretePlantPlacementPreview) || !GetWorld()) return;
+	TSubclassOf<AConcretePlant> ClassToSpawn = ConcretePlantClass;
+	if (!ClassToSpawn) ClassToSpawn = AConcretePlant::StaticClass();
+	FActorSpawnParameters Params;
+	Params.Owner = this;
+	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	ConcretePlantPlacementPreview = GetWorld()->SpawnActor<AConcretePlant>(ClassToSpawn, FVector::ZeroVector, FRotator::ZeroRotator, Params);
+	if (ConcretePlantPlacementPreview)
+	{
+		ConfigureConcretePlantPlacementPreview(ConcretePlantPlacementPreview);
+		ConcretePlantPlacementPreview->SetActorHiddenInGame(true);
+	}
+}
+
+void ASurviveThePlanetPlayerController::ConfigureConcretePlantPlacementPreview(AConcretePlant* PreviewActor) const
+{
+	if (PreviewActor) { PreviewActor->SetPlacementPreview(true); PreviewActor->SetActorTickEnabled(false); }
 }
 
 void ASurviveThePlanetPlayerController::EnsureWaterCollectorPlacementPreview()

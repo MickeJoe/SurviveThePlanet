@@ -17,7 +17,8 @@ enum class ESTPBuildingType : uint8
 	EnergyStorage UMETA(DisplayName = "Energy Storage"),
 	MiningMachine UMETA(DisplayName = "Mining Machine"),
 	Other UMETA(DisplayName = "Other"),
-	WaterCollector UMETA(DisplayName = "Water Collector")
+	WaterCollector UMETA(DisplayName = "Water Collector"),
+	ConcretePlant UMETA(DisplayName = "Concrete Plant")
 };
 
 /** Resource produced by one 100%-efficient drone during one minute. */
@@ -109,6 +110,28 @@ public:
 	/** Water produced each minute for every millimetre of hourly precipitation. */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Water Collection", meta = (ClampMin = "0.0", UIMin = "0.0"))
 	float WaterPerMinutePerMmOfRain = 1.0f;
+};
+
+/** Recipe and throughput configuration for a concrete plant. */
+UCLASS(BlueprintType)
+class SURVIVETHEPLANET_API UConcretePlantBuildingDataAsset : public UBuildingDataAsset
+{
+	GENERATED_BODY()
+
+public:
+	UConcretePlantBuildingDataAsset();
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Concrete Production", meta = (ClampMin = "0.0"))
+	float WaterPerCycle = 2.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Concrete Production", meta = (ClampMin = "0.0"))
+	float StonePerCycle = 4.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Concrete Production", meta = (ClampMin = "0.0"))
+	float ConcretePerCycle = 3.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Concrete Production", meta = (ClampMin = "0.01"))
+	float CycleSeconds = 60.0f;
 };
 
 /** Mining-only configuration kept out of unrelated building data assets. */
