@@ -8,6 +8,7 @@
 #include "Gameplay/Planet/PlanetSurfaceManager.h"
 #include "Gameplay/Drones/BaseDrone.h"
 #include "Gameplay/Cables/CableNetworkManager.h"
+#include "Gameplay/Buildings/BuildingManagerSubsystem.h"
 #include "Gameplay/UI/ConstructionProgressBarWidget.h"
 
 ABaseBuilding::ABaseBuilding()
@@ -49,6 +50,31 @@ void ABaseBuilding::OnConstruction(const FTransform& Transform)
 void ABaseBuilding::BeginPlay()
 {
 	Super::BeginPlay();
+
+	// Resolve catalog data only after the world has initialized. Loading a data
+	// asset from a native actor constructor can recurse while its Blueprint class
+	// is being created (catalog -> data asset -> Blueprint CDO -> data asset).
+	if (!IsValid(BuildingData))
+	{
+		ESTPBuildTool BuildTool = ESTPBuildTool::None;
+		switch (BuildingType)
+		{
+		case ESTPBuildingType::EnergyModule: BuildTool = ESTPBuildTool::EnergyModule; break;
+		case ESTPBuildingType::EnergyStorage: BuildTool = ESTPBuildTool::EnergyStorage; break;
+		case ESTPBuildingType::MiningMachine: BuildTool = ESTPBuildTool::MiningMachine; break;
+		case ESTPBuildingType::WaterCollector: BuildTool = ESTPBuildTool::WaterCollector; break;
+		case ESTPBuildingType::ConcretePlant: BuildTool = ESTPBuildTool::ConcretePlant; break;
+		default: break;
+		}
+
+		if (BuildTool != ESTPBuildTool::None)
+		{
+			if (UBuildingManagerSubsystem* Manager = GetWorld()->GetSubsystem<UBuildingManagerSubsystem>())
+			{
+				BuildingData = Manager->GetDefinition(BuildTool);
+			}
+		}
+	}
 
 	CurrentHealth = GetMaxHealth();
 	const int32 SlotCapacity = GetMaxDroneSlots();

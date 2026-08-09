@@ -12,6 +12,8 @@
 #include "Components/Spacer.h"
 #include "SurviveThePlanet.h"
 #include "SurviveThePlanetPlayerController.h"
+#include "Gameplay/Base/BuildingDataAsset.h"
+#include "Gameplay/Buildings/BuildingManagerSubsystem.h"
 
 UBuildToolbarWidget::UBuildToolbarWidget(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
@@ -29,6 +31,7 @@ UBuildToolbarWidget::UBuildToolbarWidget(const FObjectInitializer& ObjectInitial
 void UBuildToolbarWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
+	RefreshButtonConfigsFromCatalog();
 
 	if (HasDesignedToolbar())
 	{
@@ -45,6 +48,30 @@ void UBuildToolbarWidget::NativeConstruct()
 		Controller->OnBuildToolChanged.RemoveDynamic(this, &UBuildToolbarWidget::HandleControllerBuildToolChanged);
 		Controller->OnBuildToolChanged.AddDynamic(this, &UBuildToolbarWidget::HandleControllerBuildToolChanged);
 		SetActiveTool(Controller->GetActiveBuildTool());
+	}
+}
+
+void UBuildToolbarWidget::RefreshButtonConfigsFromCatalog()
+{
+	UWorld* World = GetWorld();
+	UBuildingManagerSubsystem* Manager = World ? World->GetSubsystem<UBuildingManagerSubsystem>() : nullptr;
+	if (!Manager) return;
+
+	for (UBuildingDataAsset* Definition : Manager->GetToolbarDefinitions())
+	{
+		if (!Definition || Definition->BuildTool == ESTPBuildTool::None) continue;
+		FBuildToolButtonConfig* Config = Buttons.FindByPredicate([Definition](const FBuildToolButtonConfig& Entry)
+		{
+			return Entry.Tool == Definition->BuildTool;
+		});
+		if (!Config)
+		{
+			Config = &Buttons.AddDefaulted_GetRef();
+			Config->Tool = Definition->BuildTool;
+		}
+		Config->Tooltip = FText::Format(NSLOCTEXT("SurviveThePlanet", "CatalogBuildTooltip", "Build {0}\n{1}"),
+			Definition->DisplayName, Definition->Description);
+		Config->IconTexture = Definition->ToolbarIcon ? Definition->ToolbarIcon : Definition->Thumbnail;
 	}
 }
 
@@ -230,6 +257,13 @@ void UBuildToolbarWidget::BindDesignedToolbar()
 		ConcretePlantButton->OnClicked.AddDynamic(this, &UBuildToolbarWidget::HandleConcretePlantClicked);
 		if (const FBuildToolButtonConfig* Config = FindButtonConfig(ESTPBuildTool::ConcretePlant)) ConcretePlantButton->SetToolTipText(Config->Tooltip);
 	}
+
+	ApplyIcon(EnergyCableIcon, ESTPBuildTool::EnergyCable);
+	ApplyIcon(EnergyModuleIcon, ESTPBuildTool::EnergyModule);
+	ApplyIcon(EnergyStorageIcon, ESTPBuildTool::EnergyStorage);
+	ApplyIcon(MiningBuildingIcon, ESTPBuildTool::MiningMachine);
+	ApplyIcon(WaterCollectorIcon, ESTPBuildTool::WaterCollector);
+	ApplyIcon(ConcretePlantIcon, ESTPBuildTool::ConcretePlant);
 
 	if (EnergyCableBorder)
 	{

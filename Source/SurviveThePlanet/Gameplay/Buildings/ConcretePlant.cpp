@@ -12,11 +12,6 @@ AConcretePlant::AConcretePlant()
 	BuildingDescription = NSLOCTEXT("SurviveThePlanet", "DefaultConcretePlantDescription", "Uses water, stone and electricity to produce concrete.");
 	EnergyConsumptionPerMinute = 10.0f;
 	ConstructionProgress = 0.0f;
-	BuildingData = LoadObject<UConcretePlantBuildingDataAsset>(nullptr, TEXT("/Game/Data/Buildings/DA_ConcretePlant.DA_ConcretePlant"));
-	if (!IsValid(BuildingData))
-	{
-		BaseModuleMesh = LoadObject<UStaticMesh>(nullptr, TEXT("/Game/Models/Buildings/ConcretePlant/ConcreatePlantMesh.ConcreatePlantMesh"));
-	}
 }
 
 void AConcretePlant::Tick(float DeltaSeconds)

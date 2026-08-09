@@ -166,31 +166,16 @@ protected:
 
 private:
 	UPROPERTY(Transient)
-	TSubclassOf<AEnergyModule> EnergyModuleClass;
-
-	UPROPERTY(Transient)
 	TObjectPtr<AEnergyModule> EnergyModulePlacementPreview;
-
-	UPROPERTY(Transient)
-	TSubclassOf<AEnergyStorageBuilding> EnergyStorageClass;
 
 	UPROPERTY(Transient)
 	TObjectPtr<AEnergyStorageBuilding> EnergyStoragePlacementPreview;
 
 	UPROPERTY(Transient)
-	TSubclassOf<AMiningMachine> MiningMachineClass;
-
-	UPROPERTY(Transient)
 	TObjectPtr<AMiningMachine> MiningMachinePlacementPreview;
 
 	UPROPERTY(Transient)
-	TSubclassOf<AWaterCollector> WaterCollectorClass;
-
-	UPROPERTY(Transient)
 	TObjectPtr<AWaterCollector> WaterCollectorPlacementPreview;
-
-	UPROPERTY(Transient)
-	TSubclassOf<AConcretePlant> ConcretePlantClass;
 
 	UPROPERTY(Transient)
 	TObjectPtr<AConcretePlant> ConcretePlantPlacementPreview;
@@ -241,6 +226,7 @@ private:
 	TSubclassOf<AMiningMachine> GetMiningMachineClassForSource(const ABaseResourceSource* ResourceSource) const;
 	ABaseResourceSource* GetResourceSourceUnderCursor(FHitResult* OutHit = nullptr) const;
 	AResourceManager* FindResourceManager() const;
+	UClass* GetManagedBuildingClass(ESTPBuildTool Tool, UClass* FallbackClass) const;
 	bool TrySelectActorUnderCursor();
 	bool TrySelectActorAtScreenPosition(const FVector2D& ScreenPosition);
 	AActor* FindSelectableActorNearLocation(const FVector& Location) const;

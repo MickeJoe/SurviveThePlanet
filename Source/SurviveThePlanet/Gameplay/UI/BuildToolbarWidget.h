@@ -122,6 +122,7 @@ private:
 	ESTPBuildTool ActiveTool = ESTPBuildTool::None;
 
 	void RebuildToolbar();
+	void RefreshButtonConfigsFromCatalog();
 	UWidget* BuildButton(const FBuildToolButtonConfig& Config);
 	bool HasDesignedToolbar() const;
 	void BindDesignedToolbar();

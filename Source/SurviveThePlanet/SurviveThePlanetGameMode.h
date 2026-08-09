@@ -10,6 +10,7 @@ class UBuildToolbarWidget;
 class UResourceDisplayWidget;
 class AEnergyModule;
 class AMiningMachine;
+class UBuildingCatalogDataAsset;
 
 /**
  *  Simple Game Mode for a top-down perspective game
@@ -35,11 +36,9 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "UI")
 	TSubclassOf<UResourceDisplayWidget> ResourceDisplayWidgetClass;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Build Tools")
-	TSubclassOf<AEnergyModule> EnergyModuleClass;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Build Tools")
-	TSubclassOf<AMiningMachine> MiningMachineClass;
+	/** Optional game-mode-specific catalog. The subsystem default is used when unset. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Buildings")
+	TObjectPtr<UBuildingCatalogDataAsset> BuildingCatalog;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UBuildToolbarWidget> BuildToolbarWidget;

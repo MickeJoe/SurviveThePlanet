@@ -4,10 +4,12 @@
 #include "Engine/DataAsset.h"
 #include "Gameplay/Drones/DroneDataAsset.h"
 #include "Gameplay/Resources/ResourceManager.h"
+#include "Gameplay/BuildTools/BuildToolTypes.h"
 #include "BuildingDataAsset.generated.h"
 
 class UStaticMesh;
 class UTexture2D;
+class ABaseBuilding;
 
 UENUM(BlueprintType)
 enum class ESTPBuildingType : uint8
@@ -41,6 +43,24 @@ class SURVIVETHEPLANET_API UBuildingDataAsset : public UDataAsset
 	GENERATED_BODY()
 
 public:
+	/** Stable toolbar/placement identifier used by the building catalog. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Catalog")
+	ESTPBuildTool BuildTool = ESTPBuildTool::None;
+
+	/** Blueprint or native actor spawned for previews and completed buildings. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Catalog")
+	TSoftClassPtr<ABaseBuilding> BuildingClass;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Catalog")
+	bool bShowInBuildToolbar = true;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Catalog")
+	int32 ToolbarSortOrder = 0;
+
+	/** Optional compact toolbar art; Thumbnail is used when unset. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Catalog")
+	TObjectPtr<UTexture2D> ToolbarIcon;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Identity")
 	FText DisplayName = NSLOCTEXT("SurviveThePlanet", "DefaultBuildingDataName", "Building");
 

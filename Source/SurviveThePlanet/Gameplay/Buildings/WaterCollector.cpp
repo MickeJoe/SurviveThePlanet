@@ -14,7 +14,6 @@ AWaterCollector::AWaterCollector()
 	EnergyProductionPerMinute = 0.0f;
 	EnergyConsumptionPerMinute = 5.0f;
 	ConstructionProgress = 0.0f;
-	BuildingData = LoadObject<UWaterCollectorBuildingDataAsset>(nullptr, TEXT("/Game/Data/Buildings/DA_WaterCollector.DA_WaterCollector"));
 }
 
 void AWaterCollector::BeginPlay()

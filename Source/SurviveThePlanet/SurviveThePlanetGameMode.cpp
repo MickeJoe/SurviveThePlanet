@@ -6,6 +6,8 @@
 #include "SurviveThePlanetPlayerController.h"
 #include "Gameplay/Buildings/EnergyModule.h"
 #include "Gameplay/Buildings/MiningMachine.h"
+#include "Gameplay/Buildings/BuildingManagerSubsystem.h"
+#include "Gameplay/Buildings/BuildingCatalogDataAsset.h"
 #include "Gameplay/UI/BuildToolbarWidget.h"
 #include "Gameplay/UI/ResourceDisplayWidget.h"
 #include "SurviveThePlanet.h"
@@ -16,8 +18,7 @@ ASurviveThePlanetGameMode::ASurviveThePlanetGameMode()
 	PlayerControllerClass = ASurviveThePlanetPlayerController::StaticClass();
 	BuildToolbarWidgetClass = UBuildToolbarWidget::StaticClass();
 	ResourceDisplayWidgetClass = UResourceDisplayWidget::StaticClass();
-	EnergyModuleClass = AEnergyModule::StaticClass();
-	MiningMachineClass = AMiningMachine::StaticClass();
+	BuildingCatalog = LoadObject<UBuildingCatalogDataAsset>(nullptr, TEXT("/Game/Data/Buildings/DA_BuildingCatalog.DA_BuildingCatalog"));
 }
 
 void ASurviveThePlanetGameMode::StartPlay()
@@ -31,10 +32,12 @@ void ASurviveThePlanetGameMode::StartPlay()
 
 	if (APlayerController* PlayerController = GetWorld()->GetFirstPlayerController())
 	{
-		if (ASurviveThePlanetPlayerController* STPPlayerController = Cast<ASurviveThePlanetPlayerController>(PlayerController))
+		if (BuildingCatalog)
 		{
-			STPPlayerController->SetEnergyModuleClass(EnergyModuleClass);
-			STPPlayerController->SetMiningMachineClass(MiningMachineClass);
+			if (UBuildingManagerSubsystem* Manager = GetWorld()->GetSubsystem<UBuildingManagerSubsystem>())
+			{
+				Manager->SetCatalog(BuildingCatalog);
+			}
 		}
 
 		if (BuildToolbarWidgetClass)

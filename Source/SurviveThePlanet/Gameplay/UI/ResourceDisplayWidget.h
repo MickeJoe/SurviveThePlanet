@@ -99,6 +99,12 @@ protected:
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidget), Category = "Resource Display")
 	TObjectPtr<UTextBlock> WaterAmountText;
 
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidget), Category = "Resource Display")
+	TObjectPtr<UImage> ConcreteIcon;
+
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidget), Category = "Resource Display")
+	TObjectPtr<UTextBlock> ConcreteAmountText;
+
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Resource Display")
 	TObjectPtr<UTextBlock> EnergyRateText;
 
@@ -113,6 +119,9 @@ protected:
 
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Resource Display")
 	TObjectPtr<UTextBlock> WaterRateText;
+
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Resource Display")
+	TObjectPtr<UTextBlock> ConcreteRateText;
 
 private:
 	UPROPERTY(Transient)

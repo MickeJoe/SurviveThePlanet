@@ -26,6 +26,7 @@
 #include "Gameplay/Buildings/MiningMachine.h"
 #include "Gameplay/Buildings/WaterCollector.h"
 #include "Gameplay/Buildings/ConcretePlant.h"
+#include "Gameplay/Buildings/BuildingManagerSubsystem.h"
 #include "Gameplay/Cables/CableNetworkManager.h"
 #include "Gameplay/Planet/PlanetSurfaceManager.h"
 #include "Gameplay/Resources/ResourceManager.h"
@@ -55,15 +56,6 @@ ASurviveThePlanetPlayerController::ASurviveThePlanetPlayerController()
 	SetDestinationClickAction = LoadObject<UInputAction>(nullptr, TEXT("/Game/TopDown/Input/Actions/IA_SetDestination_Click"));
 	SetDestinationTouchAction = LoadObject<UInputAction>(nullptr, TEXT("/Game/TopDown/Input/Actions/IA_SetDestination_Touch"));
 	FXCursor = LoadObject<UNiagaraSystem>(nullptr, TEXT("/Game/TopDown/Cursor/FX_Cursor_Success"));
-	EnergyModuleClass = AEnergyModule::StaticClass();
-	EnergyStorageClass = LoadClass<AEnergyStorageBuilding>(nullptr, TEXT("/Game/BluePrints/EneryBatteryStorage/BP_EnergyStorageBuilding.BP_EnergyStorageBuilding_C"));
-	if (!EnergyStorageClass)
-	{
-		EnergyStorageClass = AEnergyStorageBuilding::StaticClass();
-	}
-	MiningMachineClass = AMiningMachine::StaticClass();
-	WaterCollectorClass = AWaterCollector::StaticClass();
-	ConcretePlantClass = AConcretePlant::StaticClass();
 	BuildingInfoWidgetClass = LoadClass<UBuildingInfoWidget>(nullptr, TEXT("/Game/UI/WBP_BuildingPopup.WBP_BuildingPopup_C"));
 }
 
@@ -88,52 +80,36 @@ void ASurviveThePlanetPlayerController::SetActiveBuildTool(ESTPBuildTool NewBuil
 
 void ASurviveThePlanetPlayerController::SetMiningMachineClass(TSubclassOf<AMiningMachine> NewMiningMachineClass)
 {
-	MiningMachineClass = NewMiningMachineClass;
-	if (!MiningMachineClass)
-	{
-		MiningMachineClass = AMiningMachine::StaticClass();
-	}
-
+	if (UBuildingManagerSubsystem* Manager = GetWorld() ? GetWorld()->GetSubsystem<UBuildingManagerSubsystem>() : nullptr)
+		Manager->SetBuildingClassOverride(ESTPBuildTool::MiningMachine, NewMiningMachineClass);
 	DestroyBuildPlacementPreview();
-	UE_LOG(LogSurviveThePlanet, Warning, TEXT("STP_BUILD MiningMachineClass set to %s"), *GetNameSafe(MiningMachineClass.Get()));
 }
 
 void ASurviveThePlanetPlayerController::SetEnergyModuleClass(TSubclassOf<AEnergyModule> NewEnergyModuleClass)
 {
-	EnergyModuleClass = NewEnergyModuleClass;
-	if (!EnergyModuleClass)
-	{
-		EnergyModuleClass = AEnergyModule::StaticClass();
-	}
-
+	if (UBuildingManagerSubsystem* Manager = GetWorld() ? GetWorld()->GetSubsystem<UBuildingManagerSubsystem>() : nullptr)
+		Manager->SetBuildingClassOverride(ESTPBuildTool::EnergyModule, NewEnergyModuleClass);
 	DestroyBuildPlacementPreview();
-	UE_LOG(LogSurviveThePlanet, Warning, TEXT("STP_BUILD EnergyModuleClass set to %s"), *GetNameSafe(EnergyModuleClass.Get()));
 }
 
 void ASurviveThePlanetPlayerController::SetWaterCollectorClass(TSubclassOf<AWaterCollector> NewWaterCollectorClass)
 {
-	WaterCollectorClass = NewWaterCollectorClass;
-	if (!WaterCollectorClass)
-	{
-		WaterCollectorClass = AWaterCollector::StaticClass();
-	}
+	if (UBuildingManagerSubsystem* Manager = GetWorld() ? GetWorld()->GetSubsystem<UBuildingManagerSubsystem>() : nullptr)
+		Manager->SetBuildingClassOverride(ESTPBuildTool::WaterCollector, NewWaterCollectorClass);
 	DestroyBuildPlacementPreview();
 }
 
 void ASurviveThePlanetPlayerController::SetConcretePlantClass(TSubclassOf<AConcretePlant> NewConcretePlantClass)
 {
-	ConcretePlantClass = NewConcretePlantClass;
-	if (!ConcretePlantClass) ConcretePlantClass = AConcretePlant::StaticClass();
+	if (UBuildingManagerSubsystem* Manager = GetWorld() ? GetWorld()->GetSubsystem<UBuildingManagerSubsystem>() : nullptr)
+		Manager->SetBuildingClassOverride(ESTPBuildTool::ConcretePlant, NewConcretePlantClass);
 	DestroyBuildPlacementPreview();
 }
 
 void ASurviveThePlanetPlayerController::SetEnergyStorageClass(TSubclassOf<AEnergyStorageBuilding> NewEnergyStorageClass)
 {
-	EnergyStorageClass = NewEnergyStorageClass;
-	if (!EnergyStorageClass)
-	{
-		EnergyStorageClass = AEnergyStorageBuilding::StaticClass();
-	}
+	if (UBuildingManagerSubsystem* Manager = GetWorld() ? GetWorld()->GetSubsystem<UBuildingManagerSubsystem>() : nullptr)
+		Manager->SetBuildingClassOverride(ESTPBuildTool::EnergyStorage, NewEnergyStorageClass);
 	DestroyBuildPlacementPreview();
 }
 
@@ -386,7 +362,7 @@ bool ASurviveThePlanetPlayerController::TryPlaceConcretePlantAtCursor()
 	APlanetSurfaceManager* SurfaceManager = FindPlanetSurfaceManager();
 	if (!TryGetCursorWorldLocation(TargetLocation) || !World || !SurfaceManager) return true;
 
-	TSubclassOf<AConcretePlant> ClassToSpawn = ConcretePlantClass;
+	TSubclassOf<AConcretePlant> ClassToSpawn = GetManagedBuildingClass(ESTPBuildTool::ConcretePlant, AConcretePlant::StaticClass());
 	if (!ClassToSpawn) ClassToSpawn = AConcretePlant::StaticClass();
 	const AConcretePlant* Defaults = ClassToSpawn->GetDefaultObject<AConcretePlant>();
 	const FIntPoint Footprint = Defaults ? Defaults->GetGridFootprint() : FIntPoint(2, 2);
@@ -425,7 +401,7 @@ bool ASurviveThePlanetPlayerController::TryPlaceWaterCollectorAtCursor()
 		return true;
 	}
 
-	TSubclassOf<AWaterCollector> ClassToSpawn = WaterCollectorClass;
+	TSubclassOf<AWaterCollector> ClassToSpawn = GetManagedBuildingClass(ESTPBuildTool::WaterCollector, AWaterCollector::StaticClass());
 	if (!ClassToSpawn)
 	{
 		ClassToSpawn = AWaterCollector::StaticClass();
@@ -488,7 +464,7 @@ bool ASurviveThePlanetPlayerController::TryPlaceEnergyStorageAtCursor()
 		return true;
 	}
 
-	TSubclassOf<AEnergyStorageBuilding> ClassToSpawn = EnergyStorageClass;
+	TSubclassOf<AEnergyStorageBuilding> ClassToSpawn = GetManagedBuildingClass(ESTPBuildTool::EnergyStorage, AEnergyStorageBuilding::StaticClass());
 	if (!ClassToSpawn)
 	{
 		ClassToSpawn = AEnergyStorageBuilding::StaticClass();
@@ -646,7 +622,7 @@ bool ASurviveThePlanetPlayerController::TryPlaceEnergyModuleAtCursor()
 		return true;
 	}
 
-	TSubclassOf<AEnergyModule> ClassToSpawn = EnergyModuleClass;
+	TSubclassOf<AEnergyModule> ClassToSpawn = GetManagedBuildingClass(ESTPBuildTool::EnergyModule, AEnergyModule::StaticClass());
 	if (!ClassToSpawn)
 	{
 		ClassToSpawn = AEnergyModule::StaticClass();
@@ -958,7 +934,7 @@ void ASurviveThePlanetPlayerController::EnsureEnergyModulePlacementPreview()
 		return;
 	}
 
-	TSubclassOf<AEnergyModule> ClassToSpawn = EnergyModuleClass;
+	TSubclassOf<AEnergyModule> ClassToSpawn = GetManagedBuildingClass(ESTPBuildTool::EnergyModule, AEnergyModule::StaticClass());
 	if (!ClassToSpawn)
 	{
 		ClassToSpawn = AEnergyModule::StaticClass();
@@ -988,7 +964,7 @@ void ASurviveThePlanetPlayerController::EnsureMiningMachinePlacementPreview(cons
 {
 	TSubclassOf<AMiningMachine> ClassToSpawn = ResourceSource
 		? GetMiningMachineClassForSource(ResourceSource)
-		: MiningMachineClass;
+		: TSubclassOf<AMiningMachine>(GetManagedBuildingClass(ESTPBuildTool::MiningMachine, AMiningMachine::StaticClass()));
 	if (!ClassToSpawn)
 	{
 		ClassToSpawn = AMiningMachine::StaticClass();
@@ -1036,12 +1012,7 @@ TSubclassOf<AMiningMachine> ASurviveThePlanetPlayerController::GetMiningMachineC
 		return ResourceSource->GetMineBlueprint();
 	}
 
-	if (MiningMachineClass)
-	{
-		return MiningMachineClass;
-	}
-
-	return TSubclassOf<AMiningMachine>(AMiningMachine::StaticClass());
+	return TSubclassOf<AMiningMachine>(GetManagedBuildingClass(ESTPBuildTool::MiningMachine, AMiningMachine::StaticClass()));
 }
 
 void ASurviveThePlanetPlayerController::EnsureEnergyStoragePlacementPreview()
@@ -1051,7 +1022,7 @@ void ASurviveThePlanetPlayerController::EnsureEnergyStoragePlacementPreview()
 		return;
 	}
 
-	TSubclassOf<AEnergyStorageBuilding> ClassToSpawn = EnergyStorageClass;
+	TSubclassOf<AEnergyStorageBuilding> ClassToSpawn = GetManagedBuildingClass(ESTPBuildTool::EnergyStorage, AEnergyStorageBuilding::StaticClass());
 	if (!ClassToSpawn)
 	{
 		ClassToSpawn = AEnergyStorageBuilding::StaticClass();
@@ -1102,7 +1073,7 @@ void ASurviveThePlanetPlayerController::DestroyBuildPlacementPreview()
 void ASurviveThePlanetPlayerController::EnsureConcretePlantPlacementPreview()
 {
 	if (IsValid(ConcretePlantPlacementPreview) || !GetWorld()) return;
-	TSubclassOf<AConcretePlant> ClassToSpawn = ConcretePlantClass;
+	TSubclassOf<AConcretePlant> ClassToSpawn = GetManagedBuildingClass(ESTPBuildTool::ConcretePlant, AConcretePlant::StaticClass());
 	if (!ClassToSpawn) ClassToSpawn = AConcretePlant::StaticClass();
 	FActorSpawnParameters Params;
 	Params.Owner = this;
@@ -1127,7 +1098,7 @@ void ASurviveThePlanetPlayerController::EnsureWaterCollectorPlacementPreview()
 		return;
 	}
 
-	TSubclassOf<AWaterCollector> ClassToSpawn = WaterCollectorClass;
+	TSubclassOf<AWaterCollector> ClassToSpawn = GetManagedBuildingClass(ESTPBuildTool::WaterCollector, AWaterCollector::StaticClass());
 	if (!ClassToSpawn)
 	{
 		ClassToSpawn = AWaterCollector::StaticClass();
@@ -1193,6 +1164,21 @@ AResourceManager* ASurviveThePlanetPlayerController::FindResourceManager() const
 	}
 
 	return nullptr;
+}
+
+UClass* ASurviveThePlanetPlayerController::GetManagedBuildingClass(ESTPBuildTool Tool, UClass* FallbackClass) const
+{
+	if (const UWorld* World = GetWorld())
+	{
+		if (const UBuildingManagerSubsystem* Manager = World->GetSubsystem<UBuildingManagerSubsystem>())
+		{
+			if (const TSubclassOf<ABaseBuilding> ManagedClass = Manager->GetBuildingClass(Tool))
+			{
+				if (ManagedClass->IsChildOf(FallbackClass)) return ManagedClass.Get();
+			}
+		}
+	}
+	return FallbackClass;
 }
 
 void ASurviveThePlanetPlayerController::ConfigureEnergyModulePlacementPreview(AEnergyModule* PreviewActor) const
