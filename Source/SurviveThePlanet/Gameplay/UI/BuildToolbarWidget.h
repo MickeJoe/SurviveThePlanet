@@ -76,6 +76,9 @@ protected:
 	TObjectPtr<UButton> ConcretePlantButton;
 
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Build Toolbar|Designed Widgets")
+	TObjectPtr<UButton> CommunicationModuleButton;
+
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Build Toolbar|Designed Widgets")
 	TObjectPtr<UImage> EnergyCableIcon;
 
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Build Toolbar|Designed Widgets")
@@ -94,6 +97,9 @@ protected:
 	TObjectPtr<UImage> ConcretePlantIcon;
 
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Build Toolbar|Designed Widgets")
+	TObjectPtr<UImage> CommunicationModuleIcon;
+
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Build Toolbar|Designed Widgets")
 	TObjectPtr<UBorder> EnergyCableBorder;
 
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Build Toolbar|Designed Widgets")
@@ -110,6 +116,9 @@ protected:
 
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Build Toolbar|Designed Widgets")
 	TObjectPtr<UBorder> ConcretePlantBorder;
+
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Build Toolbar|Designed Widgets")
+	TObjectPtr<UBorder> CommunicationModuleBorder;
 
 	UFUNCTION(BlueprintImplementableEvent, Category = "Build Toolbar")
 	void BP_ActiveToolChanged(ESTPBuildTool NewTool);
@@ -146,6 +155,9 @@ private:
 
 	UFUNCTION()
 	void HandleConcretePlantClicked();
+
+	UFUNCTION()
+	void HandleCommunicationModuleClicked();
 
 	UFUNCTION()
 	void HandleControllerBuildToolChanged(ESTPBuildTool NewTool);

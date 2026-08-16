@@ -1,0 +1,31 @@
+{
+  "maxActiveObjectives": 8,
+  "initialObjectives": ["build_first_mining_machine"],
+  "objectives": [
+    {
+      "id": "build_first_mining_machine",
+      "title": "Bygg en gruvmaskin",
+      "description": "Bygg och färdigställ din första gruvmaskin.",
+      "timeLimitSeconds": 0,
+      "conditions": [
+        { "type": "build_building", "building": "MiningMachine", "amount": 1 }
+      ],
+      "rewards": [
+        { "type": "give_resource", "resource": "ControlChip", "amount": 5 },
+        { "type": "unlock_objective", "objective": "deliver_iron_to_home_base" }
+      ]
+    },
+    {
+      "id": "deliver_iron_to_home_base",
+      "title": "Leverera järn till basen",
+      "description": "Leverera 100 järn till hemmabasen innan tiden tar slut.",
+      "timeLimitSeconds": 600,
+      "conditions": [
+        { "type": "deliver_resource", "destination": "HomeBase", "resource": "Iron", "amount": 100 }
+      ],
+      "rewards": [
+        { "type": "give_resource", "resource": "ControlChip", "amount": 10 }
+      ]
+    }
+  ]
+}

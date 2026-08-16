@@ -8,6 +8,10 @@
 #include "Components/HorizontalBox.h"
 #include "Components/HorizontalBoxSlot.h"
 #include "Components/Image.h"
+#include "Components/PanelWidget.h"
+#include "Components/Overlay.h"
+#include "Components/TextBlock.h"
+#include "Engine/Texture2D.h"
 #include "Components/SizeBox.h"
 #include "Components/Spacer.h"
 #include "SurviveThePlanet.h"
@@ -25,6 +29,7 @@ UBuildToolbarWidget::UBuildToolbarWidget(const FObjectInitializer& ObjectInitial
 		{ ESTPBuildTool::MiningMachine, NSLOCTEXT("SurviveThePlanet", "BuildToolMiningMachineTooltip", "Build Mining Machine\nPlace on an available resource deposit."), nullptr },
 		{ ESTPBuildTool::WaterCollector, NSLOCTEXT("SurviveThePlanet", "BuildToolWaterCollectorTooltip", "Build Water Collector\nProduces water according to the current rainfall."), nullptr },
 		{ ESTPBuildTool::ConcretePlant, NSLOCTEXT("SurviveThePlanet", "BuildToolConcretePlantTooltip", "Build Concrete Plant\nConsumes water, stone and electricity to produce concrete."), nullptr }
+		,{ ESTPBuildTool::CommunicationModule, NSLOCTEXT("SurviveThePlanet", "BuildToolCommunicationModuleTooltip", "Build Communication Module\nProvides long-range communications for the colony."), LoadObject<UTexture2D>(nullptr, TEXT("/Game/UI/Images/CommunicationModuleBuildIcon.CommunicationModuleBuildIcon")) }
 	};
 }
 
@@ -157,9 +162,18 @@ UWidget* UBuildToolbarWidget::BuildButton(const FBuildToolButtonConfig& Config)
 	Button->SetToolTipText(Config.Tooltip);
 	Border->SetContent(Button);
 
+	UOverlay* ButtonContent = WidgetTree->ConstructWidget<UOverlay>(UOverlay::StaticClass());
+	Button->AddChild(ButtonContent);
+
 	UImage* Icon = WidgetTree->ConstructWidget<UImage>(UImage::StaticClass());
 	ApplyIcon(Icon, Config.Tool);
-	Button->AddChild(Icon);
+	ButtonContent->AddChildToOverlay(Icon);
+
+	UTextBlock* ShortcutLabel = WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass());
+	ShortcutLabel->SetText(FText::AsNumber(static_cast<int32>(Config.Tool)));
+	ShortcutLabel->SetColorAndOpacity(FSlateColor(FLinearColor::White));
+	ShortcutLabel->SetShadowOffset(FVector2D(1.0f, 1.0f));
+	ButtonContent->AddChildToOverlay(ShortcutLabel);
 
 	if (Config.Tool == ESTPBuildTool::EnergyCable)
 	{
@@ -184,6 +198,10 @@ UWidget* UBuildToolbarWidget::BuildButton(const FBuildToolButtonConfig& Config)
 	else if (Config.Tool == ESTPBuildTool::ConcretePlant)
 	{
 		Button->OnClicked.AddDynamic(this, &UBuildToolbarWidget::HandleConcretePlantClicked);
+	}
+	else if (Config.Tool == ESTPBuildTool::CommunicationModule)
+	{
+		Button->OnClicked.AddDynamic(this, &UBuildToolbarWidget::HandleCommunicationModuleClicked);
 	}
 
 	ButtonBorders.Add(Config.Tool, Border);
@@ -258,12 +276,21 @@ void UBuildToolbarWidget::BindDesignedToolbar()
 		if (const FBuildToolButtonConfig* Config = FindButtonConfig(ESTPBuildTool::ConcretePlant)) ConcretePlantButton->SetToolTipText(Config->Tooltip);
 	}
 
+	if (CommunicationModuleButton)
+	{
+		CommunicationModuleButton->OnClicked.RemoveDynamic(this, &UBuildToolbarWidget::HandleCommunicationModuleClicked);
+		CommunicationModuleButton->OnClicked.AddDynamic(this, &UBuildToolbarWidget::HandleCommunicationModuleClicked);
+		if (const FBuildToolButtonConfig* Config = FindButtonConfig(ESTPBuildTool::CommunicationModule)) CommunicationModuleButton->SetToolTipText(Config->Tooltip);
+	}
+
 	ApplyIcon(EnergyCableIcon, ESTPBuildTool::EnergyCable);
 	ApplyIcon(EnergyModuleIcon, ESTPBuildTool::EnergyModule);
 	ApplyIcon(EnergyStorageIcon, ESTPBuildTool::EnergyStorage);
 	ApplyIcon(MiningBuildingIcon, ESTPBuildTool::MiningMachine);
 	ApplyIcon(WaterCollectorIcon, ESTPBuildTool::WaterCollector);
 	ApplyIcon(ConcretePlantIcon, ESTPBuildTool::ConcretePlant);
+	// The Communication Module artwork is authored directly in WBP_BuildToolbar.
+	// Preserve that brush instead of replacing it during NativeConstruct.
 
 	if (EnergyCableBorder)
 	{
@@ -293,6 +320,11 @@ void UBuildToolbarWidget::BindDesignedToolbar()
 	if (ConcretePlantBorder)
 	{
 		ButtonBorders.Add(ESTPBuildTool::ConcretePlant, ConcretePlantBorder);
+	}
+
+	if (CommunicationModuleBorder)
+	{
+		ButtonBorders.Add(ESTPBuildTool::CommunicationModule, CommunicationModuleBorder);
 	}
 }
 
@@ -353,6 +385,11 @@ void UBuildToolbarWidget::HandleWaterCollectorClicked()
 void UBuildToolbarWidget::HandleConcretePlantClicked()
 {
 	HandleToolClicked(ESTPBuildTool::ConcretePlant);
+}
+
+void UBuildToolbarWidget::HandleCommunicationModuleClicked()
+{
+	HandleToolClicked(ESTPBuildTool::CommunicationModule);
 }
 
 void UBuildToolbarWidget::HandleControllerBuildToolChanged(ESTPBuildTool NewTool)

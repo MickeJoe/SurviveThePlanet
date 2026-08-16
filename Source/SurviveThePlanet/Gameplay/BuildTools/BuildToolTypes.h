@@ -12,5 +12,6 @@ enum class ESTPBuildTool : uint8
 	EnergyStorage UMETA(DisplayName = "Energy Storage"),
 	MiningMachine UMETA(DisplayName = "Mining Machine"),
 	WaterCollector UMETA(DisplayName = "Water Collector"),
-	ConcretePlant UMETA(DisplayName = "Concrete Plant")
+	ConcretePlant UMETA(DisplayName = "Concrete Plant"),
+	CommunicationModule UMETA(DisplayName = "Communication Module")
 };

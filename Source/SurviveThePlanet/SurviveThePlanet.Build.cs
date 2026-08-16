@@ -19,6 +19,8 @@ public class SurviveThePlanet : ModuleRules
 			"StateTreeModule",
 			"GameplayStateTreeModule",
 			"Niagara",
+			"Json",
+			"JsonUtilities",
 			"UMG",
 			"Slate",
 			"SlateCore"

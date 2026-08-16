@@ -7,6 +7,7 @@
 #include "EngineUtils.h"
 #include "Gameplay/Base/BaseBuilding.h"
 #include "Gameplay/Drones/ConstructionDroneCoordinatorSubsystem.h"
+#include "Gameplay/Objectives/ObjectiveSubsystem.h"
 #include "SurviveThePlanet.h"
 #include "UObject/ConstructorHelpers.h"
 
@@ -391,6 +392,10 @@ void ABaseDrone::TickBuildTarget(float DeltaSeconds)
 	if (TargetBuilding->GetConstructionProgress() >= 1.0f)
 	{
 		TargetBuilding->HideConstructionProgress();
+		if (UObjectiveSubsystem* Objectives = GetWorld()->GetSubsystem<UObjectiveSubsystem>())
+		{
+			Objectives->SubmitBuildingBuilt(TargetBuilding->GetBuildingType());
+		}
 		ClearOngoingConstructionJob();
 	}
 }

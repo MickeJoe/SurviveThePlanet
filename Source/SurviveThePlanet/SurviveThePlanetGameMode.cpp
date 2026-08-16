@@ -10,6 +10,7 @@
 #include "Gameplay/Buildings/BuildingCatalogDataAsset.h"
 #include "Gameplay/UI/BuildToolbarWidget.h"
 #include "Gameplay/UI/ResourceDisplayWidget.h"
+#include "Gameplay/UI/ObjectiveTrackerWidget.h"
 #include "SurviveThePlanet.h"
 
 ASurviveThePlanetGameMode::ASurviveThePlanetGameMode()
@@ -18,6 +19,8 @@ ASurviveThePlanetGameMode::ASurviveThePlanetGameMode()
 	PlayerControllerClass = ASurviveThePlanetPlayerController::StaticClass();
 	BuildToolbarWidgetClass = UBuildToolbarWidget::StaticClass();
 	ResourceDisplayWidgetClass = UResourceDisplayWidget::StaticClass();
+	ObjectiveTrackerWidgetClass = LoadClass<UObjectiveTrackerWidget>(nullptr,
+		TEXT("/Game/UI/Objectives/WBP_ObjectiveTracker.WBP_ObjectiveTracker_C"));
 	BuildingCatalog = LoadObject<UBuildingCatalogDataAsset>(nullptr, TEXT("/Game/Data/Buildings/DA_BuildingCatalog.DA_BuildingCatalog"));
 }
 
@@ -61,6 +64,15 @@ void ASurviveThePlanetGameMode::StartPlay()
 			if (ResourceDisplayWidget)
 			{
 				ResourceDisplayWidget->AddToViewport(10);
+			}
+		}
+
+		if (ObjectiveTrackerWidgetClass)
+		{
+			ObjectiveTrackerWidget = CreateWidget<UObjectiveTrackerWidget>(PlayerController, ObjectiveTrackerWidgetClass);
+			if (ObjectiveTrackerWidget)
+			{
+				ObjectiveTrackerWidget->AddToViewport(10);
 			}
 		}
 	}

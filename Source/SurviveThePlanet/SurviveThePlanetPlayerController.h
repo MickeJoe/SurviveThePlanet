@@ -20,6 +20,7 @@ class AEnergyStorageBuilding;
 class AMiningMachine;
 class AWaterCollector;
 class AConcretePlant;
+class ACommunicationModule;
 class ABaseResourceSource;
 class AResourceManager;
 class APlanetSurfaceManager;
@@ -180,6 +181,9 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<AConcretePlant> ConcretePlantPlacementPreview;
 
+	UPROPERTY(Transient)
+	TObjectPtr<ACommunicationModule> CommunicationModulePlacementPreview;
+
 	/** Last emitted preview diagnostic; avoids writing the same result every frame. */
 	FString LastMiningPlacementDiagnostic;
 
@@ -206,23 +210,27 @@ private:
 	bool TryPlaceMiningMachineAtCursor();
 	bool TryPlaceWaterCollectorAtCursor();
 	bool TryPlaceConcretePlantAtCursor();
+	bool TryPlaceCommunicationModuleAtCursor();
 	void UpdateBuildPlacementPreview();
 	void UpdateEnergyModulePlacementPreview();
 	void UpdateEnergyStoragePlacementPreview();
 	void UpdateMiningMachinePlacementPreview();
 	void UpdateWaterCollectorPlacementPreview();
 	void UpdateConcretePlantPlacementPreview();
+	void UpdateCommunicationModulePlacementPreview();
 	void EnsureEnergyModulePlacementPreview();
 	void EnsureEnergyStoragePlacementPreview();
 	void EnsureMiningMachinePlacementPreview(const ABaseResourceSource* ResourceSource = nullptr);
 	void EnsureWaterCollectorPlacementPreview();
 	void EnsureConcretePlantPlacementPreview();
+	void EnsureCommunicationModulePlacementPreview();
 	void DestroyBuildPlacementPreview();
 	void ConfigureEnergyModulePlacementPreview(AEnergyModule* PreviewActor) const;
 	void ConfigureEnergyStoragePlacementPreview(AEnergyStorageBuilding* PreviewActor) const;
 	void ConfigureMiningMachinePlacementPreview(AMiningMachine* PreviewActor) const;
 	void ConfigureWaterCollectorPlacementPreview(AWaterCollector* PreviewActor) const;
 	void ConfigureConcretePlantPlacementPreview(AConcretePlant* PreviewActor) const;
+	void ConfigureCommunicationModulePlacementPreview(ACommunicationModule* PreviewActor) const;
 	TSubclassOf<AMiningMachine> GetMiningMachineClassForSource(const ABaseResourceSource* ResourceSource) const;
 	ABaseResourceSource* GetResourceSourceUnderCursor(FHitResult* OutHit = nullptr) const;
 	AResourceManager* FindResourceManager() const;

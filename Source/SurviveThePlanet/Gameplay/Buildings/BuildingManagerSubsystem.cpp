@@ -4,6 +4,7 @@
 #include "Gameplay/Base/BuildingDataAsset.h"
 #include "Gameplay/Buildings/BuildingCatalogDataAsset.h"
 #include "Gameplay/Buildings/ConcretePlant.h"
+#include "Gameplay/Buildings/CommunicationModule.h"
 #include "Gameplay/Buildings/EnergyModule.h"
 #include "Gameplay/Buildings/EnergyStorageBuilding.h"
 #include "Gameplay/Buildings/MiningMachine.h"
@@ -86,6 +87,7 @@ TSubclassOf<ABaseBuilding> UBuildingManagerSubsystem::GetBuildingClass(ESTPBuild
 	case ESTPBuildTool::ConcretePlant:
 		if (UClass* BPClass = LoadClass<AConcretePlant>(nullptr, TEXT("/Game/BluePrints/ConcretePlant/BP_ConcretePlant.BP_ConcretePlant_C"))) return BPClass;
 		return AConcretePlant::StaticClass();
+	case ESTPBuildTool::CommunicationModule: return ACommunicationModule::StaticClass();
 	case ESTPBuildTool::WaterCollector: return AWaterCollector::StaticClass();
 	case ESTPBuildTool::MiningMachine: return AMiningMachine::StaticClass();
 	case ESTPBuildTool::EnergyStorage: return AEnergyStorageBuilding::StaticClass();

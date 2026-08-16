@@ -26,6 +26,7 @@
 #include "Gameplay/Buildings/MiningMachine.h"
 #include "Gameplay/Buildings/WaterCollector.h"
 #include "Gameplay/Buildings/ConcretePlant.h"
+#include "Gameplay/Buildings/CommunicationModule.h"
 #include "Gameplay/Buildings/BuildingManagerSubsystem.h"
 #include "Gameplay/Cables/CableNetworkManager.h"
 #include "Gameplay/Planet/PlanetSurfaceManager.h"
@@ -347,6 +348,8 @@ bool ASurviveThePlanetPlayerController::TryHandleActiveBuildToolClick()
 		return TryPlaceWaterCollectorAtCursor();
 	case ESTPBuildTool::ConcretePlant:
 		return TryPlaceConcretePlantAtCursor();
+	case ESTPBuildTool::CommunicationModule:
+		return TryPlaceCommunicationModuleAtCursor();
 	case ESTPBuildTool::EnergyCable:
 		return true;
 	case ESTPBuildTool::None:
@@ -388,6 +391,44 @@ bool ASurviveThePlanetPlayerController::TryPlaceConcretePlantAtCursor()
 	Plant->ShowConstructionProgress();
 	if (UConstructionJobQueueSubsystem* Queue = World->GetSubsystem<UConstructionJobQueueSubsystem>()) Queue->EnqueueConstructionJob(Plant);
 	SetSelectedActor(Plant);
+	return true;
+}
+
+bool ASurviveThePlanetPlayerController::TryPlaceCommunicationModuleAtCursor()
+{
+	FVector TargetLocation;
+	UWorld* World = GetWorld();
+	APlanetSurfaceManager* SurfaceManager = FindPlanetSurfaceManager();
+	if (!TryGetCursorWorldLocation(TargetLocation) || !World || !SurfaceManager) return true;
+
+	TSubclassOf<ACommunicationModule> ClassToSpawn = GetManagedBuildingClass(
+		ESTPBuildTool::CommunicationModule, ACommunicationModule::StaticClass());
+	if (!ClassToSpawn) ClassToSpawn = ACommunicationModule::StaticClass();
+	const ACommunicationModule* Defaults = ClassToSpawn->GetDefaultObject<ACommunicationModule>();
+	const FIntPoint Footprint = Defaults ? Defaults->GetGridFootprint() : FIntPoint(2, 2);
+	const TArray<FResourceCost> Costs = Defaults ? Defaults->GetConstructionCosts() : TArray<FResourceCost>();
+	AResourceManager* ResourceManager = FindResourceManager();
+	if ((Costs.Num() > 0 && !ResourceManager) || (ResourceManager && !ResourceManager->CanAffordCosts(Costs))) return true;
+
+	const FSTPGridPlacement Placement = SurfaceManager->GetPlacementForWorldLocation(TargetLocation, Footprint);
+	if (!Placement.bValid) return true;
+	FActorSpawnParameters Params;
+	Params.Owner = this;
+	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+	ACommunicationModule* Module = World->SpawnActor<ACommunicationModule>(
+		ClassToSpawn, Placement.WorldLocation, Placement.WorldRotation, Params);
+	if (!Module) return true;
+	Module->SetPlacementPreview(false);
+	if (!SurfaceManager->ReserveCells(Module, Placement.OriginCell, Module->GetGridFootprint())
+		|| (ResourceManager && !ResourceManager->TrySpendCosts(Costs)))
+	{
+		Module->Destroy();
+		return true;
+	}
+	Module->SetConstructionProgress(0.0f);
+	Module->ShowConstructionProgress();
+	if (UConstructionJobQueueSubsystem* Queue = World->GetSubsystem<UConstructionJobQueueSubsystem>()) Queue->EnqueueConstructionJob(Module);
+	SetSelectedActor(Module);
 	return true;
 }
 
@@ -733,6 +774,9 @@ void ASurviveThePlanetPlayerController::UpdateBuildPlacementPreview()
 	case ESTPBuildTool::ConcretePlant:
 		UpdateConcretePlantPlacementPreview();
 		break;
+	case ESTPBuildTool::CommunicationModule:
+		UpdateCommunicationModulePlacementPreview();
+		break;
 	default:
 		DestroyBuildPlacementPreview();
 		break;
@@ -753,6 +797,22 @@ void ASurviveThePlanetPlayerController::UpdateConcretePlantPlacementPreview()
 	if (SurfaceManager) ConcretePlantPlacementPreview->SetActorRotation(Placement.WorldRotation);
 	ConcretePlantPlacementPreview->SetPlacementPreviewValid(SurfaceManager && Placement.bValid);
 	ConcretePlantPlacementPreview->SetActorHiddenInGame(false);
+}
+
+void ASurviveThePlanetPlayerController::UpdateCommunicationModulePlacementPreview()
+{
+	EnsureCommunicationModulePlacementPreview();
+	if (!IsValid(CommunicationModulePlacementPreview)) return;
+	FHitResult Hit;
+	if (!GetHitResultUnderCursor(ECC_Visibility, true, Hit)) { CommunicationModulePlacementPreview->SetActorHiddenInGame(true); return; }
+	APlanetSurfaceManager* SurfaceManager = FindPlanetSurfaceManager();
+	const FSTPGridPlacement Placement = SurfaceManager
+		? SurfaceManager->GetPlacementForWorldLocation(Hit.Location, CommunicationModulePlacementPreview->GetGridFootprint())
+		: FSTPGridPlacement();
+	CommunicationModulePlacementPreview->SetActorLocation(SurfaceManager ? Placement.WorldLocation : Hit.Location, false);
+	if (SurfaceManager) CommunicationModulePlacementPreview->SetActorRotation(Placement.WorldRotation);
+	CommunicationModulePlacementPreview->SetPlacementPreviewValid(SurfaceManager && Placement.bValid);
+	CommunicationModulePlacementPreview->SetActorHiddenInGame(false);
 }
 
 void ASurviveThePlanetPlayerController::UpdateWaterCollectorPlacementPreview()
@@ -1068,6 +1128,8 @@ void ASurviveThePlanetPlayerController::DestroyBuildPlacementPreview()
 
 	if (IsValid(ConcretePlantPlacementPreview)) ConcretePlantPlacementPreview->Destroy();
 	ConcretePlantPlacementPreview = nullptr;
+	if (IsValid(CommunicationModulePlacementPreview)) CommunicationModulePlacementPreview->Destroy();
+	CommunicationModulePlacementPreview = nullptr;
 }
 
 void ASurviveThePlanetPlayerController::EnsureConcretePlantPlacementPreview()
@@ -1084,6 +1146,29 @@ void ASurviveThePlanetPlayerController::EnsureConcretePlantPlacementPreview()
 		ConfigureConcretePlantPlacementPreview(ConcretePlantPlacementPreview);
 		ConcretePlantPlacementPreview->SetActorHiddenInGame(true);
 	}
+}
+
+void ASurviveThePlanetPlayerController::EnsureCommunicationModulePlacementPreview()
+{
+	if (IsValid(CommunicationModulePlacementPreview) || !GetWorld()) return;
+	TSubclassOf<ACommunicationModule> ClassToSpawn = GetManagedBuildingClass(
+		ESTPBuildTool::CommunicationModule, ACommunicationModule::StaticClass());
+	if (!ClassToSpawn) ClassToSpawn = ACommunicationModule::StaticClass();
+	FActorSpawnParameters Params;
+	Params.Owner = this;
+	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	CommunicationModulePlacementPreview = GetWorld()->SpawnActor<ACommunicationModule>(
+		ClassToSpawn, FVector::ZeroVector, FRotator::ZeroRotator, Params);
+	if (CommunicationModulePlacementPreview)
+	{
+		ConfigureCommunicationModulePlacementPreview(CommunicationModulePlacementPreview);
+		CommunicationModulePlacementPreview->SetActorHiddenInGame(true);
+	}
+}
+
+void ASurviveThePlanetPlayerController::ConfigureCommunicationModulePlacementPreview(ACommunicationModule* PreviewActor) const
+{
+	if (PreviewActor) { PreviewActor->SetPlacementPreview(true); PreviewActor->SetActorTickEnabled(false); }
 }
 
 void ASurviveThePlanetPlayerController::ConfigureConcretePlantPlacementPreview(AConcretePlant* PreviewActor) const
