@@ -49,6 +49,8 @@ void UObjectiveSubsystem::Deinitialize()
 	Definitions.Reset();
 	RuntimeStates.Reset();
 	InitialObjectiveIds.Reset();
+	MissionChoiceGroups.Reset();
+	MissionChoiceStates.Reset();
 	Super::Deinitialize();
 }
 
@@ -101,6 +103,8 @@ bool UObjectiveSubsystem::ReloadObjectives()
 	Definitions.Reset();
 	RuntimeStates.Reset();
 	InitialObjectiveIds.Reset();
+	MissionChoiceGroups.Reset();
+	MissionChoiceStates.Reset();
 	MaxActiveObjectives = 8;
 	NextActivationSequence = 0;
 
@@ -116,6 +120,7 @@ bool UObjectiveSubsystem::ReloadObjectives()
 		State.ObjectiveId = Pair.Key;
 		State.ConditionProgress.Init(0, Pair.Value.Conditions.Num());
 	}
+
 	for (const FName Id : InitialObjectiveIds)
 	{
 		MakeObjectiveAvailable(Id);
@@ -326,6 +331,76 @@ bool UObjectiveSubsystem::LoadFromJson(const FString& FilePath)
 		}
 	}
 
+	const TArray<TSharedPtr<FJsonValue>>* ChoiceGroupValues = nullptr;
+	if (Root->TryGetArrayField(TEXT("missionChoiceGroups"), ChoiceGroupValues))
+	{
+		for (const TSharedPtr<FJsonValue>& GroupValue : *ChoiceGroupValues)
+		{
+			const TSharedPtr<FJsonObject> GroupObject = GroupValue.IsValid() ? GroupValue->AsObject() : nullptr;
+			FString GroupIdText, GroupTitle, GroupDescription;
+			const TArray<TSharedPtr<FJsonValue>>* SlotValues = nullptr;
+			if (!GroupObject.IsValid() || !GroupObject->TryGetStringField(TEXT("id"), GroupIdText) || GroupIdText.IsEmpty()
+				|| !GroupObject->TryGetStringField(TEXT("title"), GroupTitle) || GroupTitle.IsEmpty()
+				|| !GroupObject->TryGetArrayField(TEXT("slots"), SlotValues) || SlotValues->IsEmpty())
+			{
+				UE_LOG(LogObjectives, Error, TEXT("Each mission choice group needs id, title and non-empty slots."));
+				bValid = false;
+				continue;
+			}
+			GroupObject->TryGetStringField(TEXT("description"), GroupDescription);
+			FSTPMissionChoiceGroupDefinition Group;
+			Group.Id = FName(*GroupIdText);
+			Group.Title = FText::FromString(GroupTitle);
+			Group.Description = FText::FromString(GroupDescription);
+			if (MissionChoiceStates.Contains(Group.Id))
+			{
+				bValid = false;
+				continue;
+			}
+			TSet<FName> GroupCandidates;
+			bool bGroupValid = true;
+			for (const TSharedPtr<FJsonValue>& SlotValue : *SlotValues)
+			{
+				const TSharedPtr<FJsonObject> SlotObject = SlotValue.IsValid() ? SlotValue->AsObject() : nullptr;
+				FString SlotIdText, SlotTitle;
+				const TArray<TSharedPtr<FJsonValue>>* CandidateValues = nullptr;
+				if (!SlotObject.IsValid() || !SlotObject->TryGetStringField(TEXT("id"), SlotIdText) || SlotIdText.IsEmpty()
+					|| !SlotObject->TryGetStringField(TEXT("title"), SlotTitle) || SlotTitle.IsEmpty()
+					|| !SlotObject->TryGetArrayField(TEXT("objectives"), CandidateValues) || CandidateValues->IsEmpty())
+				{
+					bGroupValid = false;
+					break;
+				}
+				FSTPMissionChoiceSlotDefinition Slot;
+				Slot.Id = FName(*SlotIdText);
+				Slot.Title = FText::FromString(SlotTitle);
+				for (const TSharedPtr<FJsonValue>& CandidateValue : *CandidateValues)
+				{
+					FString CandidateText;
+					const FName CandidateId = CandidateValue.IsValid() && CandidateValue->TryGetString(CandidateText)
+						? FName(*CandidateText) : NAME_None;
+					if (CandidateId.IsNone() || !Definitions.Contains(CandidateId) || GroupCandidates.Contains(CandidateId))
+					{
+						bGroupValid = false;
+						break;
+					}
+					Slot.ObjectiveIds.Add(CandidateId);
+					GroupCandidates.Add(CandidateId);
+				}
+				Group.Slots.Add(MoveTemp(Slot));
+			}
+			if (!bGroupValid)
+			{
+				UE_LOG(LogObjectives, Error, TEXT("Mission choice group '%s' has an invalid slot or objective."), *GroupIdText);
+				bValid = false;
+				continue;
+			}
+			MissionChoiceGroups.Add(Group);
+			FSTPMissionChoiceGroupState& ChoiceState = MissionChoiceStates.Add(Group.Id);
+			ChoiceState.SelectedObjectiveIds.Init(NAME_None, Group.Slots.Num());
+		}
+	}
+
 	if (!bValid)
 	{
 		Definitions.Reset();
@@ -506,8 +581,109 @@ void UObjectiveSubsystem::ActivateAvailableObjectives()
 		{
 			return;
 		}
-		ActivateObjective(Pair.Key);
+		if (!IsMissionChoiceCandidate(Pair.Key) || IsConfirmedMissionChoice(Pair.Key))
+		{
+			ActivateObjective(Pair.Key);
+		}
 	}
+}
+
+TArray<FSTPMissionChoiceGroupDefinition> UObjectiveSubsystem::GetMissionChoiceGroups() const
+{
+	return MissionChoiceGroups;
+}
+
+bool UObjectiveSubsystem::GetMissionChoiceGroupState(FName ChoiceGroupId, FSTPMissionChoiceGroupState& OutState) const
+{
+	if (const FSTPMissionChoiceGroupState* State = MissionChoiceStates.Find(ChoiceGroupId))
+	{
+		OutState = *State;
+		return true;
+	}
+	return false;
+}
+
+bool UObjectiveSubsystem::ConfirmMissionChoices(FName ChoiceGroupId, const TArray<FName>& SelectedObjectiveIds)
+{
+	FSTPMissionChoiceGroupState* ChoiceState = MissionChoiceStates.Find(ChoiceGroupId);
+	const FSTPMissionChoiceGroupDefinition* Group = MissionChoiceGroups.FindByPredicate(
+		[ChoiceGroupId](const FSTPMissionChoiceGroupDefinition& Item) { return Item.Id == ChoiceGroupId; });
+	if (!ChoiceState || !Group || ChoiceState->bLocked || SelectedObjectiveIds.Num() != Group->Slots.Num()
+		|| CountActiveObjectives() + SelectedObjectiveIds.Num() > MaxActiveObjectives)
+	{
+		return false;
+	}
+	for (int32 Index = 0; Index < Group->Slots.Num(); ++Index)
+	{
+		if (!Group->Slots[Index].ObjectiveIds.Contains(SelectedObjectiveIds[Index]))
+		{
+			return false;
+		}
+	}
+
+	ChoiceState->SelectedObjectiveIds = SelectedObjectiveIds;
+	for (const FName ObjectiveId : SelectedObjectiveIds)
+	{
+		MakeObjectiveAvailable(ObjectiveId);
+		if (!ActivateObjective(ObjectiveId))
+		{
+			return false;
+		}
+	}
+	ChoiceState->bLocked = true;
+	OnMissionChoiceConfirmed.Broadcast(ChoiceGroupId);
+	return true;
+}
+
+bool UObjectiveSubsystem::ConfirmMissionChoiceSlot(FName ChoiceGroupId, int32 SlotIndex, FName ObjectiveId)
+{
+	FSTPMissionChoiceGroupState* ChoiceState = MissionChoiceStates.Find(ChoiceGroupId);
+	const FSTPMissionChoiceGroupDefinition* Group = MissionChoiceGroups.FindByPredicate(
+		[ChoiceGroupId](const FSTPMissionChoiceGroupDefinition& Item) { return Item.Id == ChoiceGroupId; });
+	if (!ChoiceState || !Group || !Group->Slots.IsValidIndex(SlotIndex)
+		|| !Group->Slots[SlotIndex].ObjectiveIds.Contains(ObjectiveId)
+		|| CountActiveObjectives() >= MaxActiveObjectives)
+	{
+		return false;
+	}
+
+	ChoiceState->SelectedObjectiveIds.SetNum(Group->Slots.Num());
+	if (!ChoiceState->SelectedObjectiveIds[SlotIndex].IsNone())
+	{
+		return false;
+	}
+
+	MakeObjectiveAvailable(ObjectiveId);
+	if (!ActivateObjective(ObjectiveId))
+	{
+		return false;
+	}
+
+	ChoiceState->SelectedObjectiveIds[SlotIndex] = ObjectiveId;
+	ChoiceState->bLocked = !ChoiceState->SelectedObjectiveIds.Contains(NAME_None);
+	OnMissionChoiceConfirmed.Broadcast(ChoiceGroupId);
+	return true;
+}
+
+bool UObjectiveSubsystem::IsMissionChoiceCandidate(FName ObjectiveId) const
+{
+	for (const FSTPMissionChoiceGroupDefinition& Group : MissionChoiceGroups)
+	{
+		for (const FSTPMissionChoiceSlotDefinition& Slot : Group.Slots)
+		{
+			if (Slot.ObjectiveIds.Contains(ObjectiveId)) return true;
+		}
+	}
+	return false;
+}
+
+bool UObjectiveSubsystem::IsConfirmedMissionChoice(FName ObjectiveId) const
+{
+	for (const TPair<FName, FSTPMissionChoiceGroupState>& Pair : MissionChoiceStates)
+	{
+		if (Pair.Value.SelectedObjectiveIds.Contains(ObjectiveId)) return true;
+	}
+	return false;
 }
 
 int32 UObjectiveSubsystem::CountActiveObjectives() const

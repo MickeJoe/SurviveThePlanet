@@ -121,9 +121,56 @@ struct FSTPObjectiveRuntimeState
 	int32 ActivationSequence = INDEX_NONE;
 };
 
+USTRUCT(BlueprintType)
+struct FSTPMissionChoiceSlotDefinition
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadOnly, Category = "Mission Choices")
+	FName Id;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Mission Choices")
+	FText Title;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Mission Choices")
+	TArray<FName> ObjectiveIds;
+};
+
+USTRUCT(BlueprintType)
+struct FSTPMissionChoiceGroupDefinition
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadOnly, Category = "Mission Choices")
+	FName Id;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Mission Choices")
+	FText Title;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Mission Choices")
+	FText Description;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Mission Choices")
+	TArray<FSTPMissionChoiceSlotDefinition> Slots;
+};
+
+USTRUCT(BlueprintType)
+struct FSTPMissionChoiceGroupState
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadOnly, Category = "Mission Choices")
+	bool bLocked = false;
+
+	/** One objective id per slot, in slot order. */
+	UPROPERTY(BlueprintReadOnly, Category = "Mission Choices")
+	TArray<FName> SelectedObjectiveIds;
+};
+
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FSTPObjectiveStateChangedSignature, FName, ObjectiveId, ESTPObjectiveState, NewState);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FSTPObjectiveProgressChangedSignature, FName, ObjectiveId, int32, ConditionIndex, int32, CurrentAmount, int32, RequiredAmount);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FSTPObjectiveTimeChangedSignature, FName, ObjectiveId, float, RemainingSeconds);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FSTPMissionChoiceConfirmedSignature, FName, ChoiceGroupId);
 
 /** JSON-driven objective engine. Gameplay reports facts; this owns state, timers and rewards. */
 UCLASS()
@@ -160,6 +207,20 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Objectives")
 	bool GetObjectiveState(FName ObjectiveId, FSTPObjectiveRuntimeState& OutState) const;
 
+	UFUNCTION(BlueprintPure, Category = "Mission Choices")
+	TArray<FSTPMissionChoiceGroupDefinition> GetMissionChoiceGroups() const;
+
+	UFUNCTION(BlueprintPure, Category = "Mission Choices")
+	bool GetMissionChoiceGroupState(FName ChoiceGroupId, FSTPMissionChoiceGroupState& OutState) const;
+
+	/** SelectedObjectiveIds must contain exactly one valid objective for each slot. The choice is permanent. */
+	UFUNCTION(BlueprintCallable, Category = "Mission Choices")
+	bool ConfirmMissionChoices(FName ChoiceGroupId, const TArray<FName>& SelectedObjectiveIds);
+
+	/** Permanently selects and activates one objective for one previously empty slot. */
+	UFUNCTION(BlueprintCallable, Category = "Mission Choices")
+	bool ConfirmMissionChoiceSlot(FName ChoiceGroupId, int32 SlotIndex, FName ObjectiveId);
+
 	UPROPERTY(BlueprintAssignable, Category = "Objectives")
 	FSTPObjectiveStateChangedSignature OnObjectiveStateChanged;
 
@@ -169,10 +230,15 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Objectives")
 	FSTPObjectiveTimeChangedSignature OnObjectiveTimeChanged;
 
+	UPROPERTY(BlueprintAssignable, Category = "Mission Choices")
+	FSTPMissionChoiceConfirmedSignature OnMissionChoiceConfirmed;
+
 private:
 	TMap<FName, FSTPObjectiveDefinition> Definitions;
 	TMap<FName, FSTPObjectiveRuntimeState> RuntimeStates;
 	TArray<FName> InitialObjectiveIds;
+	TArray<FSTPMissionChoiceGroupDefinition> MissionChoiceGroups;
+	TMap<FName, FSTPMissionChoiceGroupState> MissionChoiceStates;
 	int32 MaxActiveObjectives = 8;
 	int32 NextActivationSequence = 0;
 
@@ -185,5 +251,7 @@ private:
 	void MakeObjectiveAvailable(FName ObjectiveId);
 	void ActivateAvailableObjectives();
 	int32 CountActiveObjectives() const;
+	bool IsMissionChoiceCandidate(FName ObjectiveId) const;
+	bool IsConfirmedMissionChoice(FName ObjectiveId) const;
 	AResourceManager* FindResourceManager() const;
 };
