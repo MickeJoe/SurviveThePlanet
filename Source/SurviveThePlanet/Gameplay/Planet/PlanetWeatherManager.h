@@ -43,6 +43,9 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Planet Weather")
 	FPlanetWeatherState GetCurrentWeather() const { return CurrentWeather; }
 
+	UFUNCTION(BlueprintPure, Category = "Planet Weather")
+	UPlanetDefinition* GetPlanetDefinition() const { return PlanetDefinition; }
+
 	/** Overrides the current state and pauses generated transitions until GenerateNextWeather is called. */
 	UFUNCTION(BlueprintCallable, Category = "Planet Weather")
 	void SetWeatherImmediately(FPlanetWeatherState NewWeather);

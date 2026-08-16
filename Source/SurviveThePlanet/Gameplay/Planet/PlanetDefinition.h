@@ -49,6 +49,20 @@ struct SURVIVETHEPLANET_API FPlanetWeatherSettings
 	float SunPenaltyPerMmOfRain = 2.0f;
 };
 
+/** Planet-specific tuning for the mission confidence pressure system. */
+USTRUCT(BlueprintType)
+struct SURVIVETHEPLANET_API FMissionConfidenceSettings
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mission Confidence", meta = (ClampMin = "0.0", ClampMax = "100.0", UIMin = "0.0", UIMax = "100.0"))
+	float InitialConfidence = 100.0f;
+
+	/** Percentage points lost for each hour shown by the game clock. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mission Confidence", meta = (ClampMin = "0.0", UIMin = "0.0", DisplayName = "Decay Per Game Hour"))
+	float DecayPerGameHour = 5.0f;
+};
+
 /** Data-driven description of a planet and its global weather characteristics. */
 UCLASS(BlueprintType)
 class SURVIVETHEPLANET_API UPlanetDefinition : public UPrimaryDataAsset
@@ -66,4 +80,7 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Planet|Weather")
 	FPlanetWeatherSettings Weather;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Planet|Mission Confidence")
+	FMissionConfidenceSettings MissionConfidence;
 };

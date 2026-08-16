@@ -9,6 +9,7 @@
 class UBuildToolbarWidget;
 class UResourceDisplayWidget;
 class UObjectiveTrackerWidget;
+class UMissionConfidenceWidget;
 class AEnergyModule;
 class AMiningMachine;
 class UBuildingCatalogDataAsset;
@@ -40,6 +41,9 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "UI")
 	TSubclassOf<UObjectiveTrackerWidget> ObjectiveTrackerWidgetClass;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "UI")
+	TSubclassOf<UMissionConfidenceWidget> MissionConfidenceWidgetClass;
+
 	/** Optional game-mode-specific catalog. The subsystem default is used when unset. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Buildings")
 	TObjectPtr<UBuildingCatalogDataAsset> BuildingCatalog;
@@ -52,6 +56,9 @@ protected:
 
 	UPROPERTY(Transient)
 	TObjectPtr<UObjectiveTrackerWidget> ObjectiveTrackerWidget;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UMissionConfidenceWidget> MissionConfidenceWidget;
 };
 
 

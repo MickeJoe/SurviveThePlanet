@@ -11,6 +11,7 @@
 #include "Gameplay/UI/BuildToolbarWidget.h"
 #include "Gameplay/UI/ResourceDisplayWidget.h"
 #include "Gameplay/UI/ObjectiveTrackerWidget.h"
+#include "Gameplay/UI/MissionConfidenceWidget.h"
 #include "SurviveThePlanet.h"
 
 ASurviveThePlanetGameMode::ASurviveThePlanetGameMode()
@@ -21,6 +22,8 @@ ASurviveThePlanetGameMode::ASurviveThePlanetGameMode()
 	ResourceDisplayWidgetClass = UResourceDisplayWidget::StaticClass();
 	ObjectiveTrackerWidgetClass = LoadClass<UObjectiveTrackerWidget>(nullptr,
 		TEXT("/Game/UI/Objectives/WBP_ObjectiveTracker.WBP_ObjectiveTracker_C"));
+	MissionConfidenceWidgetClass = LoadClass<UMissionConfidenceWidget>(nullptr,
+		TEXT("/Game/UI/Mission/WBP_MissionConfidencePanel.WBP_MissionConfidencePanel_C"));
 	BuildingCatalog = LoadObject<UBuildingCatalogDataAsset>(nullptr, TEXT("/Game/Data/Buildings/DA_BuildingCatalog.DA_BuildingCatalog"));
 }
 
@@ -73,6 +76,15 @@ void ASurviveThePlanetGameMode::StartPlay()
 			if (ObjectiveTrackerWidget)
 			{
 				ObjectiveTrackerWidget->AddToViewport(10);
+			}
+		}
+
+		if (MissionConfidenceWidgetClass)
+		{
+			MissionConfidenceWidget = CreateWidget<UMissionConfidenceWidget>(PlayerController, MissionConfidenceWidgetClass);
+			if (MissionConfidenceWidget)
+			{
+				MissionConfidenceWidget->AddToViewport(10);
 			}
 		}
 	}

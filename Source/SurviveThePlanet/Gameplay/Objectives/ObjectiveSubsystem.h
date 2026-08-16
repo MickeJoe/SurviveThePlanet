@@ -27,7 +27,8 @@ UENUM(BlueprintType)
 enum class ESTPObjectiveRewardType : uint8
 {
 	GiveResource,
-	UnlockObjective
+	UnlockObjective,
+	GiveMissionConfidence
 };
 
 USTRUCT(BlueprintType)

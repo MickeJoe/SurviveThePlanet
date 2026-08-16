@@ -12,6 +12,7 @@
       ],
       "rewards": [
         { "type": "give_resource", "resource": "ControlChip", "amount": 5 },
+		{ "type": "give_mission_confidence", "amount": 10 },
         { "type": "unlock_objective", "objective": "deliver_iron_to_home_base" }
       ]
     },
@@ -24,7 +25,8 @@
         { "type": "deliver_resource", "destination": "HomeBase", "resource": "Iron", "amount": 100 }
       ],
       "rewards": [
-        { "type": "give_resource", "resource": "ControlChip", "amount": 10 }
+		{ "type": "give_resource", "resource": "ControlChip", "amount": 10 },
+		{ "type": "give_mission_confidence", "amount": 15 }
       ]
     }
   ]

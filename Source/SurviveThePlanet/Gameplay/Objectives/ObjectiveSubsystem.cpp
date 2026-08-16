@@ -6,6 +6,7 @@
 #include "Misc/Paths.h"
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
+#include "Gameplay/Planet/MissionConfidenceSubsystem.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogObjectives, Log, All);
 
@@ -276,6 +277,12 @@ bool UObjectiveSubsystem::LoadFromJson(const FString& FilePath)
 					bDefinitionValid = RewardObject->TryGetStringField(TEXT("objective"), UnlockedId) && !UnlockedId.IsEmpty();
 					Reward.ObjectiveId = FName(*UnlockedId);
 				}
+				else if (Type == TEXT("give_mission_confidence"))
+				{
+					Reward.Type = ESTPObjectiveRewardType::GiveMissionConfidence;
+					bDefinitionValid = STPObjectives::ReadPositiveInt(RewardObject, TEXT("amount"), Reward.Amount)
+						&& Reward.Amount <= 100;
+				}
 				else
 				{
 					bDefinitionValid = false;
@@ -461,6 +468,13 @@ void UObjectiveSubsystem::GrantRewards(const FSTPObjectiveDefinition& Definition
 		else if (Reward.Type == ESTPObjectiveRewardType::UnlockObjective)
 		{
 			MakeObjectiveAvailable(Reward.ObjectiveId);
+		}
+		else if (Reward.Type == ESTPObjectiveRewardType::GiveMissionConfidence)
+		{
+			if (UMissionConfidenceSubsystem* Confidence = GetWorld()->GetSubsystem<UMissionConfidenceSubsystem>())
+			{
+				Confidence->AddMissionConfidence(static_cast<float>(Reward.Amount));
+			}
 		}
 	}
 }
