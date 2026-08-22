@@ -27,6 +27,7 @@
 #include "Gameplay/Buildings/WaterCollector.h"
 #include "Gameplay/Buildings/ConcretePlant.h"
 #include "Gameplay/Buildings/CommunicationModule.h"
+#include "Gameplay/Buildings/CargoBay.h"
 #include "Gameplay/Buildings/BuildingManagerSubsystem.h"
 #include "Gameplay/Cables/CableNetworkManager.h"
 #include "Gameplay/Planet/PlanetSurfaceManager.h"
@@ -35,6 +36,8 @@
 #include "Gameplay/Work/ConstructionJobQueueSubsystem.h"
 #include "Gameplay/Base/BaseBuilding.h"
 #include "Gameplay/UI/BuildingInfoWidget.h"
+#include "Gameplay/Cheats/CheatMenuWidget.h"
+#include "Gameplay/Cheats/STPCheatManager.h"
 #include "Blueprint/UserWidget.h"
 #include "SurviveThePlanet.h"
 
@@ -58,6 +61,14 @@ ASurviveThePlanetPlayerController::ASurviveThePlanetPlayerController()
 	SetDestinationTouchAction = LoadObject<UInputAction>(nullptr, TEXT("/Game/TopDown/Input/Actions/IA_SetDestination_Touch"));
 	FXCursor = LoadObject<UNiagaraSystem>(nullptr, TEXT("/Game/TopDown/Cursor/FX_Cursor_Success"));
 	BuildingInfoWidgetClass = LoadClass<UBuildingInfoWidget>(nullptr, TEXT("/Game/UI/WBP_BuildingPopup.WBP_BuildingPopup_C"));
+#if !UE_BUILD_SHIPPING
+	CheatClass = USTPCheatManager::StaticClass();
+	CheatMenuWidgetClass = LoadClass<UCheatMenuWidget>(nullptr, TEXT("/Game/UI/Development/WBP_CheatMenu.WBP_CheatMenu_C"));
+	if (!CheatMenuWidgetClass)
+	{
+		CheatMenuWidgetClass = UCheatMenuWidget::StaticClass();
+	}
+#endif
 }
 
 void ASurviveThePlanetPlayerController::SetActiveBuildTool(ESTPBuildTool NewBuildTool)
@@ -149,6 +160,9 @@ void ASurviveThePlanetPlayerController::SetupInputComponent()
 	// set up gameplay key bindings
 	Super::SetupInputComponent();
 	InputComponent->BindKey(EKeys::Escape, IE_Pressed, this, &ASurviveThePlanetPlayerController::OnCancelBuildToolPressed);
+#if !UE_BUILD_SHIPPING
+	InputComponent->BindKey(EKeys::I, IE_Pressed, this, &ASurviveThePlanetPlayerController::ToggleCheatMenu);
+#endif
 
 	UE_LOG(LogSurviveThePlanet, Warning, TEXT("STP_SELECT SetupInputComponent: Controller=%s InputComponent=%s InputComponentClass=%s IsLocal=%s DefaultMappingContext=%s ClickAction=%s TouchAction=%s"),
 		*GetNameSafe(this),
@@ -216,6 +230,47 @@ void ASurviveThePlanetPlayerController::SetupInputComponent()
 			UE_LOG(LogSurviveThePlanet, Error, TEXT("'%s' Failed to find an Enhanced Input Component! This template is built to use the Enhanced Input system. If you intend to use the legacy system, then you will need to update this C++ file."), *GetNameSafe(this));
 		}
 	}
+}
+
+void ASurviveThePlanetPlayerController::ToggleCheatMenu()
+{
+#if !UE_BUILD_SHIPPING
+	if (!IsLocalPlayerController())
+	{
+		return;
+	}
+
+	if (CheatMenuWidget && CheatMenuWidget->IsInViewport())
+	{
+		CheatMenuWidget->RemoveFromParent();
+		SetInputMode(FInputModeGameAndUI());
+		return;
+	}
+
+	if (!CheatManager)
+	{
+		EnableCheats();
+	}
+	if (!CheatManager || !CheatMenuWidgetClass)
+	{
+		return;
+	}
+
+	if (!CheatMenuWidget)
+	{
+		CheatMenuWidget = CreateWidget<UCheatMenuWidget>(this, CheatMenuWidgetClass);
+	}
+	if (CheatMenuWidget)
+	{
+		CheatMenuWidget->AddToViewport(1000);
+		CheatMenuWidget->SetDesiredSizeInViewport(FVector2D(360.0f, 260.0f));
+		CheatMenuWidget->SetPositionInViewport(FVector2D(40.0f, 120.0f), false);
+		FInputModeGameAndUI InputMode;
+		InputMode.SetWidgetToFocus(CheatMenuWidget->TakeWidget());
+		InputMode.SetHideCursorDuringCapture(false);
+		SetInputMode(InputMode);
+	}
+#endif
 }
 
 void ASurviveThePlanetPlayerController::PlayerTick(float DeltaTime)
@@ -350,6 +405,8 @@ bool ASurviveThePlanetPlayerController::TryHandleActiveBuildToolClick()
 		return TryPlaceConcretePlantAtCursor();
 	case ESTPBuildTool::CommunicationModule:
 		return TryPlaceCommunicationModuleAtCursor();
+	case ESTPBuildTool::CargoBay:
+		return TryPlaceCargoBayAtCursor();
 	case ESTPBuildTool::EnergyCable:
 		return true;
 	case ESTPBuildTool::None:
@@ -429,6 +486,42 @@ bool ASurviveThePlanetPlayerController::TryPlaceCommunicationModuleAtCursor()
 	Module->ShowConstructionProgress();
 	if (UConstructionJobQueueSubsystem* Queue = World->GetSubsystem<UConstructionJobQueueSubsystem>()) Queue->EnqueueConstructionJob(Module);
 	SetSelectedActor(Module);
+	return true;
+}
+
+bool ASurviveThePlanetPlayerController::TryPlaceCargoBayAtCursor()
+{
+	FVector TargetLocation;
+	UWorld* World = GetWorld();
+	APlanetSurfaceManager* SurfaceManager = FindPlanetSurfaceManager();
+	if (!TryGetCursorWorldLocation(TargetLocation) || !World || !SurfaceManager) return true;
+
+	TSubclassOf<ACargoBay> ClassToSpawn = GetManagedBuildingClass(ESTPBuildTool::CargoBay, ACargoBay::StaticClass());
+	if (!ClassToSpawn) ClassToSpawn = ACargoBay::StaticClass();
+	const ACargoBay* Defaults = ClassToSpawn->GetDefaultObject<ACargoBay>();
+	const FIntPoint Footprint = Defaults ? Defaults->GetGridFootprint() : FIntPoint(2, 2);
+	const TArray<FResourceCost> Costs = Defaults ? Defaults->GetConstructionCosts() : TArray<FResourceCost>();
+	AResourceManager* ResourceManager = FindResourceManager();
+	if ((Costs.Num() > 0 && !ResourceManager) || (ResourceManager && !ResourceManager->CanAffordCosts(Costs))) return true;
+
+	const FSTPGridPlacement Placement = SurfaceManager->GetPlacementForWorldLocation(TargetLocation, Footprint);
+	if (!Placement.bValid) return true;
+	FActorSpawnParameters Params;
+	Params.Owner = this;
+	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+	ACargoBay* CargoBay = World->SpawnActor<ACargoBay>(ClassToSpawn, Placement.WorldLocation, Placement.WorldRotation, Params);
+	if (!CargoBay) return true;
+	CargoBay->SetPlacementPreview(false);
+	if (!SurfaceManager->ReserveCells(CargoBay, Placement.OriginCell, CargoBay->GetGridFootprint())
+		|| (ResourceManager && !ResourceManager->TrySpendCosts(Costs)))
+	{
+		CargoBay->Destroy();
+		return true;
+	}
+	CargoBay->SetConstructionProgress(0.0f);
+	CargoBay->ShowConstructionProgress();
+	if (UConstructionJobQueueSubsystem* Queue = World->GetSubsystem<UConstructionJobQueueSubsystem>()) Queue->EnqueueConstructionJob(CargoBay);
+	SetSelectedActor(CargoBay);
 	return true;
 }
 
@@ -777,6 +870,9 @@ void ASurviveThePlanetPlayerController::UpdateBuildPlacementPreview()
 	case ESTPBuildTool::CommunicationModule:
 		UpdateCommunicationModulePlacementPreview();
 		break;
+	case ESTPBuildTool::CargoBay:
+		UpdateCargoBayPlacementPreview();
+		break;
 	default:
 		DestroyBuildPlacementPreview();
 		break;
@@ -813,6 +909,22 @@ void ASurviveThePlanetPlayerController::UpdateCommunicationModulePlacementPrevie
 	if (SurfaceManager) CommunicationModulePlacementPreview->SetActorRotation(Placement.WorldRotation);
 	CommunicationModulePlacementPreview->SetPlacementPreviewValid(SurfaceManager && Placement.bValid);
 	CommunicationModulePlacementPreview->SetActorHiddenInGame(false);
+}
+
+void ASurviveThePlanetPlayerController::UpdateCargoBayPlacementPreview()
+{
+	EnsureCargoBayPlacementPreview();
+	if (!IsValid(CargoBayPlacementPreview)) return;
+	FHitResult Hit;
+	if (!GetHitResultUnderCursor(ECC_Visibility, true, Hit)) { CargoBayPlacementPreview->SetActorHiddenInGame(true); return; }
+	APlanetSurfaceManager* SurfaceManager = FindPlanetSurfaceManager();
+	const FSTPGridPlacement Placement = SurfaceManager
+		? SurfaceManager->GetPlacementForWorldLocation(Hit.Location, CargoBayPlacementPreview->GetGridFootprint())
+		: FSTPGridPlacement();
+	CargoBayPlacementPreview->SetActorLocation(SurfaceManager ? Placement.WorldLocation : Hit.Location, false);
+	if (SurfaceManager) CargoBayPlacementPreview->SetActorRotation(Placement.WorldRotation);
+	CargoBayPlacementPreview->SetPlacementPreviewValid(SurfaceManager && Placement.bValid);
+	CargoBayPlacementPreview->SetActorHiddenInGame(false);
 }
 
 void ASurviveThePlanetPlayerController::UpdateWaterCollectorPlacementPreview()
@@ -1130,6 +1242,8 @@ void ASurviveThePlanetPlayerController::DestroyBuildPlacementPreview()
 	ConcretePlantPlacementPreview = nullptr;
 	if (IsValid(CommunicationModulePlacementPreview)) CommunicationModulePlacementPreview->Destroy();
 	CommunicationModulePlacementPreview = nullptr;
+	if (IsValid(CargoBayPlacementPreview)) CargoBayPlacementPreview->Destroy();
+	CargoBayPlacementPreview = nullptr;
 }
 
 void ASurviveThePlanetPlayerController::EnsureConcretePlantPlacementPreview()
@@ -1167,6 +1281,27 @@ void ASurviveThePlanetPlayerController::EnsureCommunicationModulePlacementPrevie
 }
 
 void ASurviveThePlanetPlayerController::ConfigureCommunicationModulePlacementPreview(ACommunicationModule* PreviewActor) const
+{
+	if (PreviewActor) { PreviewActor->SetPlacementPreview(true); PreviewActor->SetActorTickEnabled(false); }
+}
+
+void ASurviveThePlanetPlayerController::EnsureCargoBayPlacementPreview()
+{
+	if (IsValid(CargoBayPlacementPreview) || !GetWorld()) return;
+	TSubclassOf<ACargoBay> ClassToSpawn = GetManagedBuildingClass(ESTPBuildTool::CargoBay, ACargoBay::StaticClass());
+	if (!ClassToSpawn) ClassToSpawn = ACargoBay::StaticClass();
+	FActorSpawnParameters Params;
+	Params.Owner = this;
+	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	CargoBayPlacementPreview = GetWorld()->SpawnActor<ACargoBay>(ClassToSpawn, FVector::ZeroVector, FRotator::ZeroRotator, Params);
+	if (CargoBayPlacementPreview)
+	{
+		ConfigureCargoBayPlacementPreview(CargoBayPlacementPreview);
+		CargoBayPlacementPreview->SetActorHiddenInGame(true);
+	}
+}
+
+void ASurviveThePlanetPlayerController::ConfigureCargoBayPlacementPreview(ACargoBay* PreviewActor) const
 {
 	if (PreviewActor) { PreviewActor->SetPlacementPreview(true); PreviewActor->SetActorTickEnabled(false); }
 }

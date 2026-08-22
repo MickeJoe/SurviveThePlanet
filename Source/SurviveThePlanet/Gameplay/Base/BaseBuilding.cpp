@@ -65,6 +65,7 @@ void ABaseBuilding::BeginPlay()
 		case ESTPBuildingType::WaterCollector: BuildTool = ESTPBuildTool::WaterCollector; break;
 		case ESTPBuildingType::ConcretePlant: BuildTool = ESTPBuildTool::ConcretePlant; break;
 		case ESTPBuildingType::CommunicationModule: BuildTool = ESTPBuildTool::CommunicationModule; break;
+		case ESTPBuildingType::CargoBay: BuildTool = ESTPBuildTool::CargoBay; break;
 		default: break;
 		}
 

@@ -1,6 +1,6 @@
 {
   "maxActiveObjectives": 8,
-  "initialObjectives": ["build_first_mining_machine"],
+  "initialObjectives": ["mission_build_communication"],
   "missionChoiceGroups": [
     {
       "id": "mother_base_directives",
@@ -20,7 +20,7 @@
         {
           "id": "operations",
           "title": "SELECT OBJECTIVE - SLOT 3",
-          "objectives": ["mission_build_communication", "mission_expand_mining"]
+          "objectives": ["mission_expand_mining"]
         }
       ]
     }
@@ -91,7 +91,10 @@
       "description": "Build a Communication Module.",
       "timeLimitSeconds": 0,
       "conditions": [{ "type": "build_building", "building": "CommunicationModule", "amount": 1 }],
-      "rewards": [{ "type": "give_mission_confidence", "amount": 20 }]
+      "rewards": [
+        { "type": "give_mission_confidence", "amount": 30 },
+        { "type": "give_resource", "resource": "ControlChip", "amount": 2 }
+      ]
     },
     {
       "id": "mission_expand_mining",

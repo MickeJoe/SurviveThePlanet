@@ -79,6 +79,9 @@ protected:
 	TObjectPtr<UButton> CommunicationModuleButton;
 
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Build Toolbar|Designed Widgets")
+	TObjectPtr<UButton> CargoBayButton;
+
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Build Toolbar|Designed Widgets")
 	TObjectPtr<UImage> EnergyCableIcon;
 
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Build Toolbar|Designed Widgets")
@@ -100,6 +103,9 @@ protected:
 	TObjectPtr<UImage> CommunicationModuleIcon;
 
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Build Toolbar|Designed Widgets")
+	TObjectPtr<UImage> CargoBayIcon;
+
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Build Toolbar|Designed Widgets")
 	TObjectPtr<UBorder> EnergyCableBorder;
 
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Build Toolbar|Designed Widgets")
@@ -119,6 +125,9 @@ protected:
 
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Build Toolbar|Designed Widgets")
 	TObjectPtr<UBorder> CommunicationModuleBorder;
+
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Build Toolbar|Designed Widgets")
+	TObjectPtr<UBorder> CargoBayBorder;
 
 	UFUNCTION(BlueprintImplementableEvent, Category = "Build Toolbar")
 	void BP_ActiveToolChanged(ESTPBuildTool NewTool);
@@ -158,6 +167,9 @@ private:
 
 	UFUNCTION()
 	void HandleCommunicationModuleClicked();
+
+	UFUNCTION()
+	void HandleCargoBayClicked();
 
 	UFUNCTION()
 	void HandleControllerBuildToolChanged(ESTPBuildTool NewTool);

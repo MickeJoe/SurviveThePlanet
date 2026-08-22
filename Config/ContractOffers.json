@@ -1,0 +1,75 @@
+{
+  "contractOffers": [
+    {
+      "id": "helix_advanced_components",
+      "traderId": "helix_industrial",
+      "itemId": "advanced_components",
+      "title": "Advanced Components Supply Contract",
+      "iconReference": "/Game/UI/Contracts/Icons/T_AdvancedComponents.T_AdvancedComponents",
+      "tiers": [
+        {
+          "id": "standard",
+          "displayName": "STANDARD",
+          "accentColor": "00BDEB",
+          "deliveryAmount": 8,
+          "deliveryCount": 4,
+          "deliveryIntervalHours": 8,
+          "deliveryRewards": [
+            { "type": "credits", "amount": 150, "iconReference": "/Game/UI/Contracts/Icons/T_Credits.T_Credits" },
+            { "type": "resource", "id": "Iron", "amount": 20, "iconReference": "/Game/UI/IronResourceIcon.IronResourceIcon" },
+            { "type": "resource", "id": "Water", "amount": 5, "iconReference": "/Game/UI/Images/WaterCollectorBuildIcon.WaterCollectorBuildIcon" }
+          ],
+          "missedDeliveryPenalties": [
+            { "type": "missionConfidence", "amount": -2, "iconReference": "/Game/UI/Contracts/Icons/T_MissionConfidence.T_MissionConfidence" }
+          ],
+          "completionBonus": [
+            { "type": "credits", "amount": 300, "iconReference": "/Game/UI/Contracts/Icons/T_Credits.T_Credits" }
+          ]
+        },
+        {
+          "id": "priority",
+          "displayName": "PRIORITY",
+          "accentColor": "FFC128",
+          "deliveryAmount": 12,
+          "deliveryCount": 5,
+          "deliveryIntervalHours": 6,
+          "deliveryRewards": [
+            { "type": "credits", "amount": 275, "iconReference": "/Game/UI/Contracts/Icons/T_Credits.T_Credits" },
+            { "type": "resource", "id": "Iron", "amount": 40, "iconReference": "/Game/UI/IronResourceIcon.IronResourceIcon" },
+            { "type": "resource", "id": "Water", "amount": 10, "iconReference": "/Game/UI/Images/WaterCollectorBuildIcon.WaterCollectorBuildIcon" }
+          ],
+          "missedDeliveryPenalties": [
+            { "type": "missionConfidence", "amount": -4, "iconReference": "/Game/UI/Contracts/Icons/T_MissionConfidence.T_MissionConfidence" },
+            { "type": "traderReputation", "amount": -20, "iconReference": "/Game/UI/Contracts/Icons/T_TraderReputation.T_TraderReputation" }
+          ],
+          "completionBonus": [
+            { "type": "missionProgress", "amount": 1, "iconReference": "/Game/UI/Contracts/Icons/T_MissionProgress.T_MissionProgress" },
+            { "type": "credits", "amount": 500, "iconReference": "/Game/UI/Contracts/Icons/T_Credits.T_Credits" }
+          ]
+        },
+        {
+          "id": "high_stakes",
+          "displayName": "HIGH STAKES",
+          "accentColor": "FF4A2F",
+          "deliveryAmount": 16,
+          "deliveryCount": 6,
+          "deliveryIntervalHours": 5,
+          "deliveryRewards": [
+            { "type": "credits", "amount": 450, "iconReference": "/Game/UI/Contracts/Icons/T_Credits.T_Credits" },
+            { "type": "resource", "id": "Iron", "amount": 60, "iconReference": "/Game/UI/IronResourceIcon.IronResourceIcon" },
+            { "type": "resource", "id": "Water", "amount": 15, "iconReference": "/Game/UI/Images/WaterCollectorBuildIcon.WaterCollectorBuildIcon" }
+          ],
+          "missedDeliveryPenalties": [
+            { "type": "missionConfidence", "amount": -7, "iconReference": "/Game/UI/Contracts/Icons/T_MissionConfidence.T_MissionConfidence" },
+            { "type": "traderReputation", "amount": -30, "iconReference": "/Game/UI/Contracts/Icons/T_TraderReputation.T_TraderReputation" },
+            { "type": "traderCooldownHours", "amount": 24, "iconReference": "/Game/UI/Contracts/Icons/T_TraderCooldown.T_TraderCooldown" }
+          ],
+          "completionBonus": [
+            { "type": "blueprint", "poolId": "rare_industrial_blueprints", "amount": 1, "iconReference": "/Game/UI/Contracts/Icons/T_RareBlueprint.T_RareBlueprint" },
+            { "type": "missionProgress", "amount": 1, "iconReference": "/Game/UI/Contracts/Icons/T_MissionProgress.T_MissionProgress" }
+          ]
+        }
+      ]
+    }
+  ]
+}

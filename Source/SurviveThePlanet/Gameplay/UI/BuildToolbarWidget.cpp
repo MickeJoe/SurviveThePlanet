@@ -30,6 +30,7 @@ UBuildToolbarWidget::UBuildToolbarWidget(const FObjectInitializer& ObjectInitial
 		{ ESTPBuildTool::WaterCollector, NSLOCTEXT("SurviveThePlanet", "BuildToolWaterCollectorTooltip", "Build Water Collector\nProduces water according to the current rainfall."), nullptr },
 		{ ESTPBuildTool::ConcretePlant, NSLOCTEXT("SurviveThePlanet", "BuildToolConcretePlantTooltip", "Build Concrete Plant\nConsumes water, stone and electricity to produce concrete."), nullptr }
 		,{ ESTPBuildTool::CommunicationModule, NSLOCTEXT("SurviveThePlanet", "BuildToolCommunicationModuleTooltip", "Build Communication Module\nProvides long-range communications for the colony."), LoadObject<UTexture2D>(nullptr, TEXT("/Game/UI/Images/CommunicationModuleBuildIcon.CommunicationModuleBuildIcon")) }
+		,{ ESTPBuildTool::CargoBay, NSLOCTEXT("SurviveThePlanet", "BuildToolCargoBayTooltip", "Build Cargo Bay\nStores cargo and supports colony logistics."), LoadObject<UTexture2D>(nullptr, TEXT("/Game/UI/Images/CargoBayBuildIcon.CargoBayBuildIcon")) }
 	};
 }
 
@@ -203,6 +204,10 @@ UWidget* UBuildToolbarWidget::BuildButton(const FBuildToolButtonConfig& Config)
 	{
 		Button->OnClicked.AddDynamic(this, &UBuildToolbarWidget::HandleCommunicationModuleClicked);
 	}
+	else if (Config.Tool == ESTPBuildTool::CargoBay)
+	{
+		Button->OnClicked.AddDynamic(this, &UBuildToolbarWidget::HandleCargoBayClicked);
+	}
 
 	ButtonBorders.Add(Config.Tool, Border);
 	return SizeBox;
@@ -210,7 +215,7 @@ UWidget* UBuildToolbarWidget::BuildButton(const FBuildToolButtonConfig& Config)
 
 bool UBuildToolbarWidget::HasDesignedToolbar() const
 {
-	return EnergyCableButton || EnergyModuleButton || EnergyStorageButton || MiningBuildingButton || WaterCollectorButton || ConcretePlantButton
+	return EnergyCableButton || EnergyModuleButton || EnergyStorageButton || MiningBuildingButton || WaterCollectorButton || ConcretePlantButton || CommunicationModuleButton || CargoBayButton
 		|| EnergyCableIcon || EnergyModuleIcon || EnergyStorageIcon || MiningBuildingIcon || WaterCollectorIcon || ConcretePlantIcon
 		|| EnergyCableBorder || EnergyModuleBorder || EnergyStorageBorder || MiningBorder || WaterCollectorBorder || ConcretePlantBorder;
 }
@@ -283,12 +288,20 @@ void UBuildToolbarWidget::BindDesignedToolbar()
 		if (const FBuildToolButtonConfig* Config = FindButtonConfig(ESTPBuildTool::CommunicationModule)) CommunicationModuleButton->SetToolTipText(Config->Tooltip);
 	}
 
+	if (CargoBayButton)
+	{
+		CargoBayButton->OnClicked.RemoveDynamic(this, &UBuildToolbarWidget::HandleCargoBayClicked);
+		CargoBayButton->OnClicked.AddDynamic(this, &UBuildToolbarWidget::HandleCargoBayClicked);
+		if (const FBuildToolButtonConfig* Config = FindButtonConfig(ESTPBuildTool::CargoBay)) CargoBayButton->SetToolTipText(Config->Tooltip);
+	}
+
 	ApplyIcon(EnergyCableIcon, ESTPBuildTool::EnergyCable);
 	ApplyIcon(EnergyModuleIcon, ESTPBuildTool::EnergyModule);
 	ApplyIcon(EnergyStorageIcon, ESTPBuildTool::EnergyStorage);
 	ApplyIcon(MiningBuildingIcon, ESTPBuildTool::MiningMachine);
 	ApplyIcon(WaterCollectorIcon, ESTPBuildTool::WaterCollector);
 	ApplyIcon(ConcretePlantIcon, ESTPBuildTool::ConcretePlant);
+	ApplyIcon(CargoBayIcon, ESTPBuildTool::CargoBay);
 	// The Communication Module artwork is authored directly in WBP_BuildToolbar.
 	// Preserve that brush instead of replacing it during NativeConstruct.
 
@@ -326,6 +339,10 @@ void UBuildToolbarWidget::BindDesignedToolbar()
 	{
 		ButtonBorders.Add(ESTPBuildTool::CommunicationModule, CommunicationModuleBorder);
 	}
+	if (CargoBayBorder)
+	{
+		ButtonBorders.Add(ESTPBuildTool::CargoBay, CargoBayBorder);
+	}
 }
 
 const FBuildToolButtonConfig* UBuildToolbarWidget::FindButtonConfig(ESTPBuildTool Tool) const
@@ -347,6 +364,14 @@ void UBuildToolbarWidget::ApplyIcon(UImage* Icon, ESTPBuildTool Tool) const
 	if (Config && Config->IconTexture)
 	{
 		Icon->SetBrushFromTexture(Config->IconTexture, true);
+		Icon->SetColorAndOpacity(FLinearColor::White);
+		return;
+	}
+
+	// Preserve artwork authored directly in the designed WBP. This also keeps the
+	// Cargo Bay icon visible while catalog data is being reloaded in the editor.
+	if (Icon->GetBrush().GetResourceObject())
+	{
 		Icon->SetColorAndOpacity(FLinearColor::White);
 		return;
 	}
@@ -390,6 +415,11 @@ void UBuildToolbarWidget::HandleConcretePlantClicked()
 void UBuildToolbarWidget::HandleCommunicationModuleClicked()
 {
 	HandleToolClicked(ESTPBuildTool::CommunicationModule);
+}
+
+void UBuildToolbarWidget::HandleCargoBayClicked()
+{
+	HandleToolClicked(ESTPBuildTool::CargoBay);
 }
 
 void UBuildToolbarWidget::HandleControllerBuildToolChanged(ESTPBuildTool NewTool)

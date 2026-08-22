@@ -13,6 +13,7 @@
 #include "Gameplay/UI/ObjectiveTrackerWidget.h"
 #include "Gameplay/UI/MissionConfidenceWidget.h"
 #include "Gameplay/UI/MissionChoiceWidget.h"
+#include "Gameplay/UI/TraderPanelWidget.h"
 #include "SurviveThePlanet.h"
 
 ASurviveThePlanetGameMode::ASurviveThePlanetGameMode()
@@ -27,6 +28,12 @@ ASurviveThePlanetGameMode::ASurviveThePlanetGameMode()
 		TEXT("/Game/UI/Mission/WBP_MissionConfidencePanel.WBP_MissionConfidencePanel_C"));
 	MissionChoiceWidgetClass = LoadClass<UMissionChoiceWidget>(nullptr,
 		TEXT("/Game/UI/Mission/WBP_MissionChoicePopup.WBP_MissionChoicePopup_C"));
+	TraderPanelWidgetClass = LoadClass<UTraderPanelWidget>(nullptr,
+		TEXT("/Game/UI/Trading/WBP_TraderPanel.WBP_TraderPanel_C"));
+	if (!TraderPanelWidgetClass)
+	{
+		TraderPanelWidgetClass = UTraderPanelWidget::StaticClass();
+	}
 	BuildingCatalog = LoadObject<UBuildingCatalogDataAsset>(nullptr, TEXT("/Game/Data/Buildings/DA_BuildingCatalog.DA_BuildingCatalog"));
 }
 
@@ -95,6 +102,12 @@ void ASurviveThePlanetGameMode::StartPlay()
 		{
 			MissionChoiceWidget = CreateWidget<UMissionChoiceWidget>(PlayerController, MissionChoiceWidgetClass);
 			if (MissionChoiceWidget) MissionChoiceWidget->AddToViewport(20);
+		}
+
+		if (TraderPanelWidgetClass)
+		{
+			TraderPanelWidget = CreateWidget<UTraderPanelWidget>(PlayerController, TraderPanelWidgetClass);
+			if (TraderPanelWidget) TraderPanelWidget->AddToViewport(10);
 		}
 	}
 }

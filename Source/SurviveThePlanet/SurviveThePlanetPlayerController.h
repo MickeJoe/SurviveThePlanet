@@ -21,11 +21,13 @@ class AMiningMachine;
 class AWaterCollector;
 class AConcretePlant;
 class ACommunicationModule;
+class ACargoBay;
 class ABaseResourceSource;
 class AResourceManager;
 class APlanetSurfaceManager;
 class ACableNetworkManager;
 class UBuildingInfoWidget;
+class UCheatMenuWidget;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogTemplateCharacter, Log, All);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FBuildToolChangedSignature, ESTPBuildTool, NewBuildTool);
@@ -161,11 +163,18 @@ protected:
 	void OnTouchTriggered();
 	void OnTouchReleased();
 	void OnCancelBuildToolPressed();
+	void ToggleCheatMenu();
 
 	/** Helper function to get the move destination */
 	void UpdateCachedDestination();
 
 private:
+	UPROPERTY(Transient)
+	TObjectPtr<UCheatMenuWidget> CheatMenuWidget;
+
+	UPROPERTY(Transient)
+	TSubclassOf<UCheatMenuWidget> CheatMenuWidgetClass;
+
 	UPROPERTY(Transient)
 	TObjectPtr<AEnergyModule> EnergyModulePlacementPreview;
 
@@ -183,6 +192,9 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<ACommunicationModule> CommunicationModulePlacementPreview;
+
+	UPROPERTY(Transient)
+	TObjectPtr<ACargoBay> CargoBayPlacementPreview;
 
 	/** Last emitted preview diagnostic; avoids writing the same result every frame. */
 	FString LastMiningPlacementDiagnostic;
@@ -211,6 +223,7 @@ private:
 	bool TryPlaceWaterCollectorAtCursor();
 	bool TryPlaceConcretePlantAtCursor();
 	bool TryPlaceCommunicationModuleAtCursor();
+	bool TryPlaceCargoBayAtCursor();
 	void UpdateBuildPlacementPreview();
 	void UpdateEnergyModulePlacementPreview();
 	void UpdateEnergyStoragePlacementPreview();
@@ -218,12 +231,14 @@ private:
 	void UpdateWaterCollectorPlacementPreview();
 	void UpdateConcretePlantPlacementPreview();
 	void UpdateCommunicationModulePlacementPreview();
+	void UpdateCargoBayPlacementPreview();
 	void EnsureEnergyModulePlacementPreview();
 	void EnsureEnergyStoragePlacementPreview();
 	void EnsureMiningMachinePlacementPreview(const ABaseResourceSource* ResourceSource = nullptr);
 	void EnsureWaterCollectorPlacementPreview();
 	void EnsureConcretePlantPlacementPreview();
 	void EnsureCommunicationModulePlacementPreview();
+	void EnsureCargoBayPlacementPreview();
 	void DestroyBuildPlacementPreview();
 	void ConfigureEnergyModulePlacementPreview(AEnergyModule* PreviewActor) const;
 	void ConfigureEnergyStoragePlacementPreview(AEnergyStorageBuilding* PreviewActor) const;
@@ -231,6 +246,7 @@ private:
 	void ConfigureWaterCollectorPlacementPreview(AWaterCollector* PreviewActor) const;
 	void ConfigureConcretePlantPlacementPreview(AConcretePlant* PreviewActor) const;
 	void ConfigureCommunicationModulePlacementPreview(ACommunicationModule* PreviewActor) const;
+	void ConfigureCargoBayPlacementPreview(ACargoBay* PreviewActor) const;
 	TSubclassOf<AMiningMachine> GetMiningMachineClassForSource(const ABaseResourceSource* ResourceSource) const;
 	ABaseResourceSource* GetResourceSourceUnderCursor(FHitResult* OutHit = nullptr) const;
 	AResourceManager* FindResourceManager() const;

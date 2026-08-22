@@ -21,7 +21,8 @@ enum class ESTPBuildingType : uint8
 	Other UMETA(DisplayName = "Other"),
 	WaterCollector UMETA(DisplayName = "Water Collector"),
 	ConcretePlant UMETA(DisplayName = "Concrete Plant"),
-	CommunicationModule UMETA(DisplayName = "Communication Module")
+	CommunicationModule UMETA(DisplayName = "Communication Module"),
+	CargoBay UMETA(DisplayName = "Cargo Bay")
 };
 
 /** Resource produced by one 100%-efficient drone during one minute. */

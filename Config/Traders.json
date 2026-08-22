@@ -1,0 +1,40 @@
+{
+  "traders": [
+    {
+      "id": "helix_industrial",
+      "name": "Helix Industrial",
+      "description": "Heavy-industry buyers seeking reliable deliveries of construction materials.",
+      "iconReference": "/Game/UI/Traders/T_HelixIndustrial.T_HelixIndustrial",
+      "offerDurationHours": 8,
+      "goods": [
+        { "resource": "Iron", "productionThreshold": 250 },
+        { "resource": "Copper", "productionThreshold": 150 },
+        { "resource": "Concrete", "productionThreshold": 100 }
+      ]
+    },
+    {
+      "id": "xeno_research",
+      "name": "Xeno Research",
+      "description": "An independent research collective acquiring rare and refined resources.",
+      "iconReference": "/Game/UI/Traders/T_XenoResearch.T_XenoResearch",
+      "offerDurationHours": 12,
+      "goods": [
+        { "resource": "Water", "productionThreshold": 300 },
+        { "resource": "ControlChip", "productionThreshold": 15 },
+        { "resource": "Concrete", "productionThreshold": 80 }
+      ]
+    },
+    {
+      "id": "nomad_shipwrights",
+      "name": "Nomad Shipwrights",
+      "description": "Roaming shipbuilders purchasing structural materials and replacement components.",
+      "iconReference": "/Game/UI/Traders/T_NomadShipwrights.T_NomadShipwrights",
+      "offerDurationHours": 6,
+      "goods": [
+        { "resource": "Iron", "productionThreshold": 100 },
+        { "resource": "ControlChip", "productionThreshold": 8 },
+        { "resource": "Concrete", "productionThreshold": 60 }
+      ]
+    }
+  ]
+}
