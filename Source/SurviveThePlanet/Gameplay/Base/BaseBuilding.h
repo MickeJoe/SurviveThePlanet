@@ -47,6 +47,12 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Base Building|Power")
 	bool IsOperational() const;
 
+	UFUNCTION(BlueprintPure, Category = "Base Building|Exploration")
+	bool ProvidesVision() const;
+
+	UFUNCTION(BlueprintPure, Category = "Base Building|Exploration")
+	float GetVisionRadius() const { return FMath::Max(0.0f, VisionRadius); }
+
 	UFUNCTION(BlueprintPure, Category = "Base Building|Power")
 	virtual float GetEnergyConsumptionPerMinute() const;
 
@@ -184,6 +190,14 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Base Building|Power", meta = (ClampMin = "0.0", UIMin = "0.0"))
 	float EnergyStorageCapacity = 1000.0f;
+
+	/** Flat world-space reveal radius. Configure per Blueprint or placed instance. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Base Building|Exploration", meta = (ClampMin = "0.0", UIMin = "0.0", Units = "cm"))
+	float VisionRadius = 3333.0f;
+
+	/** Enable on extra reveal buildings; the BaseModule always reveals. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Base Building|Exploration")
+	bool bProvidesVision = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Construction", meta = (ClampMin = "0.0", ClampMax = "1.0", UIMin = "0.0", UIMax = "1.0"))
 	float ConstructionProgress = 1.0f;

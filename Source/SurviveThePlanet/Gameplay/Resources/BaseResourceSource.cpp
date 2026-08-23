@@ -129,7 +129,21 @@ void ABaseResourceSource::RefreshResourceMeshVisibility()
 {
 	if (ResourceMesh)
 	{
-		ResourceMesh->SetHiddenInGame(IsValid(ReservedMiningMachine) || IsValid(PreviewingMiningMachine));
+		ResourceMesh->SetHiddenInGame(!bVisibleThroughFogOfWar || IsValid(ReservedMiningMachine) || IsValid(PreviewingMiningMachine));
+	}
+}
+
+void ABaseResourceSource::SetFogOfWarVisible(bool bVisible)
+{
+	if (bVisibleThroughFogOfWar != bVisible)
+	{
+		bVisibleThroughFogOfWar = bVisible;
+		if (ResourceMesh)
+		{
+			// An unseen deposit must not win cursor/mining traces through the fog.
+			ResourceMesh->SetCollisionResponseToChannel(ECC_Visibility, bVisible ? ECR_Block : ECR_Ignore);
+		}
+		RefreshResourceMeshVisibility();
 	}
 }
 

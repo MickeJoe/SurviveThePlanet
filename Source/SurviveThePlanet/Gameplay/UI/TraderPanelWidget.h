@@ -86,9 +86,12 @@ private:
 	TObjectPtr<UVerticalBox> ContractsList;
 
 	bool bCollapsed = false;
+	bool bTraderStructureDirty = false;
 	float TimerRefreshAccumulator = 0.0f;
 	float ActiveContractSimulationAccumulator = 0.0f;
 	TMap<FName, float> OfferSecondsRemaining;
+	UPROPERTY(Transient)
+	TMap<FName, TObjectPtr<UTextBlock>> OfferTimerTexts;
 	TSet<FName> PreviouslyEligibleTraders;
 	TSet<FName> ExpiredTraders;
 	FName TrackedContractOfferId;
@@ -98,9 +101,10 @@ private:
 	void BuildFallbackLayout();
 	void ResolveResourceManager();
 	void RefreshTraders();
+	void UpdateTraderTimerTexts();
 	void RefreshActiveContracts(float DeltaTime);
 	bool IsTraderEligible(const FSTPTraderDefinition& Trader) const;
-	void UpdateOfferStates(float DeltaTime);
+	bool UpdateOfferStates(float DeltaTime);
 	static FText FormatOfferTime(float RemainingSeconds);
 
 	UFUNCTION()

@@ -7,6 +7,8 @@
 #include "SurviveThePlanetCameraPawn.generated.h"
 
 class UCameraComponent;
+class UMaterialInterface;
+class UMaterialInstanceDynamic;
 class USpringArmComponent;
 
 /**
@@ -20,6 +22,7 @@ class ASurviveThePlanetCameraPawn : public APawn
 public:
 	ASurviveThePlanetCameraPawn();
 
+	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaSeconds) override;
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
 
@@ -45,7 +48,7 @@ protected:
 
 	/** Furthest allowed camera zoom. */
 	UPROPERTY(EditAnywhere, Category="Camera Controls", meta=(ClampMin="0.0", UIMin="0.0"))
-	float MaxCameraZoom = 2600.0f;
+	float MaxCameraZoom = 3400.0f;
 
 	/** Camera rotation speed in degrees per second. */
 	UPROPERTY(EditAnywhere, Category="Camera Controls", meta=(ClampMin="0.0", UIMin="0.0"))
@@ -63,6 +66,14 @@ protected:
 	UPROPERTY(EditAnywhere, Category="Selection", meta=(ClampMin="1.0", UIMin="1.0"))
 	float SelectionClickRadius = 500.0f;
 
+	/** Full-screen material that darkens pixels outside the base reveal radius. */
+	UPROPERTY(EditDefaultsOnly, Category="Exploration|Fog of War")
+	TObjectPtr<UMaterialInterface> FogOfWarMaterial;
+
+	/** Width of the soft visual transition at the edge of vision, in centimeters. */
+	UPROPERTY(EditAnywhere, Category="Exploration|Fog of War", meta=(ClampMin="0.0", UIMin="0.0", Units="cm"))
+	float FogEdgeWidth = 250.0f;
+
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta=(AllowPrivateAccess="true"))
 	TObjectPtr<USceneComponent> SceneRoot;
@@ -72,6 +83,9 @@ private:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UCameraComponent> CameraComponent;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UMaterialInstanceDynamic> FogOfWarMaterialInstance;
 
 	FVector2D KeyboardPanInput = FVector2D::ZeroVector;
 	float KeyboardRotationInput = 0.0f;
@@ -102,4 +116,5 @@ private:
 	void SetActorSelectedVisual(AActor* Actor, bool bSelected) const;
 	void DrawSelectedActorRing() const;
 	void LogSelectableActors(const TCHAR* Reason) const;
+	void RefreshFogOfWarVisual();
 };

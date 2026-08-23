@@ -124,6 +124,12 @@ bool ABaseBuilding::IsOperational() const
 	return false;
 }
 
+bool ABaseBuilding::ProvidesVision() const
+{
+	const bool bIsRevealSource = GetBuildingType() == ESTPBuildingType::BaseModule || bProvidesVision;
+	return bIsRevealSource && GetVisionRadius() > 0.0f && GetConstructionProgress() >= 1.0f && IsOperational();
+}
+
 float ABaseBuilding::GetEnergyConsumptionPerMinute() const
 {
 	return IsValid(BuildingData) && BuildingData->bOverrideEnergySettings

@@ -40,6 +40,11 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Resource Source|Grid")
 	FIntPoint GetGridFootprint() const;
 
+	UFUNCTION(BlueprintPure, Category = "Resource Source|Exploration")
+	bool RemainsVisibleAfterDiscovery() const { return bRemainsVisibleAfterDiscovery; }
+
+	void SetFogOfWarVisible(bool bVisible);
+
 	/** Mesh used to calculate the visual center when a mining building replaces this deposit. */
 	UStaticMeshComponent* GetResourceMeshComponent() const { return ResourceMesh; }
 
@@ -86,6 +91,9 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Resource Source", meta = (ClampMin = "0", UIMin = "0"))
 	int32 StartingAmount = 100;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Resource Source|Exploration")
+	bool bRemainsVisibleAfterDiscovery = false;
+
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Resource Source", meta = (ClampMin = "0", UIMin = "0"))
 	int32 RemainingAmount = 0;
 
@@ -104,6 +112,8 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<AMiningMachine> PreviewingMiningMachine;
+
+	bool bVisibleThroughFogOfWar = true;
 
 	void RefreshResourceMeshVisibility();
 };

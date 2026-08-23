@@ -11,6 +11,9 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "InputCoreTypes.h"
 #include "Kismet/GameplayStatics.h"
+#include "Materials/MaterialInstanceDynamic.h"
+#include "Materials/MaterialInterface.h"
+#include "Gameplay/Base/BaseBuilding.h"
 #include "SurviveThePlanet.h"
 
 ASurviveThePlanetCameraPawn::ASurviveThePlanetCameraPawn()
@@ -30,6 +33,25 @@ ASurviveThePlanetCameraPawn::ASurviveThePlanetCameraPawn()
 	CameraComponent = CreateDefaultSubobject<UCameraComponent>(TEXT("IsometricCamera"));
 	CameraComponent->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
 	CameraComponent->bUsePawnControlRotation = false;
+
+	FogOfWarMaterial = LoadObject<UMaterialInterface>(nullptr,
+		TEXT("/Game/Materials/Exploration/M_FogOfWar_PostProcess.M_FogOfWar_PostProcess"));
+}
+
+void ASurviveThePlanetCameraPawn::BeginPlay()
+{
+	Super::BeginPlay();
+
+	if (IsValid(FogOfWarMaterial) && CameraComponent)
+	{
+		FogOfWarMaterialInstance = UMaterialInstanceDynamic::Create(FogOfWarMaterial, this);
+		if (FogOfWarMaterialInstance)
+		{
+			CameraComponent->PostProcessSettings.AddBlendable(FogOfWarMaterialInstance, 1.0f);
+			CameraComponent->PostProcessBlendWeight = 1.0f;
+		}
+	}
+	RefreshFogOfWarVisual();
 }
 
 void ASurviveThePlanetCameraPawn::Tick(float DeltaSeconds)
@@ -45,6 +67,41 @@ void ASurviveThePlanetCameraPawn::Tick(float DeltaSeconds)
 
 	PanCamera(KeyboardPanInput + GetEdgeScrollInput(), NavigationDeltaSeconds);
 	RotateCamera(KeyboardRotationInput, NavigationDeltaSeconds);
+	RefreshFogOfWarVisual();
+}
+
+void ASurviveThePlanetCameraPawn::RefreshFogOfWarVisual()
+{
+	if (!FogOfWarMaterialInstance)
+	{
+		return;
+	}
+
+	ABaseBuilding* VisionSource = nullptr;
+	if (UWorld* World = GetWorld())
+	{
+		for (TActorIterator<ABaseBuilding> It(World); It; ++It)
+		{
+			if (It->ProvidesVision())
+			{
+				VisionSource = *It;
+				break;
+			}
+		}
+	}
+
+	if (!VisionSource)
+	{
+		FogOfWarMaterialInstance->SetScalarParameterValue(TEXT("VisionRadius"), 0.0f);
+		FogOfWarMaterialInstance->SetScalarParameterValue(TEXT("VisionEdge"), 1.0f);
+		return;
+	}
+
+	const FVector SourceLocation = VisionSource->GetActorLocation();
+	const float Radius = VisionSource->GetVisionRadius();
+	FogOfWarMaterialInstance->SetVectorParameterValue(TEXT("VisionCenter"), FLinearColor(SourceLocation));
+	FogOfWarMaterialInstance->SetScalarParameterValue(TEXT("VisionRadius"), Radius);
+	FogOfWarMaterialInstance->SetScalarParameterValue(TEXT("VisionEdge"), Radius + FMath::Max(0.0f, FogEdgeWidth));
 }
 
 void ASurviveThePlanetCameraPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)

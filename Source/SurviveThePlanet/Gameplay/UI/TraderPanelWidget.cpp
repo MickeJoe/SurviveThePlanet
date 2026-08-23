@@ -117,7 +117,7 @@ void UTraderPanelWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTi
 {
 	Super::NativeTick(MyGeometry, InDeltaTime);
 	const float SimulationDeltaTime = GetWorld() ? GetWorld()->GetDeltaSeconds() : InDeltaTime;
-	UpdateOfferStates(SimulationDeltaTime);
+	bTraderStructureDirty |= UpdateOfferStates(SimulationDeltaTime);
 	ActiveContractSimulationAccumulator += SimulationDeltaTime;
 	TimerRefreshAccumulator += InDeltaTime;
 	if (TimerRefreshAccumulator >= 1.0f)
@@ -125,7 +125,15 @@ void UTraderPanelWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTi
 		TimerRefreshAccumulator = 0.0f;
 		RefreshActiveContracts(ActiveContractSimulationAccumulator);
 		ActiveContractSimulationAccumulator = 0.0f;
-		RefreshTraders();
+		if (bTraderStructureDirty)
+		{
+			RefreshTraders();
+			bTraderStructureDirty = false;
+		}
+		else
+		{
+			UpdateTraderTimerTexts();
+		}
 	}
 }
 
@@ -217,6 +225,7 @@ void UTraderPanelWidget::ResolveResourceManager()
 void UTraderPanelWidget::RefreshTraders()
 {
 	if (!TraderList) return;
+	OfferTimerTexts.Reset();
 	TraderList->ClearChildren();
 	if (!TraderSubsystem) return;
 
@@ -319,6 +328,7 @@ void UTraderPanelWidget::RefreshTraders()
 				FormatOfferTime(*RemainingSeconds)));
 			Timer->SetJustification(ETextJustify::Center);
 			STPTraderUI::StyleText(Timer, 12, STPTraderUI::MainText);
+			OfferTimerTexts.Add(Trader.Id, Timer);
 			UVerticalBoxSlot* TimerSlot = TraderBlock->AddChildToVerticalBox(Timer);
 			TimerSlot->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 6.0f));
 			TimerSlot->SetHorizontalAlignment(HAlign_Fill);
@@ -335,6 +345,20 @@ void UTraderPanelWidget::RefreshTraders()
 			Line->SetHeightOverride(1.0f);
 			Divider->SetContent(Line);
 			TraderList->AddChildToVerticalBox(Divider)->SetPadding(FMargin(0.0f, 3.0f));
+		}
+	}
+}
+
+void UTraderPanelWidget::UpdateTraderTimerTexts()
+{
+	for (const TPair<FName, TObjectPtr<UTextBlock>>& Entry : OfferTimerTexts)
+	{
+		if (Entry.Value)
+		{
+			const float RemainingSeconds = OfferSecondsRemaining.FindRef(Entry.Key);
+			Entry.Value->SetText(FText::Format(
+				NSLOCTEXT("SurviveThePlanet", "ContractOfferExpires", "Expires in: {0}"),
+				FormatOfferTime(RemainingSeconds)));
 		}
 	}
 }
@@ -465,15 +489,17 @@ bool UTraderPanelWidget::IsTraderEligible(const FSTPTraderDefinition& Trader) co
 	return false;
 }
 
-void UTraderPanelWidget::UpdateOfferStates(float DeltaTime)
+bool UTraderPanelWidget::UpdateOfferStates(float DeltaTime)
 {
-	if (!TraderSubsystem) return;
+	if (!TraderSubsystem) return false;
+	bool bStructureChanged = false;
 	for (const FSTPTraderDefinition& Trader : TraderSubsystem->GetTraders())
 	{
 		const bool bEligible = IsTraderEligible(Trader);
 		const bool bWasEligible = PreviouslyEligibleTraders.Contains(Trader.Id);
 		if (!bEligible)
 		{
+			bStructureChanged |= bWasEligible || OfferSecondsRemaining.Contains(Trader.Id);
 			PreviouslyEligibleTraders.Remove(Trader.Id);
 			ExpiredTraders.Remove(Trader.Id);
 			OfferSecondsRemaining.Remove(Trader.Id);
@@ -483,6 +509,7 @@ void UTraderPanelWidget::UpdateOfferStates(float DeltaTime)
 		if (!bWasEligible && !ExpiredTraders.Contains(Trader.Id))
 		{
 			OfferSecondsRemaining.Add(Trader.Id, Trader.OfferDurationHours * 3600.0f);
+			bStructureChanged = true;
 		}
 		PreviouslyEligibleTraders.Add(Trader.Id);
 
@@ -493,9 +520,11 @@ void UTraderPanelWidget::UpdateOfferStates(float DeltaTime)
 			{
 				OfferSecondsRemaining.Remove(Trader.Id);
 				ExpiredTraders.Add(Trader.Id);
+				bStructureChanged = true;
 			}
 		}
 	}
+	return bStructureChanged;
 }
 
 FText UTraderPanelWidget::FormatOfferTime(float RemainingSeconds)
