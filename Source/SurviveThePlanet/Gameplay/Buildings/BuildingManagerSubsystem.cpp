@@ -10,6 +10,7 @@
 #include "Gameplay/Buildings/EnergyStorageBuilding.h"
 #include "Gameplay/Buildings/MiningMachine.h"
 #include "Gameplay/Buildings/WaterCollector.h"
+#include "Gameplay/Buildings/Steelworks.h"
 
 void UBuildingManagerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
@@ -29,7 +30,8 @@ void UBuildingManagerSubsystem::LoadDefaultCatalog()
 			{ESTPBuildTool::EnergyStorage, TEXT("/Game/Data/Buildings/DA_EnergyBatteryStorage.DA_EnergyBatteryStorage")},
 			{ESTPBuildTool::MiningMachine, TEXT("/Game/Data/Buildings/DA_MiningMachine.DA_MiningMachine")},
 			{ESTPBuildTool::WaterCollector, TEXT("/Game/Data/Buildings/DA_WaterCollector.DA_WaterCollector")},
-			{ESTPBuildTool::ConcretePlant, TEXT("/Game/Data/Buildings/DA_ConcretePlant.DA_ConcretePlant")}
+			{ESTPBuildTool::ConcretePlant, TEXT("/Game/Data/Buildings/DA_ConcretePlant.DA_ConcretePlant")},
+			{ESTPBuildTool::Steelworks, TEXT("/Game/Data/Buildings/DA_Steelworks.DA_Steelworks")}
 		};
 		for (const FFallbackDefinition& Entry : Fallbacks)
 		{
@@ -88,6 +90,9 @@ TSubclassOf<ABaseBuilding> UBuildingManagerSubsystem::GetBuildingClass(ESTPBuild
 	case ESTPBuildTool::ConcretePlant:
 		if (UClass* BPClass = LoadClass<AConcretePlant>(nullptr, TEXT("/Game/BluePrints/ConcretePlant/BP_ConcretePlant.BP_ConcretePlant_C"))) return BPClass;
 		return AConcretePlant::StaticClass();
+	case ESTPBuildTool::Steelworks:
+		if (UClass* BPClass = LoadClass<ASteelworks>(nullptr, TEXT("/Game/BluePrints/Buildings/Steelworks/BP_Steelworks.BP_Steelworks_C"))) return BPClass;
+		return ASteelworks::StaticClass();
 	case ESTPBuildTool::CommunicationModule: return ACommunicationModule::StaticClass();
 	case ESTPBuildTool::CargoBay: return ACargoBay::StaticClass();
 	case ESTPBuildTool::WaterCollector: return AWaterCollector::StaticClass();
@@ -119,6 +124,15 @@ TArray<UBuildingDataAsset*> UBuildingManagerSubsystem::GetToolbarDefinitions() c
 		for (const TPair<ESTPBuildTool, TObjectPtr<UBuildingDataAsset>>& Pair : DefinitionsByTool)
 			if (IsValid(Pair.Value) && Pair.Value->bShowInBuildToolbar) Result.Add(Pair.Value);
 	}
+	Result.Sort([](const UBuildingDataAsset& A, const UBuildingDataAsset& B) { return A.ToolbarSortOrder < B.ToolbarSortOrder; });
+	return Result;
+}
+
+TArray<UBuildingDataAsset*> UBuildingManagerSubsystem::GetAllDefinitions() const
+{
+	TArray<UBuildingDataAsset*> Result;
+	for (const TPair<ESTPBuildTool, TObjectPtr<UBuildingDataAsset>>& Pair : DefinitionsByTool)
+		if (IsValid(Pair.Value)) Result.Add(Pair.Value);
 	Result.Sort([](const UBuildingDataAsset& A, const UBuildingDataAsset& B) { return A.ToolbarSortOrder < B.ToolbarSortOrder; });
 	return Result;
 }

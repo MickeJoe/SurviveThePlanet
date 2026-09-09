@@ -10,6 +10,8 @@ class UCameraComponent;
 class UMaterialInterface;
 class UMaterialInstanceDynamic;
 class USpringArmComponent;
+class UTexture2D;
+class AHexSectorGrid;
 
 /**
  * Invisible pawn used as the player's isometric camera rig.
@@ -66,7 +68,7 @@ protected:
 	UPROPERTY(EditAnywhere, Category="Selection", meta=(ClampMin="1.0", UIMin="1.0"))
 	float SelectionClickRadius = 500.0f;
 
-	/** Full-screen material that darkens pixels outside the base reveal radius. */
+	/** Full-screen material that visualizes the exploration sector states. */
 	UPROPERTY(EditDefaultsOnly, Category="Exploration|Fog of War")
 	TObjectPtr<UMaterialInterface> FogOfWarMaterial;
 
@@ -86,6 +88,11 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<UMaterialInstanceDynamic> FogOfWarMaterialInstance;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UTexture2D> SectorFogMaskTexture;
+
+	uint32 SectorFogMaskHash = 0;
 
 	FVector2D KeyboardPanInput = FVector2D::ZeroVector;
 	float KeyboardRotationInput = 0.0f;
@@ -117,4 +124,5 @@ private:
 	void DrawSelectedActorRing() const;
 	void LogSelectableActors(const TCHAR* Reason) const;
 	void RefreshFogOfWarVisual();
+	void RefreshSectorFogMask(AHexSectorGrid* SectorGrid);
 };

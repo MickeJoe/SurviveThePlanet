@@ -42,6 +42,13 @@ public class SurviveThePlanet : ModuleRules
 			"SurviveThePlanet/Variant_TwinStick/UI"
 		});
 
+		// These data files are read directly from ProjectConfigDir at runtime.
+		// Unreal only stages standard .ini config files automatically, so declare
+		// the JSON files as loose runtime dependencies for packaged builds.
+		RuntimeDependencies.Add("$(ProjectDir)/Config/Objectives.json", StagedFileType.NonUFS);
+		RuntimeDependencies.Add("$(ProjectDir)/Config/Traders.json", StagedFileType.NonUFS);
+		RuntimeDependencies.Add("$(ProjectDir)/Config/ContractOffers.json", StagedFileType.NonUFS);
+
 		// Uncomment if you are using Slate UI
 		// PrivateDependencyModuleNames.AddRange(new string[] { "Slate", "SlateCore" });
 

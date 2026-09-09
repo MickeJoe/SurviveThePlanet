@@ -28,6 +28,9 @@ class APlanetSurfaceManager;
 class ACableNetworkManager;
 class UBuildingInfoWidget;
 class UCheatMenuWidget;
+class ABaseBuilding;
+class AExplorerDrone;
+class UExplorerDroneActivationWidget;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogTemplateCharacter, Log, All);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FBuildToolChangedSignature, ESTPBuildTool, NewBuildTool);
@@ -123,6 +126,9 @@ public:
 	/** Constructor */
 	ASurviveThePlanetPlayerController();
 
+	UFUNCTION(BlueprintPure, Category="Selection") AActor* GetSelectedActor() const { return SelectedActor; }
+	UFUNCTION(BlueprintCallable, Category="Explorer Drone") bool TryActivateSelectedExplorerDrone();
+
 	UFUNCTION(BlueprintCallable, Category = "Build Tools")
 	void SetActiveBuildTool(ESTPBuildTool NewBuildTool);
 
@@ -164,6 +170,7 @@ protected:
 	void OnTouchReleased();
 	void OnCancelBuildToolPressed();
 	void ToggleCheatMenu();
+	void OnActivateExplorerDronePressed();
 
 	/** Helper function to get the move destination */
 	void UpdateCachedDestination();
@@ -196,6 +203,9 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<ACargoBay> CargoBayPlacementPreview;
 
+	UPROPERTY(Transient)
+	TObjectPtr<ABaseBuilding> GenericBuildingPlacementPreview;
+
 	/** Last emitted preview diagnostic; avoids writing the same result every frame. */
 	FString LastMiningPlacementDiagnostic;
 
@@ -207,6 +217,12 @@ private:
 
 	UPROPERTY(Transient)
 	TSubclassOf<UBuildingInfoWidget> BuildingInfoWidgetClass;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UExplorerDroneActivationWidget> ExplorerDroneActivationWidget;
+
+	UPROPERTY(Transient)
+	TSubclassOf<UExplorerDroneActivationWidget> ExplorerDroneActivationWidgetClass;
 
 	APlanetSurfaceManager* FindPlanetSurfaceManager() const;
 	ACableNetworkManager* FindOrCreateCableNetworkManager();
@@ -224,6 +240,7 @@ private:
 	bool TryPlaceConcretePlantAtCursor();
 	bool TryPlaceCommunicationModuleAtCursor();
 	bool TryPlaceCargoBayAtCursor();
+	bool TryPlaceGenericBuildingAtCursor();
 	void UpdateBuildPlacementPreview();
 	void UpdateEnergyModulePlacementPreview();
 	void UpdateEnergyStoragePlacementPreview();
@@ -232,6 +249,7 @@ private:
 	void UpdateConcretePlantPlacementPreview();
 	void UpdateCommunicationModulePlacementPreview();
 	void UpdateCargoBayPlacementPreview();
+	void UpdateGenericBuildingPlacementPreview();
 	void EnsureEnergyModulePlacementPreview();
 	void EnsureEnergyStoragePlacementPreview();
 	void EnsureMiningMachinePlacementPreview(const ABaseResourceSource* ResourceSource = nullptr);
@@ -239,6 +257,7 @@ private:
 	void EnsureConcretePlantPlacementPreview();
 	void EnsureCommunicationModulePlacementPreview();
 	void EnsureCargoBayPlacementPreview();
+	void EnsureGenericBuildingPlacementPreview();
 	void DestroyBuildPlacementPreview();
 	void ConfigureEnergyModulePlacementPreview(AEnergyModule* PreviewActor) const;
 	void ConfigureEnergyStoragePlacementPreview(AEnergyStorageBuilding* PreviewActor) const;

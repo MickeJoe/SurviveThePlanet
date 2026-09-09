@@ -8,7 +8,10 @@
 #include "Components/TextBlock.h"
 #include "Components/VerticalBox.h"
 #include "Components/VerticalBoxSlot.h"
+#include "Components/PanelWidget.h"
 #include "Gameplay/Cheats/STPCheatManager.h"
+#include "Gameplay/Buildings/BuildingManagerSubsystem.h"
+#include "Gameplay/Base/BuildingDataAsset.h"
 #include "GameFramework/PlayerController.h"
 
 void UCheatMenuWidget::NativeConstruct()
@@ -26,7 +29,75 @@ void UCheatMenuWidget::NativeConstruct()
 	AmountSpinBox->SetMaxSliderValue(10000.0f);
 	AmountSpinBox->SetValue(100.0f);
 	GiveButton->OnClicked.AddUniqueDynamic(this, &UCheatMenuWidget::GiveSelectedResource);
+	EnsureObjectiveCheatButton();
+	CompleteObjectiveButton->OnClicked.AddUniqueDynamic(this, &UCheatMenuWidget::CompleteUplinkObjective);
+	EnsureBlueprintCheatControls();
+	GrantBlueprintButton->OnClicked.AddUniqueDynamic(this, &UCheatMenuWidget::GrantSelectedBlueprint);
 #endif
+}
+
+void UCheatMenuWidget::EnsureBlueprintCheatControls()
+{
+	TArray<UWidget*> Widgets; WidgetTree->GetAllWidgets(Widgets);
+	UVerticalBox* Column = nullptr;
+	for (UWidget* Widget : Widgets) if ((Column = Cast<UVerticalBox>(Widget))) break;
+	if (!Column) return;
+	if (!BlueprintComboBox)
+	{
+		BlueprintComboBox = WidgetTree->ConstructWidget<UComboBoxString>(UComboBoxString::StaticClass(), TEXT("BlueprintComboBox"));
+		Column->AddChildToVerticalBox(BlueprintComboBox)->SetPadding(FMargin(0, 10, 0, 4));
+	}
+	if (!GrantBlueprintButton)
+	{
+		GrantBlueprintButton = WidgetTree->ConstructWidget<UButton>(UButton::StaticClass(), TEXT("GrantBlueprintButton"));
+		UTextBlock* Label = WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), TEXT("GrantBlueprintButtonLabel"));
+		Label->SetText(NSLOCTEXT("STPCheats", "GrantBlueprint", "OWN BUILDING BLUEPRINT"));
+		GrantBlueprintButton->SetContent(Label); Column->AddChildToVerticalBox(GrantBlueprintButton);
+	}
+	BlueprintComboBox->ClearOptions(); BlueprintTools.Reset();
+	UWorld* World = GetWorld(); UBuildingManagerSubsystem* Manager = World ? World->GetSubsystem<UBuildingManagerSubsystem>() : nullptr;
+	if (Manager)
+	{
+		for (UBuildingDataAsset* Definition : Manager->GetAllDefinitions())
+		{
+			if (!Definition || Definition->BuildTool == ESTPBuildTool::None) continue;
+			BlueprintTools.Add(Definition->BuildTool); BlueprintComboBox->AddOption(Definition->DisplayName.ToString());
+		}
+	}
+	if (BlueprintComboBox->GetOptionCount() > 0) BlueprintComboBox->SetSelectedIndex(0);
+}
+
+void UCheatMenuWidget::GrantSelectedBlueprint()
+{
+#if !UE_BUILD_SHIPPING
+	const int32 Index = BlueprintComboBox ? BlueprintComboBox->GetSelectedIndex() : INDEX_NONE;
+	APlayerController* PC = GetOwningPlayer(); USTPCheatManager* Cheats = PC ? Cast<USTPCheatManager>(PC->CheatManager) : nullptr;
+	const bool bSuccess = BlueprintTools.IsValidIndex(Index) && Cheats && Cheats->GrantBuildingBlueprint(BlueprintTools[Index]);
+	if (FeedbackText) FeedbackText->SetText(bSuccess ? NSLOCTEXT("STPCheats", "BlueprintGranted", "Building blueprint acquired; build menu updated.") : NSLOCTEXT("STPCheats", "BlueprintOwned", "Blueprint already owned or unavailable."));
+#endif
+}
+
+void UCheatMenuWidget::EnsureObjectiveCheatButton()
+{
+	if (CompleteObjectiveButton)
+	{
+		return;
+	}
+	CompleteObjectiveButton = WidgetTree->ConstructWidget<UButton>(UButton::StaticClass(), TEXT("CompleteObjectiveButton"));
+	UTextBlock* Label = WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), TEXT("CompleteObjectiveButtonLabel"));
+	Label->SetText(NSLOCTEXT("STPCheats", "CompleteUplink", "Complete ESTABLISH UPLINK"));
+	CompleteObjectiveButton->SetContent(Label);
+
+	TArray<UWidget*> Widgets;
+	WidgetTree->GetAllWidgets(Widgets);
+	for (UWidget* Widget : Widgets)
+	{
+		if (UVerticalBox* Column = Cast<UVerticalBox>(Widget))
+		{
+			Column->AddChildToVerticalBox(CompleteObjectiveButton)->SetPadding(FMargin(0, 8, 0, 0));
+			return;
+		}
+	}
 }
 
 void UCheatMenuWidget::BuildFallbackLayout()
@@ -79,6 +150,21 @@ void UCheatMenuWidget::GiveSelectedResource()
 	if (FeedbackText)
 	{
 		FeedbackText->SetText(bSuccess ? FText::Format(NSLOCTEXT("STPCheats", "Success", "Added {0}."), FText::AsNumber(Amount)) : NSLOCTEXT("STPCheats", "Failed", "Could not add resource."));
+	}
+#endif
+}
+
+void UCheatMenuWidget::CompleteUplinkObjective()
+{
+#if !UE_BUILD_SHIPPING
+	APlayerController* PC = GetOwningPlayer();
+	USTPCheatManager* Cheats = PC ? Cast<USTPCheatManager>(PC->CheatManager) : nullptr;
+	const bool bSuccess = Cheats && Cheats->CompleteObjective(TEXT("mission_build_communication"));
+	if (FeedbackText)
+	{
+		FeedbackText->SetText(bSuccess
+			? NSLOCTEXT("STPCheats", "ObjectiveComplete", "ESTABLISH UPLINK completed; rewards granted.")
+			: NSLOCTEXT("STPCheats", "ObjectiveCompleteFailed", "ESTABLISH UPLINK is not active."));
 	}
 #endif
 }

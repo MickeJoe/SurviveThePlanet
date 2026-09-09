@@ -2,6 +2,8 @@
 
 #include "Dom/JsonObject.h"
 #include "EngineUtils.h"
+#include "GameFramework/Pawn.h"
+#include "GameFramework/PlayerController.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
 #include "Serialization/JsonReader.h"
@@ -288,6 +290,15 @@ bool UObjectiveSubsystem::LoadFromJson(const FString& FilePath)
 					bDefinitionValid = STPObjectives::ReadPositiveInt(RewardObject, TEXT("amount"), Reward.Amount)
 						&& Reward.Amount <= 100;
 				}
+				else if (Type == TEXT("give_drone"))
+				{
+					FString DroneClassPath;
+					Reward.Type = ESTPObjectiveRewardType::GiveDrone;
+					bDefinitionValid = RewardObject->TryGetStringField(TEXT("droneClass"), DroneClassPath)
+						&& !DroneClassPath.IsEmpty()
+						&& STPObjectives::ReadPositiveInt(RewardObject, TEXT("amount"), Reward.Amount);
+					Reward.DroneClass = FSoftClassPath(DroneClassPath);
+				}
 				else
 				{
 					bDefinitionValid = false;
@@ -551,7 +562,68 @@ void UObjectiveSubsystem::GrantRewards(const FSTPObjectiveDefinition& Definition
 				Confidence->AddMissionConfidence(static_cast<float>(Reward.Amount));
 			}
 		}
+		else if (Reward.Type == ESTPObjectiveRewardType::GiveDrone)
+		{
+			for (int32 Index = 0; Index < Reward.Amount; ++Index)
+			{
+				if (!SpawnRewardDrone(Reward, Definition.Id))
+				{
+					break;
+				}
+			}
+		}
 	}
+}
+
+bool UObjectiveSubsystem::DebugCompleteObjective(FName ObjectiveId)
+{
+#if UE_BUILD_SHIPPING
+	return false;
+#else
+	const FSTPObjectiveRuntimeState* State = RuntimeStates.Find(ObjectiveId);
+	if (!State || State->State != ESTPObjectiveState::Active)
+	{
+		return false;
+	}
+	CompleteObjective(ObjectiveId);
+	return true;
+#endif
+}
+
+bool UObjectiveSubsystem::SpawnRewardDrone(const FSTPObjectiveRewardDefinition& Reward, FName SourceObjectiveId) const
+{
+	UWorld* World = GetWorld();
+	UClass* DroneClass = Reward.DroneClass.TryLoadClass<AActor>();
+	if (!World || !DroneClass || !DroneClass->IsChildOf(AActor::StaticClass()))
+	{
+		UE_LOG(LogObjectives, Error, TEXT("Objective '%s' could not load reward drone class '%s'."),
+			*SourceObjectiveId.ToString(), *Reward.DroneClass.ToString());
+		return false;
+	}
+
+	FVector SpawnLocation = FVector(0.0, 0.0, 250.0);
+	FRotator SpawnRotation = FRotator::ZeroRotator;
+	if (APlayerController* PlayerController = World->GetFirstPlayerController())
+	{
+		if (APawn* Pawn = PlayerController->GetPawn())
+		{
+			SpawnLocation = Pawn->GetActorLocation() + Pawn->GetActorRightVector() * 350.0f + FVector(0.0f, 0.0f, 150.0f);
+			SpawnRotation = Pawn->GetActorRotation();
+		}
+	}
+
+	FActorSpawnParameters Params;
+	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+	AActor* SpawnedDrone = World->SpawnActor<AActor>(DroneClass, SpawnLocation, SpawnRotation, Params);
+	if (!SpawnedDrone)
+	{
+		UE_LOG(LogObjectives, Error, TEXT("Objective '%s' failed to spawn reward drone '%s'."),
+			*SourceObjectiveId.ToString(), *Reward.DroneClass.ToString());
+		return false;
+	}
+	UE_LOG(LogObjectives, Log, TEXT("Objective '%s' granted drone '%s'."),
+		*SourceObjectiveId.ToString(), *GetNameSafe(SpawnedDrone));
+	return true;
 }
 
 void UObjectiveSubsystem::MakeObjectiveAvailable(FName ObjectiveId)

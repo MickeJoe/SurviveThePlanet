@@ -28,3 +28,13 @@ UConcretePlantBuildingDataAsset::UConcretePlantBuildingDataAsset()
 	EnergyConsumptionPerMinute = 10.0f;
 	bOverrideEnergySettings = true;
 }
+
+USteelworksBuildingDataAsset::USteelworksBuildingDataAsset()
+{
+	BuildCategory = ESTPBuildCategory::Industry;
+	BuildingType = ESTPBuildingType::Steelworks;
+	BuildingTag = TEXT("Steelworks");
+	DisplayName = NSLOCTEXT("SurviveThePlanet", "SteelworksDataName", "Steelworks");
+	EnergyConsumptionPerMinute = 18.0f;
+	bOverrideEnergySettings = true;
+}

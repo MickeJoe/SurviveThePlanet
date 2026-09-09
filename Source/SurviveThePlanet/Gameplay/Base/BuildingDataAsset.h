@@ -22,7 +22,8 @@ enum class ESTPBuildingType : uint8
 	WaterCollector UMETA(DisplayName = "Water Collector"),
 	ConcretePlant UMETA(DisplayName = "Concrete Plant"),
 	CommunicationModule UMETA(DisplayName = "Communication Module"),
-	CargoBay UMETA(DisplayName = "Cargo Bay")
+	CargoBay UMETA(DisplayName = "Cargo Bay"),
+	Steelworks UMETA(DisplayName = "Steelworks")
 };
 
 /** Resource produced by one 100%-efficient drone during one minute. */
@@ -45,6 +46,18 @@ class SURVIVETHEPLANET_API UBuildingDataAsset : public UDataAsset
 	GENERATED_BODY()
 
 public:
+	/** Category shown in the nested build toolbar. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Catalog")
+	ESTPBuildCategory BuildCategory = ESTPBuildCategory::Infrastructure;
+
+	/** Stable ownership key. When empty, the BuildTool enum name is used. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Catalog")
+	FName BlueprintId;
+
+	/** Starting colony knowledge. Reward/cheat-only buildings should leave this false. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Catalog")
+	bool bBlueprintInitiallyOwned = true;
+
 	/** Stable toolbar/placement identifier used by the building catalog. */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Catalog")
 	ESTPBuildTool BuildTool = ESTPBuildTool::None;
@@ -154,6 +167,25 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Concrete Production", meta = (ClampMin = "0.01"))
 	float CycleSeconds = 60.0f;
+};
+
+/** Recipe and throughput configuration for a steelworks. */
+UCLASS(BlueprintType)
+class SURVIVETHEPLANET_API USteelworksBuildingDataAsset : public UBuildingDataAsset
+{
+	GENERATED_BODY()
+
+public:
+	USteelworksBuildingDataAsset();
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Steel Production", meta = (ClampMin = "0.0"))
+	float IronPerCycle = 4.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Steel Production", meta = (ClampMin = "0.0"))
+	float SteelPerCycle = 2.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Steel Production", meta = (ClampMin = "0.01"))
+	float CycleSeconds = 20.0f;
 };
 
 /** Mining-only configuration kept out of unrelated building data assets. */

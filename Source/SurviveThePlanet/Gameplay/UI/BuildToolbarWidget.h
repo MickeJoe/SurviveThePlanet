@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
 #include "Gameplay/BuildTools/BuildToolTypes.h"
+#include "Gameplay/Resources/ResourceManager.h"
 #include "BuildToolbarWidget.generated.h"
 
 class UBorder;
@@ -10,6 +11,8 @@ class UButton;
 class UImage;
 class UTexture2D;
 class UWidget;
+class UBuildingBlueprintSubsystem;
+class AResourceManager;
 
 USTRUCT(BlueprintType)
 struct FBuildToolButtonConfig
@@ -38,6 +41,7 @@ public:
 	void SetActiveTool(ESTPBuildTool NewTool);
 
 protected:
+	virtual TSharedRef<SWidget> RebuildWidget() override;
 	virtual void NativePreConstruct() override;
 	virtual void NativeConstruct() override;
 	virtual void NativeDestruct() override;
@@ -56,6 +60,18 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Build Toolbar")
 	FLinearColor EmptyIconTint = FLinearColor(0.12f, 0.16f, 0.18f, 1.0f);
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Build Toolbar|Categories")
+	FVector2D CategoryButtonSize = FVector2D(108.0f, 88.0f);
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Build Toolbar|Categories")
+	FLinearColor CategoryNormalColor = FLinearColor(0.38f, 0.29f, 0.12f, 0.96f);
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Build Toolbar|Categories")
+	FLinearColor CategorySelectedColor = FLinearColor(0.0f, 0.72f, 0.95f, 0.96f);
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Build Toolbar|Categories")
+	FLinearColor CategoryButtonBackground = FLinearColor(0.018f, 0.038f, 0.052f, 0.98f);
 
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Build Toolbar|Designed Widgets")
 	TObjectPtr<UButton> EnergyCableButton;
@@ -133,13 +149,30 @@ protected:
 	void BP_ActiveToolChanged(ESTPBuildTool NewTool);
 
 private:
+	ESTPBuildCategory ActiveCategory = ESTPBuildCategory::Energy;
 	UPROPERTY(Transient)
 	TMap<ESTPBuildTool, TObjectPtr<UBorder>> ButtonBorders;
+
+	UPROPERTY(Transient)
+	TMap<ESTPBuildTool, TObjectPtr<UButton>> ToolButtons;
+
+	UPROPERTY(Transient)
+	TObjectPtr<AResourceManager> ResourceManager;
+
+	UPROPERTY(Transient)
+	TMap<ESTPBuildTool, TObjectPtr<UWidget>> ToolWidgets;
+
+	UPROPERTY(Transient)
+	TMap<ESTPBuildCategory, TObjectPtr<UWidget>> CategoryRows;
+
+	UPROPERTY(Transient)
+	TMap<ESTPBuildCategory, TObjectPtr<UBorder>> CategoryBorders;
 
 	UPROPERTY(Transient)
 	ESTPBuildTool ActiveTool = ESTPBuildTool::None;
 
 	void RebuildToolbar();
+	void EnsureRequiredButtonConfigs();
 	void RefreshButtonConfigsFromCatalog();
 	UWidget* BuildButton(const FBuildToolButtonConfig& Config);
 	bool HasDesignedToolbar() const;
@@ -166,6 +199,9 @@ private:
 	void HandleConcretePlantClicked();
 
 	UFUNCTION()
+	void HandleSteelworksClicked();
+
+	UFUNCTION()
 	void HandleCommunicationModuleClicked();
 
 	UFUNCTION()
@@ -176,4 +212,28 @@ private:
 
 	void HandleToolClicked(ESTPBuildTool Tool);
 	void RefreshButtonStates();
+	bool CanAffordTool(ESTPBuildTool Tool, TArray<FResourceCost>* OutCosts = nullptr) const;
+	FText BuildToolTooltip(ESTPBuildTool Tool, bool bAffordable, const TArray<FResourceCost>& Costs) const;
+	AResourceManager* ResolveResourceManager();
+	bool IsToolOwned(ESTPBuildTool Tool) const;
+	ESTPBuildCategory GetCategoryForTool(ESTPBuildTool Tool) const;
+	UWidget* BuildCategoryButton(const FText& Label, ESTPBuildCategory Category);
+	UTexture2D* GetCategoryIcon(ESTPBuildCategory Category) const;
+	void RefreshToolbarVisibility();
+
+	UFUNCTION() void HandleEnergyCategoryClicked();
+	UFUNCTION() void HandleIndustryCategoryClicked();
+	UFUNCTION() void HandleLogisticsCategoryClicked();
+	UFUNCTION() void HandleInfrastructureCategoryClicked();
+	UFUNCTION() void HandleCommandHubClicked();
+	UFUNCTION() void HandleSolarArrayClicked();
+	UFUNCTION() void HandleWindGeneratorClicked();
+	UFUNCTION() void HandleGeothermalPlantClicked();
+	UFUNCTION() void HandleNuclearReactorClicked();
+	UFUNCTION() void HandleMiningStationClicked();
+	UFUNCTION() void HandleResourceStorageClicked();
+	UFUNCTION() void HandleDroneFactoryClicked();
+	UFUNCTION() void HandleCommunicationsTowerClicked();
+	UFUNCTION() void HandleBlueprintInventoryChanged(ESTPBuildTool ChangedTool);
+	UFUNCTION() void HandleResourceAmountChanged(EResourceType ResourceType, int32 NewAmount);
 };

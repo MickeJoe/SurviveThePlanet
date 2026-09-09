@@ -93,7 +93,8 @@
       "conditions": [{ "type": "build_building", "building": "CommunicationModule", "amount": 1 }],
       "rewards": [
         { "type": "give_mission_confidence", "amount": 30 },
-        { "type": "give_resource", "resource": "ControlChip", "amount": 2 }
+        { "type": "give_resource", "resource": "ControlChip", "amount": 2 },
+        { "type": "give_drone", "droneClass": "/Game/Models/Units/ExplorerDrone/BP_ExplorerDrone.BP_ExplorerDrone_C", "amount": 1 }
       ]
     },
     {

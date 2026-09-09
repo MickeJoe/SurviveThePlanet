@@ -166,6 +166,25 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Drone|Visual", meta = (ClampMin = "0.01", UIMin = "0.01"))
 	float DroneVisualScale = 0.75f;
 
+	/** Enables a lightweight runtime hover loop for drones imported as static meshes. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Drone|Visual|Animation")
+	bool bEnableHoverAnimation = false;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Drone|Visual|Animation", meta = (ClampMin = "0.0", Units = "cm"))
+	float HoverAmplitude = 12.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Drone|Visual|Animation", meta = (ClampMin = "0.05", Units = "s"))
+	float HoverPeriod = 2.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Drone|Visual|Animation", meta = (ClampMin = "0.0", Units = "deg"))
+	float HoverPitchAmplitude = 2.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Drone|Visual|Animation", meta = (ClampMin = "0.0", Units = "deg"))
+	float HoverRollAmplitude = 2.5f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Drone|Visual|Animation", meta = (ClampMin = "0.0", Units = "deg"))
+	float ScannerYawAmplitude = 4.0f;
+
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Drone|Construction")
 	bool bHasOngoingConstructionJob = false;
 
@@ -186,12 +205,17 @@ protected:
 
 	int32 IdlePathIndex = 0;
 
+	FVector BaseMeshRelativeLocation = FVector::ZeroVector;
+	FRotator BaseMeshRelativeRotation = FRotator::ZeroRotator;
+	float VisualAnimationTime = 0.0f;
+
 private:
 	friend class ABaseBuilding;
 	void SetBuildingAssignmentInternal(ABaseBuilding* Building, int32 SlotIndex);
 	void ParkAtAssignedBuilding();
 	void ConfigureMesh();
 	void ApplyVisualScale();
+	void UpdateVisualAnimation(float DeltaSeconds);
 	bool IsOngoingConstructionJobValid() const;
 	void TickTravelToBuilding(float DeltaSeconds);
 	void TickBuildTarget(float DeltaSeconds);

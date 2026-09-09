@@ -38,6 +38,9 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Buildings")
 	TArray<UBuildingDataAsset*> GetToolbarDefinitions() const;
 
+	UFUNCTION(BlueprintPure, Category = "Buildings")
+	TArray<UBuildingDataAsset*> GetAllDefinitions() const;
+
 	UPROPERTY(BlueprintAssignable, Category = "Buildings")
 	FBuildingCatalogChangedSignature OnCatalogChanged;
 

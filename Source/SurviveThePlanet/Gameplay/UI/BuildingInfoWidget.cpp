@@ -239,14 +239,6 @@ void UBuildingInfoWidget::OpenDroneSelection(int32 SlotIndex)
 		return;
 	}
 
-	if (!DroneSelectionWidgetClass)
-	{
-		DroneSelectionWidgetClass = LoadClass<UUserWidget>(nullptr, TEXT("/Game/UI/WBP_DroneSelectionPopup.WBP_DroneSelectionPopup_C"));
-	}
-	if (!DroneSelectionCardClass)
-	{
-		DroneSelectionCardClass = LoadClass<UUserWidget>(nullptr, TEXT("/Game/UI/WBP_DroneSelectionCard.WBP_DroneSelectionCard_C"));
-	}
 	if (!DroneSelectionWidgetClass || !DroneSelectionCardClass)
 	{
 		UE_LOG(LogTemp, Error, TEXT("Could not open drone selection: WBP_DroneSelectionPopup or WBP_DroneSelectionCard failed to load."));

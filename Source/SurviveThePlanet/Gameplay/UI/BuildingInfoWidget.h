@@ -96,10 +96,10 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<UUserWidget> DroneSelectionWidget;
 
-	UPROPERTY(Transient)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Building Info|Drone Selection", meta = (AllowPrivateAccess = "true"))
 	TSubclassOf<UUserWidget> DroneSelectionWidgetClass;
 
-	UPROPERTY(Transient)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Building Info|Drone Selection", meta = (AllowPrivateAccess = "true"))
 	TSubclassOf<UUserWidget> DroneSelectionCardClass;
 
 	UPROPERTY(Transient)

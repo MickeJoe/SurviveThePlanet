@@ -6,6 +6,7 @@
 #include "Components/InputComponent.h"
 #include "Components/PrimitiveComponent.h"
 #include "DrawDebugHelpers.h"
+#include "Engine/Texture2D.h"
 #include "EngineUtils.h"
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/SpringArmComponent.h"
@@ -13,7 +14,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Materials/MaterialInterface.h"
-#include "Gameplay/Base/BaseBuilding.h"
+#include "Gameplay/World/HexSectorGrid.h"
 #include "SurviveThePlanet.h"
 
 ASurviveThePlanetCameraPawn::ASurviveThePlanetCameraPawn()
@@ -77,31 +78,88 @@ void ASurviveThePlanetCameraPawn::RefreshFogOfWarVisual()
 		return;
 	}
 
-	ABaseBuilding* VisionSource = nullptr;
+	AHexSectorGrid* SectorGrid = nullptr;
 	if (UWorld* World = GetWorld())
 	{
-		for (TActorIterator<ABaseBuilding> It(World); It; ++It)
+		for (TActorIterator<AHexSectorGrid> It(World); It; ++It)
 		{
-			if (It->ProvidesVision())
-			{
-				VisionSource = *It;
-				break;
-			}
+			SectorGrid = *It;
+			break;
 		}
 	}
 
-	if (!VisionSource)
+	if (!SectorGrid)
 	{
-		FogOfWarMaterialInstance->SetScalarParameterValue(TEXT("VisionRadius"), 0.0f);
-		FogOfWarMaterialInstance->SetScalarParameterValue(TEXT("VisionEdge"), 1.0f);
 		return;
 	}
 
-	const FVector SourceLocation = VisionSource->GetActorLocation();
-	const float Radius = VisionSource->GetVisionRadius();
-	FogOfWarMaterialInstance->SetVectorParameterValue(TEXT("VisionCenter"), FLinearColor(SourceLocation));
-	FogOfWarMaterialInstance->SetScalarParameterValue(TEXT("VisionRadius"), Radius);
-	FogOfWarMaterialInstance->SetScalarParameterValue(TEXT("VisionEdge"), Radius + FMath::Max(0.0f, FogEdgeWidth));
+	RefreshSectorFogMask(SectorGrid);
+}
+
+void ASurviveThePlanetCameraPawn::RefreshSectorFogMask(AHexSectorGrid* SectorGrid)
+{
+	if (!FogOfWarMaterialInstance || !SectorGrid || SectorGrid->Sectors.IsEmpty())
+	{
+		return;
+	}
+
+	uint32 NewHash = GetTypeHash(SectorGrid->ExplorationSectorRadius);
+	NewHash = HashCombineFast(NewHash, GetTypeHash(SectorGrid->GetActorTransform().ToHumanReadableString()));
+	for (const FHexSector& Sector : SectorGrid->Sectors)
+	{
+		NewHash = HashCombineFast(NewHash, HashCombineFast(GetTypeHash(Sector.Id), GetTypeHash(static_cast<uint8>(Sector.State))));
+	}
+	if (SectorFogMaskTexture && NewHash == SectorFogMaskHash)
+	{
+		return;
+	}
+
+	constexpr int32 MaskResolution = 512;
+	if (!SectorFogMaskTexture)
+	{
+		SectorFogMaskTexture = UTexture2D::CreateTransient(MaskResolution, MaskResolution, PF_B8G8R8A8, TEXT("SectorFogMask"));
+		SectorFogMaskTexture->SRGB = false;
+		SectorFogMaskTexture->Filter = TF_Nearest;
+		SectorFogMaskTexture->AddressX = TA_Clamp;
+		SectorFogMaskTexture->AddressY = TA_Clamp;
+	}
+
+	FVector2D BoundsMin(FLT_MAX, FLT_MAX);
+	FVector2D BoundsMax(-FLT_MAX, -FLT_MAX);
+	const float Radius = FMath::Max(100.0f, SectorGrid->ExplorationSectorRadius);
+	for (const FHexSector& Sector : SectorGrid->Sectors)
+	{
+		BoundsMin.X = FMath::Min(BoundsMin.X, Sector.WorldCenter.X - Radius);
+		BoundsMin.Y = FMath::Min(BoundsMin.Y, Sector.WorldCenter.Y - Radius);
+		BoundsMax.X = FMath::Max(BoundsMax.X, Sector.WorldCenter.X + Radius);
+		BoundsMax.Y = FMath::Max(BoundsMax.Y, Sector.WorldCenter.Y + Radius);
+	}
+	const FVector2D BoundsSize = BoundsMax - BoundsMin;
+
+	FTexture2DMipMap& Mip = SectorFogMaskTexture->GetPlatformData()->Mips[0];
+	uint8* Pixels = static_cast<uint8*>(Mip.BulkData.Lock(LOCK_READ_WRITE));
+	for (int32 Y = 0; Y < MaskResolution; ++Y)
+	{
+		for (int32 X = 0; X < MaskResolution; ++X)
+		{
+			const FVector2D UV((X + 0.5f) / MaskResolution, (Y + 0.5f) / MaskResolution);
+			const FVector2D WorldXY = BoundsMin + UV * BoundsSize;
+			const int32 SectorId = SectorGrid->GetSectorAtWorldLocation(FVector(WorldXY, SectorGrid->GetActorLocation().Z));
+			const uint8 Opacity = FMath::RoundToInt(FMath::Clamp(SectorGrid->GetFogOpacityForSector(SectorId), 0.0f, 1.0f) * 255.0f);
+			const int32 PixelIndex = (Y * MaskResolution + X) * 4;
+			Pixels[PixelIndex + 0] = Opacity;
+			Pixels[PixelIndex + 1] = Opacity;
+			Pixels[PixelIndex + 2] = Opacity;
+			Pixels[PixelIndex + 3] = 255;
+		}
+	}
+	Mip.BulkData.Unlock();
+	SectorFogMaskTexture->UpdateResource();
+
+	FogOfWarMaterialInstance->SetTextureParameterValue(TEXT("SectorFogMask"), SectorFogMaskTexture);
+	FogOfWarMaterialInstance->SetVectorParameterValue(TEXT("FogMaskWorldMin"), FLinearColor(BoundsMin.X, BoundsMin.Y, 0.0f, 0.0f));
+	FogOfWarMaterialInstance->SetVectorParameterValue(TEXT("FogMaskWorldSize"), FLinearColor(BoundsSize.X, BoundsSize.Y, 0.0f, 0.0f));
+	SectorFogMaskHash = NewHash;
 }
 
 void ASurviveThePlanetCameraPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)

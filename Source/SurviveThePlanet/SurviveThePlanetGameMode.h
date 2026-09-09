@@ -52,6 +52,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "UI")
 	TSubclassOf<UTraderPanelWidget> TraderPanelWidgetClass;
 
+
 	/** Optional game-mode-specific catalog. The subsystem default is used when unset. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Buildings")
 	TObjectPtr<UBuildingCatalogDataAsset> BuildingCatalog;
@@ -73,6 +74,7 @@ protected:
 
 	UPROPERTY(Transient)
 	TObjectPtr<UTraderPanelWidget> TraderPanelWidget;
+
 };
 
 

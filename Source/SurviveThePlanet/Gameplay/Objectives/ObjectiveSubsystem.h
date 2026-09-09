@@ -28,7 +28,8 @@ enum class ESTPObjectiveRewardType : uint8
 {
 	GiveResource,
 	UnlockObjective,
-	GiveMissionConfidence
+	GiveMissionConfidence,
+	GiveDrone
 };
 
 USTRUCT(BlueprintType)
@@ -68,6 +69,10 @@ struct FSTPObjectiveRewardDefinition
 
 	UPROPERTY(BlueprintReadOnly, Category = "Objectives")
 	FName ObjectiveId;
+
+	/** Blueprint class path used by give_drone rewards. */
+	UPROPERTY(BlueprintReadOnly, Category = "Objectives")
+	FSoftClassPath DroneClass;
 };
 
 USTRUCT(BlueprintType)
@@ -221,6 +226,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Mission Choices")
 	bool ConfirmMissionChoiceSlot(FName ChoiceGroupId, int32 SlotIndex, FName ObjectiveId);
 
+	/** Development helper that completes an active objective through its normal reward path. */
+	bool DebugCompleteObjective(FName ObjectiveId);
+
 	UPROPERTY(BlueprintAssignable, Category = "Objectives")
 	FSTPObjectiveStateChangedSignature OnObjectiveStateChanged;
 
@@ -254,4 +262,5 @@ private:
 	bool IsMissionChoiceCandidate(FName ObjectiveId) const;
 	bool IsConfirmedMissionChoice(FName ObjectiveId) const;
 	AResourceManager* FindResourceManager() const;
+	bool SpawnRewardDrone(const FSTPObjectiveRewardDefinition& Reward, FName SourceObjectiveId) const;
 };

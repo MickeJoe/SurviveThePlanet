@@ -29,6 +29,7 @@
 #include "Gameplay/Buildings/CommunicationModule.h"
 #include "Gameplay/Buildings/CargoBay.h"
 #include "Gameplay/Buildings/BuildingManagerSubsystem.h"
+#include "Gameplay/Buildings/BuildingBlueprintSubsystem.h"
 #include "Gameplay/Cables/CableNetworkManager.h"
 #include "Gameplay/Planet/PlanetSurfaceManager.h"
 #include "Gameplay/Resources/ResourceManager.h"
@@ -36,6 +37,8 @@
 #include "Gameplay/Work/ConstructionJobQueueSubsystem.h"
 #include "Gameplay/Base/BaseBuilding.h"
 #include "Gameplay/UI/BuildingInfoWidget.h"
+#include "Gameplay/UI/ExplorerDroneActivationWidget.h"
+#include "Gameplay/Drones/ExplorerDrone.h"
 #include "Gameplay/Cheats/CheatMenuWidget.h"
 #include "Gameplay/Cheats/STPCheatManager.h"
 #include "Blueprint/UserWidget.h"
@@ -61,6 +64,12 @@ ASurviveThePlanetPlayerController::ASurviveThePlanetPlayerController()
 	SetDestinationTouchAction = LoadObject<UInputAction>(nullptr, TEXT("/Game/TopDown/Input/Actions/IA_SetDestination_Touch"));
 	FXCursor = LoadObject<UNiagaraSystem>(nullptr, TEXT("/Game/TopDown/Cursor/FX_Cursor_Success"));
 	BuildingInfoWidgetClass = LoadClass<UBuildingInfoWidget>(nullptr, TEXT("/Game/UI/WBP_BuildingPopup.WBP_BuildingPopup_C"));
+	ExplorerDroneActivationWidgetClass = LoadClass<UExplorerDroneActivationWidget>(nullptr,
+		TEXT("/Game/UI/WBP_ExplorerDroneActivation.WBP_ExplorerDroneActivation_C"));
+	if (!ExplorerDroneActivationWidgetClass)
+	{
+		ExplorerDroneActivationWidgetClass = UExplorerDroneActivationWidget::StaticClass();
+	}
 #if !UE_BUILD_SHIPPING
 	CheatClass = USTPCheatManager::StaticClass();
 	CheatMenuWidgetClass = LoadClass<UCheatMenuWidget>(nullptr, TEXT("/Game/UI/Development/WBP_CheatMenu.WBP_CheatMenu_C"));
@@ -73,6 +82,15 @@ ASurviveThePlanetPlayerController::ASurviveThePlanetPlayerController()
 
 void ASurviveThePlanetPlayerController::SetActiveBuildTool(ESTPBuildTool NewBuildTool)
 {
+	if (NewBuildTool != ESTPBuildTool::None)
+	{
+		UGameInstance* GI = GetGameInstance(); UBuildingBlueprintSubsystem* Inventory = GI ? GI->GetSubsystem<UBuildingBlueprintSubsystem>() : nullptr;
+		if (Inventory && !Inventory->OwnsBlueprint(NewBuildTool))
+		{
+			UE_LOG(LogSurviveThePlanet, Warning, TEXT("STP_BUILD Rejected unowned blueprint tool=%d"), static_cast<int32>(NewBuildTool));
+			return;
+		}
+	}
 	if (ActiveBuildTool == NewBuildTool)
 	{
 		return;
@@ -153,6 +171,22 @@ void ASurviveThePlanetPlayerController::BeginPlay()
 			BuildingInfoWidget->SetBuilding(nullptr);
 		}
 	}
+
+	if (IsLocalPlayerController() && ExplorerDroneActivationWidgetClass)
+	{
+		ExplorerDroneActivationWidget = CreateWidget<UExplorerDroneActivationWidget>(this, ExplorerDroneActivationWidgetClass);
+		if (ExplorerDroneActivationWidget)
+		{
+			ExplorerDroneActivationWidget->AddToViewport(30);
+			UE_LOG(LogSurviveThePlanet, Log, TEXT("STP_EXPLORER Added activation widget: %s Class=%s"),
+				*GetNameSafe(ExplorerDroneActivationWidget), *GetNameSafe(ExplorerDroneActivationWidgetClass));
+		}
+		else
+		{
+			UE_LOG(LogSurviveThePlanet, Error, TEXT("STP_EXPLORER Failed to create activation widget from %s"),
+				*GetNameSafe(ExplorerDroneActivationWidgetClass));
+		}
+	}
 }
 
 void ASurviveThePlanetPlayerController::SetupInputComponent()
@@ -160,6 +194,7 @@ void ASurviveThePlanetPlayerController::SetupInputComponent()
 	// set up gameplay key bindings
 	Super::SetupInputComponent();
 	InputComponent->BindKey(EKeys::Escape, IE_Pressed, this, &ASurviveThePlanetPlayerController::OnCancelBuildToolPressed);
+	InputComponent->BindKey(EKeys::R, IE_Pressed, this, &ASurviveThePlanetPlayerController::OnActivateExplorerDronePressed);
 #if !UE_BUILD_SHIPPING
 	InputComponent->BindKey(EKeys::I, IE_Pressed, this, &ASurviveThePlanetPlayerController::ToggleCheatMenu);
 #endif
@@ -263,7 +298,7 @@ void ASurviveThePlanetPlayerController::ToggleCheatMenu()
 	if (CheatMenuWidget)
 	{
 		CheatMenuWidget->AddToViewport(1000);
-		CheatMenuWidget->SetDesiredSizeInViewport(FVector2D(360.0f, 260.0f));
+		CheatMenuWidget->SetDesiredSizeInViewport(FVector2D(420.0f, 430.0f));
 		CheatMenuWidget->SetPositionInViewport(FVector2D(40.0f, 120.0f), false);
 		FInputModeGameAndUI InputMode;
 		InputMode.SetWidgetToFocus(CheatMenuWidget->TakeWidget());
@@ -271,6 +306,19 @@ void ASurviveThePlanetPlayerController::ToggleCheatMenu()
 		SetInputMode(InputMode);
 	}
 #endif
+}
+
+void ASurviveThePlanetPlayerController::OnActivateExplorerDronePressed()
+{
+	TryActivateSelectedExplorerDrone();
+}
+
+bool ASurviveThePlanetPlayerController::TryActivateSelectedExplorerDrone()
+{
+	AExplorerDrone* ExplorerDrone = Cast<AExplorerDrone>(SelectedActor);
+	if (!ExplorerDrone || !ExplorerDrone->ActivateExploration()) return false;
+	SetSelectedActor(nullptr);
+	return true;
 }
 
 void ASurviveThePlanetPlayerController::PlayerTick(float DeltaTime)
@@ -407,6 +455,11 @@ bool ASurviveThePlanetPlayerController::TryHandleActiveBuildToolClick()
 		return TryPlaceCommunicationModuleAtCursor();
 	case ESTPBuildTool::CargoBay:
 		return TryPlaceCargoBayAtCursor();
+	case ESTPBuildTool::CommandHub: case ESTPBuildTool::SolarArray: case ESTPBuildTool::WindGenerator:
+	case ESTPBuildTool::GeothermalPlant: case ESTPBuildTool::NuclearReactor: case ESTPBuildTool::MiningStation:
+	case ESTPBuildTool::ResourceStorage: case ESTPBuildTool::DroneFactory: case ESTPBuildTool::CommunicationsTower:
+	case ESTPBuildTool::Steelworks:
+		return TryPlaceGenericBuildingAtCursor();
 	case ESTPBuildTool::EnergyCable:
 		return true;
 	case ESTPBuildTool::None:
@@ -873,6 +926,11 @@ void ASurviveThePlanetPlayerController::UpdateBuildPlacementPreview()
 	case ESTPBuildTool::CargoBay:
 		UpdateCargoBayPlacementPreview();
 		break;
+	case ESTPBuildTool::CommandHub: case ESTPBuildTool::SolarArray: case ESTPBuildTool::WindGenerator:
+	case ESTPBuildTool::GeothermalPlant: case ESTPBuildTool::NuclearReactor: case ESTPBuildTool::MiningStation:
+	case ESTPBuildTool::ResourceStorage: case ESTPBuildTool::DroneFactory: case ESTPBuildTool::CommunicationsTower:
+	case ESTPBuildTool::Steelworks:
+		UpdateGenericBuildingPlacementPreview(); break;
 	default:
 		DestroyBuildPlacementPreview();
 		break;
@@ -1244,6 +1302,38 @@ void ASurviveThePlanetPlayerController::DestroyBuildPlacementPreview()
 	CommunicationModulePlacementPreview = nullptr;
 	if (IsValid(CargoBayPlacementPreview)) CargoBayPlacementPreview->Destroy();
 	CargoBayPlacementPreview = nullptr;
+	if (IsValid(GenericBuildingPlacementPreview)) GenericBuildingPlacementPreview->Destroy();
+	GenericBuildingPlacementPreview = nullptr;
+}
+
+void ASurviveThePlanetPlayerController::EnsureGenericBuildingPlacementPreview()
+{
+	if (IsValid(GenericBuildingPlacementPreview) || !GetWorld()) return;
+	UClass* ClassToSpawn=GetManagedBuildingClass(ActiveBuildTool, ABaseBuilding::StaticClass()); if(!ClassToSpawn)return;
+	FActorSpawnParameters Params; Params.Owner=this; Params.SpawnCollisionHandlingOverride=ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	GenericBuildingPlacementPreview=GetWorld()->SpawnActor<ABaseBuilding>(ClassToSpawn,FVector::ZeroVector,FRotator::ZeroRotator,Params);
+	if(GenericBuildingPlacementPreview){GenericBuildingPlacementPreview->SetPlacementPreview(true);GenericBuildingPlacementPreview->SetActorTickEnabled(false);GenericBuildingPlacementPreview->SetActorHiddenInGame(true);}
+}
+
+void ASurviveThePlanetPlayerController::UpdateGenericBuildingPlacementPreview()
+{
+	EnsureGenericBuildingPlacementPreview(); if(!IsValid(GenericBuildingPlacementPreview))return; FHitResult Hit;
+	if(!GetHitResultUnderCursor(ECC_Visibility,true,Hit)){GenericBuildingPlacementPreview->SetActorHiddenInGame(true);return;}
+	APlanetSurfaceManager* Surface=FindPlanetSurfaceManager(); const FSTPGridPlacement Placement=Surface?Surface->GetPlacementForWorldLocation(Hit.Location,GenericBuildingPlacementPreview->GetGridFootprint()):FSTPGridPlacement();
+	GenericBuildingPlacementPreview->SetActorLocation(Surface?Placement.WorldLocation:Hit.Location,false); if(Surface)GenericBuildingPlacementPreview->SetActorRotation(Placement.WorldRotation);
+	AResourceManager* Resources=FindResourceManager(); const TArray<FResourceCost>& Costs=GenericBuildingPlacementPreview->GetConstructionCosts(); const bool bAffordable=Costs.Num()==0||(Resources&&Resources->CanAffordCosts(Costs));
+	GenericBuildingPlacementPreview->SetPlacementPreviewValid(Surface&&Placement.bValid&&bAffordable); GenericBuildingPlacementPreview->SetActorHiddenInGame(false);
+}
+
+bool ASurviveThePlanetPlayerController::TryPlaceGenericBuildingAtCursor()
+{
+	FVector Target; UWorld* World=GetWorld(); APlanetSurfaceManager* Surface=FindPlanetSurfaceManager(); if(!TryGetCursorWorldLocation(Target)||!World||!Surface)return true;
+	UClass* ClassToSpawn=GetManagedBuildingClass(ActiveBuildTool,ABaseBuilding::StaticClass()); if(!ClassToSpawn)return true; const ABaseBuilding* Defaults=ClassToSpawn->GetDefaultObject<ABaseBuilding>();
+	const FIntPoint Footprint=Defaults?Defaults->GetGridFootprint():FIntPoint(2,2); const TArray<FResourceCost> Costs=Defaults?Defaults->GetConstructionCosts():TArray<FResourceCost>(); AResourceManager* Resources=FindResourceManager();
+	if((Costs.Num()>0&&!Resources)||(Resources&&!Resources->CanAffordCosts(Costs)))return true; const FSTPGridPlacement Placement=Surface->GetPlacementForWorldLocation(Target,Footprint); if(!Placement.bValid)return true;
+	FActorSpawnParameters Params; Params.Owner=this; Params.SpawnCollisionHandlingOverride=ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn; ABaseBuilding* Building=World->SpawnActor<ABaseBuilding>(ClassToSpawn,Placement.WorldLocation,Placement.WorldRotation,Params); if(!Building)return true;
+	Building->SetPlacementPreview(false); if(!Surface->ReserveCells(Building,Placement.OriginCell,Building->GetGridFootprint())||(Resources&&!Resources->TrySpendCosts(Costs))){Building->Destroy();return true;}
+	Building->SetConstructionProgress(0); Building->ShowConstructionProgress(); if(UConstructionJobQueueSubsystem* Queue=World->GetSubsystem<UConstructionJobQueueSubsystem>())Queue->EnqueueConstructionJob(Building); SetSelectedActor(Building); return true;
 }
 
 void ASurviveThePlanetPlayerController::EnsureConcretePlantPlacementPreview()
@@ -1677,12 +1767,19 @@ void ASurviveThePlanetPlayerController::SetSelectedActor(AActor* NewSelectedActo
 	}
 
 	SetActorSelectedVisual(SelectedActor, false);
+	if (AExplorerDrone* PreviousExplorer = Cast<AExplorerDrone>(SelectedActor)) PreviousExplorer->SetActivationPreviewVisible(false);
 	SelectedActor = NewSelectedActor;
 	SetActorSelectedVisual(SelectedActor, true);
+	if (AExplorerDrone* NewExplorer = Cast<AExplorerDrone>(SelectedActor)) NewExplorer->SetActivationPreviewVisible(true);
 
 	if (BuildingInfoWidget)
 	{
 		BuildingInfoWidget->SetBuilding(Cast<ABaseBuilding>(SelectedActor));
+	}
+
+	if (ExplorerDroneActivationWidget)
+	{
+		ExplorerDroneActivationWidget->RefreshFromSelection();
 	}
 
 	UE_LOG(LogSurviveThePlanet, Warning, TEXT("STP_SELECT Selection changed to: %s Class=%s"),

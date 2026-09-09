@@ -120,6 +120,11 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Construction")
 	const TArray<FResourceCost>& GetConstructionCosts() const;
 
+	/** Generic preview support used by catalog-driven building classes. */
+	virtual void SetPlacementPreview(bool bPreview);
+
+	virtual void SetPlacementPreviewValid(bool bValidPlacement);
+
 protected:
 	virtual void OnConstruction(const FTransform& Transform) override;
 	virtual void BeginPlay() override;
@@ -201,6 +206,9 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Construction", meta = (ClampMin = "0.0", ClampMax = "1.0", UIMin = "0.0", UIMax = "1.0"))
 	float ConstructionProgress = 1.0f;
+
+	bool bPlacementPreview = false;
+	bool bPlacementPreviewValid = false;
 
 	/** Resources consumed when this building is constructed. */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Construction", meta = (TitleProperty = "Resource"))

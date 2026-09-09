@@ -44,10 +44,11 @@ void ABaseDrone::OnConstruction(const FTransform& Transform)
 void ABaseDrone::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
+	UpdateVisualAnimation(DeltaSeconds);
 
 	if (!IsValid(AssignedBuilding) || bParkedAtAssignedBuilding)
 	{
-		SetActorTickEnabled(false);
+		SetActorTickEnabled(bEnableHoverAnimation && !bParkedAtAssignedBuilding);
 		return;
 	}
 
@@ -65,6 +66,11 @@ void ABaseDrone::Tick(float DeltaSeconds)
 void ABaseDrone::BeginPlay()
 {
 	Super::BeginPlay();
+	if (DroneMesh)
+	{
+		BaseMeshRelativeLocation = DroneMesh->GetRelativeLocation();
+		BaseMeshRelativeRotation = DroneMesh->GetRelativeRotation();
+	}
 
 	if (!DroneTag.IsNone())
 	{
@@ -79,7 +85,7 @@ void ABaseDrone::BeginPlay()
 		}
 	}
 
-	SetActorTickEnabled(IsAssignedToBuilding() && !bParkedAtAssignedBuilding);
+	SetActorTickEnabled((IsAssignedToBuilding() || bEnableHoverAnimation) && !bParkedAtAssignedBuilding);
 }
 
 void ABaseDrone::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -293,7 +299,7 @@ void ABaseDrone::SetBuildingAssignmentInternal(ABaseBuilding* Building, int32 Sl
 	bParkedAtAssignedBuilding = false;
 	SetActorHiddenInGame(false);
 	SetActorEnableCollision(true);
-	SetActorTickEnabled(bIsAssigned);
+	SetActorTickEnabled(bIsAssigned || bEnableHoverAnimation);
 	HandleBuildingAssignmentChanged(bIsAssigned);
 	OnBuildingAssignmentChanged.Broadcast(AssignedBuilding);
 }
@@ -335,6 +341,26 @@ void ABaseDrone::ApplyVisualScale()
 	{
 		DroneMesh->SetRelativeScale3D(FVector(DroneVisualScale));
 	}
+}
+
+void ABaseDrone::UpdateVisualAnimation(float DeltaSeconds)
+{
+	if (!bEnableHoverAnimation || !DroneMesh)
+	{
+		return;
+	}
+
+	VisualAnimationTime += DeltaSeconds;
+	const float Period = FMath::Max(0.05f, HoverPeriod);
+	const float Phase = VisualAnimationTime * UE_TWO_PI / Period;
+	const float SecondaryPhase = Phase * 0.5f;
+
+	DroneMesh->SetRelativeLocation(BaseMeshRelativeLocation
+		+ FVector(0.0f, 0.0f, FMath::Sin(Phase) * HoverAmplitude));
+	DroneMesh->SetRelativeRotation(BaseMeshRelativeRotation + FRotator(
+		FMath::Sin(Phase + UE_HALF_PI) * HoverPitchAmplitude,
+		FMath::Sin(SecondaryPhase) * ScannerYawAmplitude,
+		FMath::Sin(Phase * 0.8f) * HoverRollAmplitude));
 }
 
 bool ABaseDrone::IsOngoingConstructionJobValid() const

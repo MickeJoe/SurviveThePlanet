@@ -66,6 +66,7 @@ void ABaseBuilding::BeginPlay()
 		case ESTPBuildingType::ConcretePlant: BuildTool = ESTPBuildTool::ConcretePlant; break;
 		case ESTPBuildingType::CommunicationModule: BuildTool = ESTPBuildTool::CommunicationModule; break;
 		case ESTPBuildingType::CargoBay: BuildTool = ESTPBuildTool::CargoBay; break;
+		case ESTPBuildingType::Steelworks: BuildTool = ESTPBuildTool::Steelworks; break;
 		default: break;
 		}
 
@@ -316,6 +317,17 @@ void ABaseBuilding::HideConstructionProgress()
 	{
 		ConstructionProgressBar->SetHiddenInGame(true);
 	}
+}
+
+void ABaseBuilding::SetPlacementPreview(bool bPreview)
+{
+	bPlacementPreview=bPreview; bIsSelectable=!bPreview; SetActorEnableCollision(!bPreview); SetConstructionProgress(bPreview?1.0f:0.0f);
+	if(BuildingMesh){BuildingMesh->SetCollisionEnabled(bPreview?ECollisionEnabled::NoCollision:ECollisionEnabled::QueryAndPhysics);BuildingMesh->SetRenderCustomDepth(bPreview);BuildingMesh->SetCustomDepthStencilValue(bPreview?(bPlacementPreviewValid?2:3):0);}
+}
+
+void ABaseBuilding::SetPlacementPreviewValid(bool bValidPlacement)
+{
+	bPlacementPreviewValid=bValidPlacement; if(BuildingMesh&&bPlacementPreview)BuildingMesh->SetCustomDepthStencilValue(bValidPlacement?2:3);
 }
 
 void ABaseBuilding::RefreshConstructionProgressBar()

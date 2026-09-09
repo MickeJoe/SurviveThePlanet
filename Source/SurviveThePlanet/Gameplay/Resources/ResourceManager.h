@@ -13,7 +13,8 @@ enum class EResourceType : uint8
 	Copper UMETA(DisplayName = "Copper"),
 	Stone UMETA(DisplayName = "Stone"),
 	Water UMETA(DisplayName = "Water"),
-	Concrete UMETA(DisplayName = "Concrete")
+	Concrete UMETA(DisplayName = "Concrete"),
+	Steel UMETA(DisplayName = "Steel")
 };
 
 /** A resource and the amount required for a purchase or construction. */

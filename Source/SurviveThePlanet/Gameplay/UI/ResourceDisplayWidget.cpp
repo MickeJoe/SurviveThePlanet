@@ -9,6 +9,7 @@
 #include "Gameplay/Buildings/MiningMachine.h"
 #include "Gameplay/Buildings/WaterCollector.h"
 #include "Gameplay/Buildings/ConcretePlant.h"
+#include "Gameplay/Buildings/Steelworks.h"
 #include "Gameplay/Cables/CableNetworkManager.h"
 #include "Gameplay/Resources/BaseResourceSource.h"
 #include "Gameplay/Planet/PlanetWeatherManager.h"
@@ -36,7 +37,8 @@ UResourceDisplayWidget::UResourceDisplayWidget(const FObjectInitializer& ObjectI
 		{ EResourceType::Copper, NSLOCTEXT("SurviveThePlanet", "CopperResourceTooltip", "Copper"), nullptr },
 		{ EResourceType::Stone, NSLOCTEXT("SurviveThePlanet", "StoneResourceTooltip", "Stone"), nullptr },
 		{ EResourceType::Water, NSLOCTEXT("SurviveThePlanet", "WaterResourceTooltip", "Water"), nullptr },
-		{ EResourceType::Concrete, NSLOCTEXT("SurviveThePlanet", "ConcreteResourceTooltip", "Concrete"), nullptr }
+		{ EResourceType::Concrete, NSLOCTEXT("SurviveThePlanet", "ConcreteResourceTooltip", "Concrete"), nullptr },
+		{ EResourceType::Steel, NSLOCTEXT("SurviveThePlanet", "SteelResourceTooltip", "Steel"), nullptr }
 	};
 }
 
@@ -316,7 +318,8 @@ void UResourceDisplayWidget::RefreshAllResources()
 		EResourceType::Copper,
 		EResourceType::Stone,
 		EResourceType::Water,
-		EResourceType::Concrete
+		EResourceType::Concrete,
+		EResourceType::Steel
 	};
 
 	for (const EResourceType ResourceType : DisplayedResourceTypes)
@@ -336,6 +339,7 @@ void UResourceDisplayWidget::RefreshResourceRates()
 	float StoneRatePerMinute = 0.0f;
 	float WaterRatePerMinute = 0.0f;
 	float ConcreteRatePerMinute = 0.0f;
+	float SteelRatePerMinute = 0.0f;
 
 	if (UWorld* World = GetWorld())
 	{
@@ -384,6 +388,15 @@ void UResourceDisplayWidget::RefreshResourceRates()
 				ConcreteRatePerMinute += It->GetConcreteProductionPerMinute();
 			}
 		}
+
+		for (TActorIterator<ASteelworks> It(World); It; ++It)
+		{
+			if (It->IsProducing())
+			{
+				SteelRatePerMinute += It->GetSteelProductionPerMinute();
+				IronRatePerMinute -= It->GetIronConsumptionPerMinute();
+			}
+		}
 	}
 
 	if (EnergyRateText)
@@ -409,6 +422,10 @@ void UResourceDisplayWidget::RefreshResourceRates()
 	if (ConcreteRateText)
 	{
 		ConcreteRateText->SetText(FormatRate(ConcreteRatePerMinute));
+	}
+	if (SteelRateText)
+	{
+		SteelRateText->SetText(FormatRate(SteelRatePerMinute));
 	}
 }
 
@@ -445,6 +462,8 @@ UImage* UResourceDisplayWidget::GetResourceImage(EResourceType ResourceType) con
 		return WaterIcon;
 	case EResourceType::Concrete:
 		return ConcreteIcon;
+	case EResourceType::Steel:
+		return SteelIcon;
 	default:
 		return nullptr;
 	}
@@ -468,6 +487,8 @@ UTextBlock* UResourceDisplayWidget::GetResourceAmountText(EResourceType Resource
 		return WaterAmountText;
 	case EResourceType::Concrete:
 		return ConcreteAmountText;
+	case EResourceType::Steel:
+		return SteelAmountText;
 	default:
 		return nullptr;
 	}

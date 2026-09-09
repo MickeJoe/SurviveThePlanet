@@ -123,6 +123,15 @@ protected:
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Resource Display")
 	TObjectPtr<UTextBlock> ConcreteRateText;
 
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Resource Display")
+	TObjectPtr<UImage> SteelIcon;
+
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Resource Display")
+	TObjectPtr<UTextBlock> SteelAmountText;
+
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Resource Display")
+	TObjectPtr<UTextBlock> SteelRateText;
+
 private:
 	UPROPERTY(Transient)
 	TObjectPtr<AResourceManager> ResourceManager;
