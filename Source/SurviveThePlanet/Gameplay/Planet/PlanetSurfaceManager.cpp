@@ -3,6 +3,8 @@
 #include "Components/StaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
 #include "Engine/World.h"
+#include "EngineUtils.h"
+#include "Gameplay/Drones/BaseDrone.h"
 #include "Gameplay/Base/BaseBuilding.h"
 
 APlanetSurfaceManager::APlanetSurfaceManager()
@@ -85,6 +87,45 @@ FSTPGridPlacement APlanetSurfaceManager::GetPlacementForWorldLocation(const FVec
 	return Placement;
 }
 
+FSTPGridPlacement APlanetSurfaceManager::GetBuildingPlacementForWorldLocation(const FVector& WorldLocation, FIntPoint Footprint) const
+{
+	FSTPGridPlacement Placement = GetPlacementForWorldLocation(WorldLocation, Footprint);
+	Placement.bValid = Placement.bValid && HasBuildingClearance(Placement.OriginCell, Footprint);
+	return Placement;
+}
+
+int32 APlanetSurfaceManager::GetBuildingClearanceCells() const
+{
+	int32 Clearance = FMath::CeilToInt(FMath::Max(200.0f, MinimumBuildingClearance) / FMath::Max(1.0f, TileSpacing));
+	for (TActorIterator<ABaseDrone> It(GetWorld()); It; ++It)
+	{
+		const FIntPoint DroneFootprint = It->GetGridFootprint();
+		Clearance = FMath::Max(Clearance, FMath::Max(DroneFootprint.X, DroneFootprint.Y));
+	}
+	return Clearance;
+}
+
+bool APlanetSurfaceManager::HasBuildingClearance(FSTPGridCell OriginCell, FIntPoint Footprint) const
+{
+	Footprint = SanitizeFootprint(Footprint);
+	const int32 Clearance = GetBuildingClearanceCells();
+	// Check the expanded footprint without reserving it: drones must be able to use the gap.
+	for (int32 Y = FMath::Max(0, OriginCell.Y - Clearance);
+		Y < FMath::Min(GridHeight, OriginCell.Y + Footprint.Y + Clearance); ++Y)
+	{
+		for (int32 X = FMath::Max(0, OriginCell.X - Clearance);
+			X < FMath::Min(GridWidth, OriginCell.X + Footprint.X + Clearance); ++X)
+		{
+			const TObjectPtr<AActor>* Occupier = OccupiedCells.Find(MakeCellKey(FSTPGridCell(X, Y)));
+			if (Occupier && IsValid(Occupier->Get()) && Occupier->Get()->IsA<ABaseBuilding>())
+			{
+				return false;
+			}
+		}
+	}
+	return true;
+}
+
 bool APlanetSurfaceManager::GetCellForWorldLocation(const FVector& WorldLocation, FSTPGridCell& OutCell) const
 {
 	const FVector LocalLocation = GetActorTransform().InverseTransformPosition(WorldLocation);
@@ -134,7 +175,7 @@ bool APlanetSurfaceManager::CanOccupyCells(FSTPGridCell OriginCell, FIntPoint Fo
 
 bool APlanetSurfaceManager::ReserveCells(AActor* Occupier, FSTPGridCell OriginCell, FIntPoint Footprint)
 {
-	if (!IsValid(Occupier) || !CanOccupyCells(OriginCell, Footprint))
+	if (!IsValid(Occupier) || !CanOccupyCells(OriginCell, Footprint) || (Occupier->IsA<ABaseBuilding>() && !HasBuildingClearance(OriginCell, Footprint)))
 	{
 		return false;
 	}
