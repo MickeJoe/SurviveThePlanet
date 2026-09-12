@@ -50,7 +50,7 @@ protected:
 
 	/** Furthest allowed camera zoom. */
 	UPROPERTY(EditAnywhere, Category="Camera Controls", meta=(ClampMin="0.0", UIMin="0.0"))
-	float MaxCameraZoom = 3400.0f;
+	float MaxCameraZoom = 6000.0f;
 
 	/** Camera rotation speed in degrees per second. */
 	UPROPERTY(EditAnywhere, Category="Camera Controls", meta=(ClampMin="0.0", UIMin="0.0"))

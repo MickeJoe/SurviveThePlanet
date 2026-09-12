@@ -27,13 +27,16 @@ ASurviveThePlanetCameraPawn::ASurviveThePlanetCameraPawn()
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
 	CameraBoom->SetupAttachment(RootComponent);
 	CameraBoom->SetUsingAbsoluteRotation(true);
-	CameraBoom->TargetArmLength = 1800.0f;
-	CameraBoom->SetRelativeRotation(FRotator(-55.0f, 45.0f, 0.0f));
+	// Medium isometric gameplay view: enough overview for planning while keeping
+	// buildings readable and showing more of their vertical silhouettes.
+	CameraBoom->TargetArmLength = 2400.0f;
+	CameraBoom->SetRelativeRotation(FRotator(-30.0f, 45.0f, 0.0f));
 	CameraBoom->bDoCollisionTest = false;
 
 	CameraComponent = CreateDefaultSubobject<UCameraComponent>(TEXT("IsometricCamera"));
 	CameraComponent->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
 	CameraComponent->bUsePawnControlRotation = false;
+	CameraComponent->SetFieldOfView(60.0f);
 
 	FogOfWarMaterial = LoadObject<UMaterialInterface>(nullptr,
 		TEXT("/Game/Materials/Exploration/M_FogOfWar_PostProcess.M_FogOfWar_PostProcess"));
