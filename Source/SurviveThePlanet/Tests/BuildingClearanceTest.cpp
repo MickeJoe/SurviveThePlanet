@@ -24,21 +24,33 @@ bool FSTPBuildingClearanceTest::RunTest(const FString& Parameters)
 		World->DestroyWorld(false);
 		return false;
 	}
+	First->SetActorLocation(Surface->GetWorldLocationForCell(FSTPGridCell(90, 90)));
+	Second->SetPlacementPreview(true);
 	TestEqual(TEXT("Default two metre clearance"), Surface->GetBuildingClearanceCells(), 2);
-	TestTrue(TEXT("Reserve first building"), Surface->ReserveCells(First, FSTPGridCell(90, 90), FIntPoint(2, 2)));
-	TestFalse(TEXT("Touching edge rejected"), Surface->HasBuildingClearance(FSTPGridCell(92, 90), FIntPoint(2, 2)));
-	TestFalse(TEXT("One-cell gap rejected"), Surface->HasBuildingClearance(FSTPGridCell(93, 90), FIntPoint(2, 2)));
-	TestFalse(TEXT("Diagonal one-cell gap rejected"), Surface->HasBuildingClearance(FSTPGridCell(93, 93), FIntPoint(2, 2)));
-	TestTrue(TEXT("Exact two-cell gap accepted"), Surface->HasBuildingClearance(FSTPGridCell(94, 90), FIntPoint(2, 2)));
-	TestFalse(TEXT("Reservation enforces clearance"), Surface->ReserveCells(Second, FSTPGridCell(93, 90), FIntPoint(2, 2)));
-	TestTrue(TEXT("Reserve second building at legal gap"), Surface->ReserveCells(Second, FSTPGridCell(94, 90), FIntPoint(2, 2)));
-	TestTrue(TEXT("Two-cell drone corridor stays free"), Surface->CanOccupyCells(FSTPGridCell(92, 90), FIntPoint(2, 2)));
+	const FIntPoint BuildingFootprint = First->GetGridFootprint();
+	TestTrue(TEXT("Reserve first building"), Surface->ReserveCells(First, FSTPGridCell(90, 90), BuildingFootprint));
+	Surface->ReleaseCells(First);
+	TestFalse(TEXT("Map-authored building blocks clearance without a reservation"),
+		Surface->HasBuildingClearance(FSTPGridCell(92, 90), BuildingFootprint));
+	TestTrue(TEXT("Placement preview does not block clearance"),
+		Surface->HasBuildingClearance(FSTPGridCell(93, 90), BuildingFootprint));
+	TestTrue(TEXT("Restore first building reservation"), Surface->ReserveCells(First, FSTPGridCell(90, 90), BuildingFootprint));
+	TestFalse(TEXT("Touching edge rejected"), Surface->HasBuildingClearance(FSTPGridCell(91, 90), BuildingFootprint));
+	TestFalse(TEXT("One-cell gap rejected"), Surface->HasBuildingClearance(FSTPGridCell(92, 90), BuildingFootprint));
+	TestFalse(TEXT("Diagonal one-cell gap rejected"), Surface->HasBuildingClearance(FSTPGridCell(92, 92), BuildingFootprint));
+	TestTrue(TEXT("Exact two-cell gap accepted"), Surface->HasBuildingClearance(FSTPGridCell(93, 90), BuildingFootprint));
+	TestFalse(TEXT("Reservation enforces clearance"), Surface->ReserveCells(Second, FSTPGridCell(92, 90), BuildingFootprint));
+	TestTrue(TEXT("Reserve second building at legal gap"), Surface->ReserveCells(Second, FSTPGridCell(93, 90), BuildingFootprint));
+	TestTrue(TEXT("Two-cell drone corridor stays free"), Surface->CanOccupyCells(FSTPGridCell(91, 90), FIntPoint(2, 1)));
 	TArray<FVector> Path;
 	TestTrue(TEXT("Drone can route through the gap"), Surface->FindGridPath(
 		Surface->GetWorldLocationForCell(FSTPGridCell(92, 87)), FSTPGridCell(92, 95), FIntPoint(1, 1), Path));
 	Surface->ReleaseCells(First);
 	Surface->ReleaseCells(Second);
-	TestTrue(TEXT("Release removes clearance restriction"), Surface->HasBuildingClearance(FSTPGridCell(91, 90), FIntPoint(2, 2)));
+	First->Destroy();
+	Second->Destroy();
+	TestTrue(TEXT("Destroyed buildings remove clearance restriction"),
+		Surface->HasBuildingClearance(FSTPGridCell(91, 90), BuildingFootprint));
 	World->DestroyWorld(false);
 	return true;
 }

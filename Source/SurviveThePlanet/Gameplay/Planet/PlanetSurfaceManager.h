@@ -6,6 +6,7 @@
 
 class UStaticMesh;
 class UStaticMeshComponent;
+class ABaseBuilding;
 
 USTRUCT(BlueprintType)
 struct FSTPGridCell
@@ -85,7 +86,7 @@ public:
 	FSTPGridPlacement GetBuildingPlacementForWorldLocation(const FVector& WorldLocation, FIntPoint Footprint) const;
 
 	UFUNCTION(BlueprintPure, Category = "Planet Surface|Grid")
-	bool HasBuildingClearance(FSTPGridCell OriginCell, FIntPoint Footprint) const;
+	bool HasBuildingClearance(FSTPGridCell OriginCell, FIntPoint Footprint, ABaseBuilding* IgnoredBuilding = nullptr) const;
 
 	UFUNCTION(BlueprintPure, Category = "Planet Surface|Grid")
 	int32 GetBuildingClearanceCells() const;

@@ -105,23 +105,32 @@ int32 APlanetSurfaceManager::GetBuildingClearanceCells() const
 	return Clearance;
 }
 
-bool APlanetSurfaceManager::HasBuildingClearance(FSTPGridCell OriginCell, FIntPoint Footprint) const
+bool APlanetSurfaceManager::HasBuildingClearance(FSTPGridCell OriginCell, FIntPoint Footprint, ABaseBuilding* IgnoredBuilding) const
 {
 	Footprint = SanitizeFootprint(Footprint);
 	const int32 Clearance = GetBuildingClearanceCells();
-	// Check the expanded footprint without reserving it: drones must be able to use the gap.
-	for (int32 Y = FMath::Max(0, OriginCell.Y - Clearance);
-		Y < FMath::Min(GridHeight, OriginCell.Y + Footprint.Y + Clearance); ++Y)
+	const int32 CandidateMinX = OriginCell.X - Clearance;
+	const int32 CandidateMinY = OriginCell.Y - Clearance;
+	const int32 CandidateMaxX = OriginCell.X + Footprint.X - 1 + Clearance;
+	const int32 CandidateMaxY = OriginCell.Y + Footprint.Y - 1 + Clearance;
+
+	// Query building actors directly. Map-authored buildings are not guaranteed to
+	// have been added to OccupiedCells, while placement previews must never block.
+	for (TActorIterator<ABaseBuilding> It(GetWorld()); It; ++It)
 	{
-		for (int32 X = FMath::Max(0, OriginCell.X - Clearance);
-			X < FMath::Min(GridWidth, OriginCell.X + Footprint.X + Clearance); ++X)
-		{
-			const TObjectPtr<AActor>* Occupier = OccupiedCells.Find(MakeCellKey(FSTPGridCell(X, Y)));
-			if (Occupier && IsValid(Occupier->Get()) && Occupier->Get()->IsA<ABaseBuilding>())
-			{
-				return false;
-			}
-		}
+		const ABaseBuilding* ExistingBuilding = *It;
+		if (!IsValid(ExistingBuilding) || ExistingBuilding == IgnoredBuilding
+			|| ExistingBuilding->IsActorBeingDestroyed() || ExistingBuilding->IsPlacementPreview()) continue;
+		const FIntPoint ExistingFootprint = SanitizeFootprint(ExistingBuilding->GetGridFootprint());
+		const FSTPGridPlacement ExistingPlacement = GetPlacementForWorldLocation(
+			ExistingBuilding->GetActorLocation(), ExistingFootprint);
+		const int32 ExistingMinX = ExistingPlacement.OriginCell.X;
+		const int32 ExistingMinY = ExistingPlacement.OriginCell.Y;
+		const int32 ExistingMaxX = ExistingMinX + ExistingFootprint.X - 1;
+		const int32 ExistingMaxY = ExistingMinY + ExistingFootprint.Y - 1;
+		const bool bSeparated = CandidateMaxX < ExistingMinX || CandidateMinX > ExistingMaxX
+			|| CandidateMaxY < ExistingMinY || CandidateMinY > ExistingMaxY;
+		if (!bSeparated) return false;
 	}
 	return true;
 }
@@ -175,7 +184,9 @@ bool APlanetSurfaceManager::CanOccupyCells(FSTPGridCell OriginCell, FIntPoint Fo
 
 bool APlanetSurfaceManager::ReserveCells(AActor* Occupier, FSTPGridCell OriginCell, FIntPoint Footprint)
 {
-	if (!IsValid(Occupier) || !CanOccupyCells(OriginCell, Footprint) || (Occupier->IsA<ABaseBuilding>() && !HasBuildingClearance(OriginCell, Footprint)))
+	ABaseBuilding* BuildingOccupier = Cast<ABaseBuilding>(Occupier);
+	if (!IsValid(Occupier) || !CanOccupyCells(OriginCell, Footprint)
+		|| (BuildingOccupier && !HasBuildingClearance(OriginCell, Footprint, BuildingOccupier)))
 	{
 		return false;
 	}

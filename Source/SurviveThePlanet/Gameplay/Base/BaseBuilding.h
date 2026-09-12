@@ -125,6 +125,9 @@ public:
 
 	virtual void SetPlacementPreviewValid(bool bValidPlacement);
 
+	UFUNCTION(BlueprintPure, Category = "Base Building|Placement")
+	bool IsPlacementPreview() const { return bPlacementPreview; }
+
 protected:
 	virtual void OnConstruction(const FTransform& Transform) override;
 	virtual void BeginPlay() override;
