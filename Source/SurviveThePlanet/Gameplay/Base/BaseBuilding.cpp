@@ -6,6 +6,8 @@
 #include "EngineUtils.h"
 #include "Engine/StaticMesh.h"
 #include "Gameplay/Planet/PlanetSurfaceManager.h"
+#include "DrawDebugHelpers.h"
+#include "EngineUtils.h"
 #include "Gameplay/Drones/BaseDrone.h"
 #include "Gameplay/Cables/CableNetworkManager.h"
 #include "Gameplay/Buildings/BuildingManagerSubsystem.h"
@@ -321,13 +323,67 @@ void ABaseBuilding::HideConstructionProgress()
 
 void ABaseBuilding::SetPlacementPreview(bool bPreview)
 {
-	bPlacementPreview=bPreview; bIsSelectable=!bPreview; SetActorEnableCollision(!bPreview); SetConstructionProgress(bPreview?1.0f:0.0f);
-	if(BuildingMesh){BuildingMesh->SetCollisionEnabled(bPreview?ECollisionEnabled::NoCollision:ECollisionEnabled::QueryAndPhysics);BuildingMesh->SetRenderCustomDepth(bPreview);BuildingMesh->SetCustomDepthStencilValue(bPreview?(bPlacementPreviewValid?2:3):0);}
+	if (BuildingMesh && bPreview && !bPlacementPreviewMeshLocationSaved)
+	{
+		PlacementPreviewMeshLocation = BuildingMesh->GetRelativeLocation();
+		bPlacementPreviewMeshLocationSaved = true;
+		BuildingMesh->SetRelativeLocation(PlacementPreviewMeshLocation + FVector(0.0f, 0.0f, 15.0f));
+	}
+	else if (BuildingMesh && !bPreview && bPlacementPreviewMeshLocationSaved)
+	{
+		BuildingMesh->SetRelativeLocation(PlacementPreviewMeshLocation);
+		bPlacementPreviewMeshLocationSaved = false;
+	}
+
+	bPlacementPreview = bPreview;
+	bIsSelectable = !bPreview;
+	SetActorEnableCollision(!bPreview);
+	SetConstructionProgress(bPreview ? 1.0f : 0.0f);
+	if (BuildingMesh)
+	{
+		BuildingMesh->SetCollisionEnabled(bPreview ? ECollisionEnabled::NoCollision : ECollisionEnabled::QueryAndPhysics);
+		BuildingMesh->SetRenderCustomDepth(bPreview);
+		BuildingMesh->SetCustomDepthStencilValue(bPreview ? (bPlacementPreviewValid ? 2 : 3) : 0);
+	}
 }
 
 void ABaseBuilding::SetPlacementPreviewValid(bool bValidPlacement)
 {
-	bPlacementPreviewValid=bValidPlacement; if(BuildingMesh&&bPlacementPreview)BuildingMesh->SetCustomDepthStencilValue(bValidPlacement?2:3);
+	bPlacementPreviewValid = bValidPlacement;
+	if (!BuildingMesh || !bPlacementPreview)
+	{
+		return;
+	}
+
+	BuildingMesh->SetCustomDepthStencilValue(bValidPlacement ? 2 : 3);
+
+	APlanetSurfaceManager* Surface = nullptr;
+	for (TActorIterator<APlanetSurfaceManager> It(GetWorld()); It; ++It)
+	{
+		Surface = *It;
+		break;
+	}
+	if (!Surface)
+	{
+		return;
+	}
+
+	const float CellSize = Surface->GetTileSpacing();
+	const FIntPoint Footprint = GetGridFootprint();
+	const float Height = GetActorLocation().Z + 6.0f;
+	const FColor StatusColor = bValidPlacement ? FColor(0, 220, 255) : FColor(255, 70, 20);
+	const FVector FootprintExtent(Footprint.X * CellSize * 0.5f, Footprint.Y * CellSize * 0.5f, 2.0f);
+	DrawDebugBox(GetWorld(), FVector(GetActorLocation().X, GetActorLocation().Y, Height), FootprintExtent,
+		GetActorQuat(), StatusColor, false, 0.06f, 0, 5.0f);
+
+	const int32 ClearanceCells = Surface->GetBuildingClearanceCells();
+	const FVector ClearanceExtent(
+		(Footprint.X + ClearanceCells * 2) * CellSize * 0.5f,
+		(Footprint.Y + ClearanceCells * 2) * CellSize * 0.5f,
+		1.0f);
+	const FColor ClearanceColor(StatusColor.R / 2, StatusColor.G / 2, StatusColor.B / 2);
+	DrawDebugBox(GetWorld(), FVector(GetActorLocation().X, GetActorLocation().Y, Height - 1.0f), ClearanceExtent,
+		GetActorQuat(), ClearanceColor, false, 0.06f, 0, 2.0f);
 }
 
 void ABaseBuilding::RefreshConstructionProgressBar()

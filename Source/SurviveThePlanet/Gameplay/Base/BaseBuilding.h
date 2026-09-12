@@ -136,6 +136,13 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	TObjectPtr<UStaticMeshComponent> BuildingMesh;
 
+	/** Mesh position restored when the placement ghost becomes a real building. */
+	UPROPERTY(Transient)
+	FVector PlacementPreviewMeshLocation = FVector::ZeroVector;
+
+	UPROPERTY(Transient)
+	bool bPlacementPreviewMeshLocationSaved = false;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Base Building|Visuals")
 	TObjectPtr<UStaticMesh> BaseModuleMesh;
 
