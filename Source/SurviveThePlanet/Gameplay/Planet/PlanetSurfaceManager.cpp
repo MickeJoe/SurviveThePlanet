@@ -3,6 +3,8 @@
 #include "Components/StaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
 #include "Engine/World.h"
+#include "EngineUtils.h"
+#include "Gameplay/Drones/BaseDrone.h"
 #include "Gameplay/Base/BaseBuilding.h"
 
 APlanetSurfaceManager::APlanetSurfaceManager()
@@ -85,6 +87,54 @@ FSTPGridPlacement APlanetSurfaceManager::GetPlacementForWorldLocation(const FVec
 	return Placement;
 }
 
+FSTPGridPlacement APlanetSurfaceManager::GetBuildingPlacementForWorldLocation(const FVector& WorldLocation, FIntPoint Footprint) const
+{
+	FSTPGridPlacement Placement = GetPlacementForWorldLocation(WorldLocation, Footprint);
+	Placement.bValid = Placement.bValid && HasBuildingClearance(Placement.OriginCell, Footprint);
+	return Placement;
+}
+
+int32 APlanetSurfaceManager::GetBuildingClearanceCells() const
+{
+	int32 Clearance = FMath::CeilToInt(FMath::Max(200.0f, MinimumBuildingClearance) / FMath::Max(1.0f, TileSpacing));
+	for (TActorIterator<ABaseDrone> It(GetWorld()); It; ++It)
+	{
+		const FIntPoint DroneFootprint = It->GetGridFootprint();
+		Clearance = FMath::Max(Clearance, FMath::Max(DroneFootprint.X, DroneFootprint.Y));
+	}
+	return Clearance;
+}
+
+bool APlanetSurfaceManager::HasBuildingClearance(FSTPGridCell OriginCell, FIntPoint Footprint, ABaseBuilding* IgnoredBuilding) const
+{
+	Footprint = SanitizeFootprint(Footprint);
+	const int32 Clearance = GetBuildingClearanceCells();
+	const int32 CandidateMinX = OriginCell.X - Clearance;
+	const int32 CandidateMinY = OriginCell.Y - Clearance;
+	const int32 CandidateMaxX = OriginCell.X + Footprint.X - 1 + Clearance;
+	const int32 CandidateMaxY = OriginCell.Y + Footprint.Y - 1 + Clearance;
+
+	// Query building actors directly. Map-authored buildings are not guaranteed to
+	// have been added to OccupiedCells, while placement previews must never block.
+	for (TActorIterator<ABaseBuilding> It(GetWorld()); It; ++It)
+	{
+		const ABaseBuilding* ExistingBuilding = *It;
+		if (!IsValid(ExistingBuilding) || ExistingBuilding == IgnoredBuilding
+			|| ExistingBuilding->IsActorBeingDestroyed() || ExistingBuilding->IsPlacementPreview()) continue;
+		const FIntPoint ExistingFootprint = SanitizeFootprint(ExistingBuilding->GetGridFootprint());
+		const FSTPGridPlacement ExistingPlacement = GetPlacementForWorldLocation(
+			ExistingBuilding->GetActorLocation(), ExistingFootprint);
+		const int32 ExistingMinX = ExistingPlacement.OriginCell.X;
+		const int32 ExistingMinY = ExistingPlacement.OriginCell.Y;
+		const int32 ExistingMaxX = ExistingMinX + ExistingFootprint.X - 1;
+		const int32 ExistingMaxY = ExistingMinY + ExistingFootprint.Y - 1;
+		const bool bSeparated = CandidateMaxX < ExistingMinX || CandidateMinX > ExistingMaxX
+			|| CandidateMaxY < ExistingMinY || CandidateMinY > ExistingMaxY;
+		if (!bSeparated) return false;
+	}
+	return true;
+}
+
 bool APlanetSurfaceManager::GetCellForWorldLocation(const FVector& WorldLocation, FSTPGridCell& OutCell) const
 {
 	const FVector LocalLocation = GetActorTransform().InverseTransformPosition(WorldLocation);
@@ -134,7 +184,9 @@ bool APlanetSurfaceManager::CanOccupyCells(FSTPGridCell OriginCell, FIntPoint Fo
 
 bool APlanetSurfaceManager::ReserveCells(AActor* Occupier, FSTPGridCell OriginCell, FIntPoint Footprint)
 {
-	if (!IsValid(Occupier) || !CanOccupyCells(OriginCell, Footprint))
+	ABaseBuilding* BuildingOccupier = Cast<ABaseBuilding>(Occupier);
+	if (!IsValid(Occupier) || !CanOccupyCells(OriginCell, Footprint)
+		|| (BuildingOccupier && !HasBuildingClearance(OriginCell, Footprint, BuildingOccupier)))
 	{
 		return false;
 	}

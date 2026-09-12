@@ -483,7 +483,7 @@ bool ASurviveThePlanetPlayerController::TryPlaceConcretePlantAtCursor()
 	AResourceManager* ResourceManager = FindResourceManager();
 	if ((Costs.Num() > 0 && !ResourceManager) || (ResourceManager && !ResourceManager->CanAffordCosts(Costs))) return true;
 
-	const FSTPGridPlacement Placement = SurfaceManager->GetPlacementForWorldLocation(TargetLocation, Footprint);
+	const FSTPGridPlacement Placement = SurfaceManager->GetBuildingPlacementForWorldLocation(TargetLocation, Footprint);
 	if (!Placement.bValid) return true;
 	FActorSpawnParameters Params;
 	Params.Owner = this;
@@ -520,7 +520,7 @@ bool ASurviveThePlanetPlayerController::TryPlaceCommunicationModuleAtCursor()
 	AResourceManager* ResourceManager = FindResourceManager();
 	if ((Costs.Num() > 0 && !ResourceManager) || (ResourceManager && !ResourceManager->CanAffordCosts(Costs))) return true;
 
-	const FSTPGridPlacement Placement = SurfaceManager->GetPlacementForWorldLocation(TargetLocation, Footprint);
+	const FSTPGridPlacement Placement = SurfaceManager->GetBuildingPlacementForWorldLocation(TargetLocation, Footprint);
 	if (!Placement.bValid) return true;
 	FActorSpawnParameters Params;
 	Params.Owner = this;
@@ -557,7 +557,7 @@ bool ASurviveThePlanetPlayerController::TryPlaceCargoBayAtCursor()
 	AResourceManager* ResourceManager = FindResourceManager();
 	if ((Costs.Num() > 0 && !ResourceManager) || (ResourceManager && !ResourceManager->CanAffordCosts(Costs))) return true;
 
-	const FSTPGridPlacement Placement = SurfaceManager->GetPlacementForWorldLocation(TargetLocation, Footprint);
+	const FSTPGridPlacement Placement = SurfaceManager->GetBuildingPlacementForWorldLocation(TargetLocation, Footprint);
 	if (!Placement.bValid) return true;
 	FActorSpawnParameters Params;
 	Params.Owner = this;
@@ -602,7 +602,7 @@ bool ASurviveThePlanetPlayerController::TryPlaceWaterCollectorAtCursor()
 		return true;
 	}
 
-	const FSTPGridPlacement Placement = SurfaceManager->GetPlacementForWorldLocation(TargetLocation, Footprint);
+	const FSTPGridPlacement Placement = SurfaceManager->GetBuildingPlacementForWorldLocation(TargetLocation, Footprint);
 	if (!Placement.bValid)
 	{
 		return true;
@@ -666,7 +666,7 @@ bool ASurviveThePlanetPlayerController::TryPlaceEnergyStorageAtCursor()
 		return true;
 	}
 
-	const FSTPGridPlacement Placement = SurfaceManager->GetPlacementForWorldLocation(TargetLocation, Footprint);
+	const FSTPGridPlacement Placement = SurfaceManager->GetBuildingPlacementForWorldLocation(TargetLocation, Footprint);
 	if (!Placement.bValid)
 	{
 		return true;
@@ -839,7 +839,7 @@ bool ASurviveThePlanetPlayerController::TryPlaceEnergyModuleAtCursor()
 		return true;
 	}
 
-	const FSTPGridPlacement Placement = SurfaceManager->GetPlacementForWorldLocation(TargetLocation, Footprint);
+	const FSTPGridPlacement Placement = SurfaceManager->GetBuildingPlacementForWorldLocation(TargetLocation, Footprint);
 	if (!Placement.bValid)
 	{
 		UE_LOG(LogSurviveThePlanet, Warning, TEXT("STP_BUILD Energy module placement failed: grid cell is invalid or occupied. OriginCell=(%d,%d) Footprint=(%d,%d)"),
@@ -945,7 +945,7 @@ void ASurviveThePlanetPlayerController::UpdateConcretePlantPlacementPreview()
 	if (!GetHitResultUnderCursor(ECC_Visibility, true, Hit)) { ConcretePlantPlacementPreview->SetActorHiddenInGame(true); return; }
 	APlanetSurfaceManager* SurfaceManager = FindPlanetSurfaceManager();
 	const FSTPGridPlacement Placement = SurfaceManager
-		? SurfaceManager->GetPlacementForWorldLocation(Hit.Location, ConcretePlantPlacementPreview->GetGridFootprint())
+		? SurfaceManager->GetBuildingPlacementForWorldLocation(Hit.Location, ConcretePlantPlacementPreview->GetGridFootprint())
 		: FSTPGridPlacement();
 	ConcretePlantPlacementPreview->SetActorLocation(SurfaceManager ? Placement.WorldLocation : Hit.Location, false);
 	if (SurfaceManager) ConcretePlantPlacementPreview->SetActorRotation(Placement.WorldRotation);
@@ -961,7 +961,7 @@ void ASurviveThePlanetPlayerController::UpdateCommunicationModulePlacementPrevie
 	if (!GetHitResultUnderCursor(ECC_Visibility, true, Hit)) { CommunicationModulePlacementPreview->SetActorHiddenInGame(true); return; }
 	APlanetSurfaceManager* SurfaceManager = FindPlanetSurfaceManager();
 	const FSTPGridPlacement Placement = SurfaceManager
-		? SurfaceManager->GetPlacementForWorldLocation(Hit.Location, CommunicationModulePlacementPreview->GetGridFootprint())
+		? SurfaceManager->GetBuildingPlacementForWorldLocation(Hit.Location, CommunicationModulePlacementPreview->GetGridFootprint())
 		: FSTPGridPlacement();
 	CommunicationModulePlacementPreview->SetActorLocation(SurfaceManager ? Placement.WorldLocation : Hit.Location, false);
 	if (SurfaceManager) CommunicationModulePlacementPreview->SetActorRotation(Placement.WorldRotation);
@@ -977,7 +977,7 @@ void ASurviveThePlanetPlayerController::UpdateCargoBayPlacementPreview()
 	if (!GetHitResultUnderCursor(ECC_Visibility, true, Hit)) { CargoBayPlacementPreview->SetActorHiddenInGame(true); return; }
 	APlanetSurfaceManager* SurfaceManager = FindPlanetSurfaceManager();
 	const FSTPGridPlacement Placement = SurfaceManager
-		? SurfaceManager->GetPlacementForWorldLocation(Hit.Location, CargoBayPlacementPreview->GetGridFootprint())
+		? SurfaceManager->GetBuildingPlacementForWorldLocation(Hit.Location, CargoBayPlacementPreview->GetGridFootprint())
 		: FSTPGridPlacement();
 	CargoBayPlacementPreview->SetActorLocation(SurfaceManager ? Placement.WorldLocation : Hit.Location, false);
 	if (SurfaceManager) CargoBayPlacementPreview->SetActorRotation(Placement.WorldRotation);
@@ -1002,7 +1002,7 @@ void ASurviveThePlanetPlayerController::UpdateWaterCollectorPlacementPreview()
 
 	APlanetSurfaceManager* SurfaceManager = FindPlanetSurfaceManager();
 	const FSTPGridPlacement Placement = SurfaceManager
-		? SurfaceManager->GetPlacementForWorldLocation(Hit.Location, WaterCollectorPlacementPreview->GetGridFootprint())
+		? SurfaceManager->GetBuildingPlacementForWorldLocation(Hit.Location, WaterCollectorPlacementPreview->GetGridFootprint())
 		: FSTPGridPlacement();
 	WaterCollectorPlacementPreview->SetActorLocation(SurfaceManager ? Placement.WorldLocation : Hit.Location, false);
 	if (SurfaceManager)
@@ -1030,7 +1030,7 @@ void ASurviveThePlanetPlayerController::UpdateEnergyStoragePlacementPreview()
 
 	APlanetSurfaceManager* SurfaceManager = FindPlanetSurfaceManager();
 	const FSTPGridPlacement Placement = SurfaceManager
-		? SurfaceManager->GetPlacementForWorldLocation(Hit.Location, EnergyStoragePlacementPreview->GetGridFootprint())
+		? SurfaceManager->GetBuildingPlacementForWorldLocation(Hit.Location, EnergyStoragePlacementPreview->GetGridFootprint())
 		: FSTPGridPlacement();
 	EnergyStoragePlacementPreview->SetActorLocation(SurfaceManager ? Placement.WorldLocation : Hit.Location, false);
 	if (SurfaceManager)
@@ -1144,7 +1144,7 @@ void ASurviveThePlanetPlayerController::UpdateEnergyModulePlacementPreview()
 		return;
 	}
 
-	const FSTPGridPlacement Placement = SurfaceManager->GetPlacementForWorldLocation(Hit.Location, EnergyModulePlacementPreview->GetGridFootprint());
+	const FSTPGridPlacement Placement = SurfaceManager->GetBuildingPlacementForWorldLocation(Hit.Location, EnergyModulePlacementPreview->GetGridFootprint());
 	EnergyModulePlacementPreview->SetActorLocation(Placement.WorldLocation, false);
 	EnergyModulePlacementPreview->SetActorRotation(Placement.WorldRotation);
 	EnergyModulePlacementPreview->SetPlacementPreviewValid(Placement.bValid);
@@ -1319,7 +1319,7 @@ void ASurviveThePlanetPlayerController::UpdateGenericBuildingPlacementPreview()
 {
 	EnsureGenericBuildingPlacementPreview(); if(!IsValid(GenericBuildingPlacementPreview))return; FHitResult Hit;
 	if(!GetHitResultUnderCursor(ECC_Visibility,true,Hit)){GenericBuildingPlacementPreview->SetActorHiddenInGame(true);return;}
-	APlanetSurfaceManager* Surface=FindPlanetSurfaceManager(); const FSTPGridPlacement Placement=Surface?Surface->GetPlacementForWorldLocation(Hit.Location,GenericBuildingPlacementPreview->GetGridFootprint()):FSTPGridPlacement();
+	APlanetSurfaceManager* Surface=FindPlanetSurfaceManager(); const FSTPGridPlacement Placement=Surface?Surface->GetBuildingPlacementForWorldLocation(Hit.Location,GenericBuildingPlacementPreview->GetGridFootprint()):FSTPGridPlacement();
 	GenericBuildingPlacementPreview->SetActorLocation(Surface?Placement.WorldLocation:Hit.Location,false); if(Surface)GenericBuildingPlacementPreview->SetActorRotation(Placement.WorldRotation);
 	AResourceManager* Resources=FindResourceManager(); const TArray<FResourceCost>& Costs=GenericBuildingPlacementPreview->GetConstructionCosts(); const bool bAffordable=Costs.Num()==0||(Resources&&Resources->CanAffordCosts(Costs));
 	GenericBuildingPlacementPreview->SetPlacementPreviewValid(Surface&&Placement.bValid&&bAffordable); GenericBuildingPlacementPreview->SetActorHiddenInGame(false);
@@ -1330,7 +1330,7 @@ bool ASurviveThePlanetPlayerController::TryPlaceGenericBuildingAtCursor()
 	FVector Target; UWorld* World=GetWorld(); APlanetSurfaceManager* Surface=FindPlanetSurfaceManager(); if(!TryGetCursorWorldLocation(Target)||!World||!Surface)return true;
 	UClass* ClassToSpawn=GetManagedBuildingClass(ActiveBuildTool,ABaseBuilding::StaticClass()); if(!ClassToSpawn)return true; const ABaseBuilding* Defaults=ClassToSpawn->GetDefaultObject<ABaseBuilding>();
 	const FIntPoint Footprint=Defaults?Defaults->GetGridFootprint():FIntPoint(2,2); const TArray<FResourceCost> Costs=Defaults?Defaults->GetConstructionCosts():TArray<FResourceCost>(); AResourceManager* Resources=FindResourceManager();
-	if((Costs.Num()>0&&!Resources)||(Resources&&!Resources->CanAffordCosts(Costs)))return true; const FSTPGridPlacement Placement=Surface->GetPlacementForWorldLocation(Target,Footprint); if(!Placement.bValid)return true;
+	if((Costs.Num()>0&&!Resources)||(Resources&&!Resources->CanAffordCosts(Costs)))return true; const FSTPGridPlacement Placement=Surface->GetBuildingPlacementForWorldLocation(Target,Footprint); if(!Placement.bValid)return true;
 	FActorSpawnParameters Params; Params.Owner=this; Params.SpawnCollisionHandlingOverride=ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn; ABaseBuilding* Building=World->SpawnActor<ABaseBuilding>(ClassToSpawn,Placement.WorldLocation,Placement.WorldRotation,Params); if(!Building)return true;
 	Building->SetPlacementPreview(false); if(!Surface->ReserveCells(Building,Placement.OriginCell,Building->GetGridFootprint())||(Resources&&!Resources->TrySpendCosts(Costs))){Building->Destroy();return true;}
 	Building->SetConstructionProgress(0); Building->ShowConstructionProgress(); if(UConstructionJobQueueSubsystem* Queue=World->GetSubsystem<UConstructionJobQueueSubsystem>())Queue->EnqueueConstructionJob(Building); SetSelectedActor(Building); return true;
