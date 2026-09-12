@@ -1,6 +1,7 @@
 #if WITH_DEV_AUTOMATION_TESTS
 #include "Misc/AutomationTest.h"
 #include "Engine/World.h"
+#include "UObject/UObjectGlobals.h"
 #include "Gameplay/Planet/PlanetSurfaceManager.h"
 #include "Gameplay/Base/BaseBuilding.h"
 
@@ -10,10 +11,10 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSTPBuildingClearanceTest,
 
 bool FSTPBuildingClearanceTest::RunTest(const FString& Parameters)
 {
-	UWorld* World = UWorld::CreateWorld(EWorldType::Game, false, NAME_None, nullptr, true, ERHIFeatureLevel::Num, nullptr, true);
+	const FName WorldName = MakeUniqueObjectName(
+		nullptr, UWorld::StaticClass(), NAME_None, EUniqueObjectNameOptions::GloballyUnique);
+	UWorld* World = UWorld::CreateWorld(EWorldType::Game, false, WorldName, GetTransientPackage());
 	if (!TestNotNull(TEXT("Test world"), World)) return false;
-	World->InitializeNewWorld(UWorld::InitializationValues().AllowAudioPlayback(false)
-		.CreatePhysicsScene(false).CreateNavigation(false).CreateAISystem(false).ShouldSimulatePhysics(false));
 	APlanetSurfaceManager* Surface = World->SpawnActor<APlanetSurfaceManager>();
 	ABaseBuilding* First = World->SpawnActor<ABaseBuilding>();
 	ABaseBuilding* Second = World->SpawnActor<ABaseBuilding>();
