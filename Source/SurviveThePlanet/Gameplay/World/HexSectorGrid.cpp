@@ -40,6 +40,7 @@ AHexSectorGrid::AHexSectorGrid()
 	PrimaryActorTick.bCanEverTick = true;
 	SetActorTickInterval(0.0f);
 	SetRootComponent(CreateDefaultSubobject<USceneComponent>(TEXT("SceneRoot")));
+	EnsureDefaultTemplates();
 }
 
 void AHexSectorGrid::OnConstruction(const FTransform& Transform)
@@ -87,6 +88,105 @@ void AHexSectorGrid::RebuildGrid()
 		}
 	}
 	Sectors.Sort([](const FHexSector& A, const FHexSector& B) { return A.Id < B.Id; });
+	AssignTemplates(LayoutSeed);
+}
+
+void AHexSectorGrid::EnsureDefaultTemplates()
+{
+	if (!SectorTemplates.IsEmpty()) return;
+	const FName Names[] = {TEXT("RockyBasin"), TEXT("SplitRidge"), TEXT("CraterShelf"),
+		TEXT("TwinMesa"), TEXT("WindChannel"), TEXT("BrokenPlateau")};
+	for (int32 Index = 0; Index < UE_ARRAY_COUNT(Names); ++Index)
+	{
+		FSectorTemplateDefinition Template;
+		Template.TemplateId = Names[Index];
+		Template.DressingRuleTags = {Index % 2 == 0 ? TEXT("RockScatter") : TEXT("RidgeScatter"), TEXT("KeepCorridorsClear")};
+		Template.bSupportsHQ = Index == 0 || Index == 3;
+		Template.BuildablePockets.Add({FVector2D(-650.0f + Index * 75.0f, 150.0f), FVector2D(900.0f, 700.0f)});
+		Template.BuildablePockets.Add({FVector2D(850.0f, -500.0f + Index * 60.0f), FVector2D(550.0f, 450.0f)});
+		Template.ResourceSlots.Add({TEXT("Any"), FVector2D(-1450.0f, -800.0f + Index * 120.0f), 300.0f});
+		Template.ResourceSlots.Add({Index % 2 == 0 ? TEXT("Mineral") : TEXT("Water"), FVector2D(1350.0f, 700.0f), 250.0f});
+		Template.LandmarkSlots.Add(FVector2D(0.0f, 1250.0f));
+		Template.SubBaseSlots.Add(FVector2D(600.0f, 250.0f));
+		for (int32 Side = 0; Side < 6; ++Side)
+		{
+			const float Angle = FMath::DegreesToRadians(30.0f + Side * 60.0f);
+			Template.ConnectionSockets.Add(FVector2D(FMath::Cos(Angle), FMath::Sin(Angle)) * ExplorationSectorRadius);
+			Template.DroneCorridors.Add({FVector2D::ZeroVector,
+				FVector2D(FMath::Cos(Angle), FMath::Sin(Angle)) * ExplorationSectorRadius, 350.0f});
+		}
+		SectorTemplates.Add(MoveTemp(Template));
+	}
+}
+
+void AHexSectorGrid::AssignTemplates(int32 Seed)
+{
+	EnsureDefaultTemplates();
+	if (SectorTemplates.IsEmpty()) return;
+	FRandomStream Random(Seed);
+	TArray<int32> Order;
+	for (int32 Index = 0; Index < SectorTemplates.Num(); ++Index) Order.Add(Index);
+	for (int32 Index = Order.Num() - 1; Index > 0; --Index) Order.Swap(Index, Random.RandRange(0, Index));
+	int32 HQTemplateIndex = SectorTemplates.IndexOfByPredicate([](const FSectorTemplateDefinition& T) { return T.bSupportsHQ; });
+	if (HQTemplateIndex == INDEX_NONE) HQTemplateIndex = 0;
+	Order.Remove(HQTemplateIndex);
+	int32 NonStartTemplate = 0;
+
+	for (FHexSector& Sector : Sectors)
+	{
+		const int32 TemplateIndex = Sector.Id == StartingSectorId || Order.IsEmpty()
+			? HQTemplateIndex : Order[(NonStartTemplate++) % Order.Num()];
+		const FSectorTemplateDefinition& Template = SectorTemplates[TemplateIndex];
+		Sector.TemplateId = Template.TemplateId;
+		Sector.TemplateRotationDegrees = Template.SafeRotations.IsEmpty()
+			? 0 : Template.SafeRotations[Random.RandRange(0, Template.SafeRotations.Num() - 1)];
+		Sector.bTemplateMirrored = Template.bAllowMirroring && Random.RandRange(0, 1) == 1;
+	}
+}
+
+bool AHexSectorGrid::GetTemplateForSector(int32 SectorId, FSectorTemplateDefinition& OutTemplate) const
+{
+	FHexSector Sector;
+	if (!GetSectorById(SectorId, Sector)) return false;
+	const FSectorTemplateDefinition* Found = SectorTemplates.FindByPredicate([&Sector](const FSectorTemplateDefinition& T)
+	{
+		return T.TemplateId == Sector.TemplateId;
+	});
+	if (!Found) return false;
+	OutTemplate = *Found;
+	return true;
+}
+
+bool AHexSectorGrid::ValidateGeneratedLayout(FString& OutDiagnostic) const
+{
+	if (SectorTemplates.Num() < 6) { OutDiagnostic = TEXT("At least six sector templates are required."); return false; }
+	FHexSector Start;
+	FSectorTemplateDefinition StartTemplate;
+	if (!GetSectorById(StartingSectorId, Start) || !GetTemplateForSector(StartingSectorId, StartTemplate)
+		|| !StartTemplate.bSupportsHQ || StartTemplate.BuildablePockets.IsEmpty())
+	{
+		OutDiagnostic = TEXT("Starting sector has no HQ-capable buildable template.");
+		return false;
+	}
+	for (const FHexSector& Sector : Sectors)
+	{
+		FSectorTemplateDefinition Template;
+		if (!GetTemplateForSector(Sector.Id, Template) || Template.ConnectionSockets.Num() < 6
+			|| Template.DroneCorridors.Num() < 6)
+		{
+			OutDiagnostic = FString::Printf(TEXT("Sector %d lacks a template or connection corridors."), Sector.Id);
+			return false;
+		}
+	}
+	OutDiagnostic = TEXT("Layout is valid.");
+	return true;
+}
+
+FVector AHexSectorGrid::TransformTemplatePoint(const FHexSector& Sector, FVector2D Point) const
+{
+	if (Sector.bTemplateMirrored) Point.X *= -1.0f;
+	Point = Point.GetRotated(Sector.TemplateRotationDegrees);
+	return Sector.WorldCenter + GetActorTransform().TransformVectorNoScale(FVector(Point, 0.0f));
 }
 
 FVector AHexSectorGrid::AxialToWorld(int32 Q, int32 R) const
@@ -221,6 +321,35 @@ void AHexSectorGrid::DrawGrid() const
 		for (int32 Corner = 0; Corner < 6; ++Corner)
 		{
 			DrawDebugLine(GetWorld(), Corners[Corner], Corners[(Corner + 1) % 6], SectorColor, false, 0.0f, 0, LineThickness);
+		}
+		if (bShowTemplateDebug)
+		{
+			FSectorTemplateDefinition Template;
+			if (!GetTemplateForSector(Sector.Id, Template)) continue;
+			DrawDebugString(GetWorld(), Sector.WorldCenter + FVector(0, 0, 120),
+				FString::Printf(TEXT("S%d %s R%d%s"), Sector.Id, *Sector.TemplateId.ToString(),
+					Sector.TemplateRotationDegrees, Sector.bTemplateMirrored ? TEXT(" M") : TEXT("")),
+				nullptr, SectorColor, 0.0f, true);
+			for (const FSectorBuildablePocket& Pocket : Template.BuildablePockets)
+			{
+				DrawDebugBox(GetWorld(), TransformTemplatePoint(Sector, Pocket.Center), FVector(Pocket.Extent, 15.0f),
+					FColor::Green, false, 0.0f, 0, 4.0f);
+			}
+			for (const FSectorResourceSlot& Slot : Template.ResourceSlots)
+			{
+				DrawDebugSphere(GetWorld(), TransformTemplatePoint(Sector, Slot.Location), Slot.Radius, 12,
+					FColor::Yellow, false, 0.0f, 0, 3.0f);
+			}
+			for (const FVector2D& Socket : Template.ConnectionSockets)
+			{
+				DrawDebugSphere(GetWorld(), TransformTemplatePoint(Sector, Socket), 90.0f, 8,
+					FColor::Magenta, false, 0.0f, 0, 4.0f);
+			}
+			for (const FSectorCorridor& Corridor : Template.DroneCorridors)
+			{
+				DrawDebugLine(GetWorld(), TransformTemplatePoint(Sector, Corridor.Start),
+					TransformTemplatePoint(Sector, Corridor.End), FColor::Cyan, false, 0.0f, 0, Corridor.Width / 20.0f);
+			}
 		}
 	}
 }
