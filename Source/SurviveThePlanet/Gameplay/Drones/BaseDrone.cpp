@@ -45,6 +45,12 @@ void ABaseDrone::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 	UpdateVisualAnimation(DeltaSeconds);
+	if (bMovingAsideForConstruction)
+	{
+		SetActorLocation(FMath::VInterpConstantTo(GetActorLocation(), ConstructionAvoidanceDestination, DeltaSeconds, FMath::Max(1.0f, MoveSpeed)));
+		if (GetActorLocation().Equals(ConstructionAvoidanceDestination, 1.0f)) bMovingAsideForConstruction = false;
+		return;
+	}
 
 	if (!IsValid(AssignedBuilding) || bParkedAtAssignedBuilding)
 	{
@@ -228,6 +234,13 @@ void ABaseDrone::SetIdleDestination(FSTPGridCell Cell, const FVector& WorldLocat
 		}
 	}
 	bHasIdleDestination = true;
+}
+
+void ABaseDrone::MoveAsideForConstruction(const FVector& Destination)
+{
+	ConstructionAvoidanceDestination = FVector(Destination.X, Destination.Y, GetActorLocation().Z);
+	bMovingAsideForConstruction = true;
+	SetActorTickEnabled(true);
 }
 
 void ABaseDrone::ClearIdleDestination()

@@ -13,6 +13,7 @@ AEnergyStorageBuilding::AEnergyStorageBuilding()
 
 void AEnergyStorageBuilding::SetPlacementPreview(bool bPreview)
 {
+	Super::SetPlacementPreview(bPreview);
 	bPlacementPreview = bPreview;
 	bIsSelectable = !bPreview;
 	SetActorEnableCollision(!bPreview);
@@ -27,6 +28,7 @@ void AEnergyStorageBuilding::SetPlacementPreview(bool bPreview)
 
 void AEnergyStorageBuilding::SetPlacementPreviewValid(bool bValidPlacement)
 {
+	Super::SetPlacementPreviewValid(bValidPlacement);
 	bPlacementPreviewValid = bValidPlacement;
 	RefreshPlacementPreviewVisual();
 }

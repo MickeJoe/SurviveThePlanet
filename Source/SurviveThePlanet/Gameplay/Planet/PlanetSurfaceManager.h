@@ -6,6 +6,7 @@
 
 class UStaticMesh;
 class UStaticMeshComponent;
+class ABaseBuilding;
 
 USTRUCT(BlueprintType)
 struct FSTPGridCell
@@ -80,6 +81,16 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Planet Surface|Grid")
 	bool CanOccupyCells(FSTPGridCell OriginCell, FIntPoint Footprint) const;
 
+	/** Building-only validation; the surrounding corridor remains available to drones. */
+	UFUNCTION(BlueprintCallable, Category = "Planet Surface|Grid")
+	FSTPGridPlacement GetBuildingPlacementForWorldLocation(const FVector& WorldLocation, FIntPoint Footprint) const;
+
+	UFUNCTION(BlueprintPure, Category = "Planet Surface|Grid")
+	bool HasBuildingClearance(FSTPGridCell OriginCell, FIntPoint Footprint, ABaseBuilding* IgnoredBuilding = nullptr) const;
+
+	UFUNCTION(BlueprintPure, Category = "Planet Surface|Grid")
+	int32 GetBuildingClearanceCells() const;
+
 	UFUNCTION(BlueprintCallable, Category = "Planet Surface|Grid")
 	bool ReserveCells(AActor* Occupier, FSTPGridCell OriginCell, FIntPoint Footprint);
 
@@ -141,6 +152,10 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Planet Surface|Grid", meta = (ClampMin = "1.0", UIMin = "1.0"))
 	float TileSpacing = 100.0f;
+
+	/** Minimum passage width, rounded up to whole grid cells. Drones move out of a new building footprint. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Planet Surface|Grid", meta = (ClampMin = "200.0", Units = "cm"))
+	float MinimumBuildingClearance = 200.0f;
 
 	UPROPERTY(EditAnywhere, Category = "Planet Surface|Grid")
 	bool bCenterGridOnActor = true;

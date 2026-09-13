@@ -13,6 +13,8 @@ class UStaticMeshComponent;
 class UTexture2D;
 class UWidgetComponent;
 class ABaseDrone;
+class UMaterialInterface;
+class UMaterialInstanceDynamic;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDroneSlotsChangedSignature, int32, UnlockedSlots);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FDroneAssignmentsChangedSignature);
@@ -125,6 +127,9 @@ public:
 
 	virtual void SetPlacementPreviewValid(bool bValidPlacement);
 
+	UFUNCTION(BlueprintPure, Category = "Base Building|Placement")
+	bool IsPlacementPreview() const { return bPlacementPreview; }
+
 protected:
 	virtual void OnConstruction(const FTransform& Transform) override;
 	virtual void BeginPlay() override;
@@ -135,6 +140,21 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	TObjectPtr<UStaticMeshComponent> BuildingMesh;
+
+	UPROPERTY(Transient) TObjectPtr<UMaterialInterface> PlacementOriginalOverlay;
+	bool bPlacementOriginalDisallowNanite = false;
+	UPROPERTY() TObjectPtr<UMaterialInterface> PlacementMaterial;
+	UPROPERTY() TObjectPtr<UStaticMesh> PlacementLineMesh;
+	UPROPERTY(Transient) TObjectPtr<UMaterialInstanceDynamic> PlacementGhostMaterial;
+	UPROPERTY(Transient) TObjectPtr<UMaterialInstanceDynamic> PlacementLineMaterial;
+	UPROPERTY(Transient) TArray<TObjectPtr<UStaticMeshComponent>> PlacementLines;
+
+	/** Mesh position restored when the placement ghost becomes a real building. */
+	UPROPERTY(Transient)
+	FVector PlacementPreviewMeshLocation = FVector::ZeroVector;
+
+	UPROPERTY(Transient)
+	bool bPlacementPreviewMeshLocationSaved = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Base Building|Visuals")
 	TObjectPtr<UStaticMesh> BaseModuleMesh;

@@ -55,7 +55,8 @@ TSharedRef<SWidget> UBuildToolbarWidget::RebuildWidget()
 {
 	EnsureRequiredButtonConfigs();
 	RefreshButtonConfigsFromCatalog();
-	RebuildToolbar();
+	if (HasDesignedToolbar()) BindDesignedToolbar();
+	else RebuildToolbar();
 	return Super::RebuildWidget();
 }
 
@@ -183,6 +184,7 @@ void UBuildToolbarWidget::RebuildToolbar()
 	CategoryBorders.Reset();
 
 	UCanvasPanel* RootCanvas = WidgetTree->ConstructWidget<UCanvasPanel>(UCanvasPanel::StaticClass(), TEXT("BuildToolbarRoot"));
+	RootCanvas->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
 	WidgetTree->RootWidget = RootCanvas;
 
 	UVerticalBox* ToolbarStack = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("BuildToolbarStack"));
@@ -641,7 +643,9 @@ bool UBuildToolbarWidget::CanAffordTool(ESTPBuildTool Tool, TArray<FResourceCost
 FText UBuildToolbarWidget::BuildToolTooltip(ESTPBuildTool Tool, bool bAffordable, const TArray<FResourceCost>& Costs) const
 {
 	const FBuildToolButtonConfig* Config = FindButtonConfig(Tool);
-	const FText BaseTooltip = Config ? Config->Tooltip : FText::GetEmpty();
+	const FText BaseTooltip = Tool == ESTPBuildTool::MiningMachine
+		? NSLOCTEXT("SurviveThePlanet", "BuildMineTooltip", "Build Mine\nPlace on an available resource deposit.")
+		: (Config ? Config->Tooltip : FText::GetEmpty());
 	if (bAffordable || Costs.IsEmpty())
 	{
 		return BaseTooltip;

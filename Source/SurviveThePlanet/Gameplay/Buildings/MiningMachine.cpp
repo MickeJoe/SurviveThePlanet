@@ -178,7 +178,17 @@ bool AMiningMachine::CanMineResourceSource(const ABaseResourceSource* CandidateS
 	}
 
 	const AMiningMachine* ReservedMachine = CandidateSource->GetReservedMiningMachine();
-	return !IsValid(ReservedMachine) || ReservedMachine == this;
+	if (IsValid(ReservedMachine))
+	{
+		return ReservedMachine == this;
+	}
+	for (TActorIterator<APlanetSurfaceManager> It(CandidateSource->GetWorld()); It; ++It)
+	{
+		const FSTPGridPlacement Placement = It->GetPlacementForWorldLocation(
+			GetPlacementTransformForSource(CandidateSource).GetLocation(), GetGridFootprint());
+		return It->HasBuildingClearance(Placement.OriginCell, GetGridFootprint());
+	}
+	return false;
 }
 
 FTransform AMiningMachine::GetPlacementTransformForSource(const ABaseResourceSource* CandidateSource) const
@@ -217,6 +227,7 @@ FTransform AMiningMachine::GetPlacementTransformForSource(const ABaseResourceSou
 
 void AMiningMachine::SetPlacementPreview(bool bPreview)
 {
+	Super::SetPlacementPreview(bPreview);
 	bPlacementPreview = bPreview;
 	bIsSelectable = !bPreview;
 	SetActorEnableCollision(!bPreview);
@@ -238,6 +249,7 @@ void AMiningMachine::SetPlacementPreview(bool bPreview)
 
 void AMiningMachine::SetPlacementPreviewValid(bool bValidPlacement)
 {
+	Super::SetPlacementPreviewValid(bValidPlacement);
 	bPlacementPreviewValid = bValidPlacement;
 	RefreshPlacementPreviewVisual();
 }

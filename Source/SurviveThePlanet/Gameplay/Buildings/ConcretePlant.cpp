@@ -48,6 +48,7 @@ float AConcretePlant::GetConcreteProductionPerMinute() const
 
 void AConcretePlant::SetPlacementPreview(bool bPreview)
 {
+	Super::SetPlacementPreview(bPreview);
 	bPlacementPreview = bPreview;
 	bIsSelectable = !bPreview;
 	SetActorEnableCollision(!bPreview);
@@ -62,6 +63,7 @@ void AConcretePlant::SetPlacementPreview(bool bPreview)
 
 void AConcretePlant::SetPlacementPreviewValid(bool bValidPlacement)
 {
+	Super::SetPlacementPreviewValid(bValidPlacement);
 	bPlacementPreviewValid = bValidPlacement;
 	RefreshPlacementPreviewVisual();
 }

@@ -25,7 +25,7 @@ void UConstructionDroneCoordinatorSubsystem::Tick(float DeltaTime)
 
 	for (ABaseDrone* Drone : Drones)
 	{
-		if (!IsValid(Drone))
+		if (!IsValid(Drone) || Drone->IsMovingAsideForConstruction())
 		{
 			continue;
 		}

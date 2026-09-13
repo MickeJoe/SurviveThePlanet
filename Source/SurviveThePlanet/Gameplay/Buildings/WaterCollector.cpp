@@ -83,6 +83,7 @@ float AWaterCollector::GetEnergyConsumptionPerMinute() const
 
 void AWaterCollector::SetPlacementPreview(bool bPreview)
 {
+	Super::SetPlacementPreview(bPreview);
 	bPlacementPreview = bPreview;
 	bIsSelectable = !bPreview;
 	SetActorEnableCollision(!bPreview);
@@ -97,6 +98,7 @@ void AWaterCollector::SetPlacementPreview(bool bPreview)
 
 void AWaterCollector::SetPlacementPreviewValid(bool bValidPlacement)
 {
+	Super::SetPlacementPreviewValid(bValidPlacement);
 	bPlacementPreviewValid = bValidPlacement;
 	RefreshPlacementPreviewVisual();
 }

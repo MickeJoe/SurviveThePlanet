@@ -101,6 +101,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Drone|Idle")
 	void ClearIdleDestination();
 
+	/** Temporary movement takes priority while keeping the current assignment/job. */
+	void MoveAsideForConstruction(const FVector& Destination);
+	bool IsMovingAsideForConstruction() const { return bMovingAsideForConstruction; }
+
 	UFUNCTION(BlueprintCallable, Category = "Drone|Idle")
 	void TickIdleMovement(float DeltaSeconds);
 
@@ -210,6 +214,8 @@ protected:
 	float VisualAnimationTime = 0.0f;
 
 private:
+	bool bMovingAsideForConstruction = false;
+	FVector ConstructionAvoidanceDestination = FVector::ZeroVector;
 	friend class ABaseBuilding;
 	void SetBuildingAssignmentInternal(ABaseBuilding* Building, int32 SlotIndex);
 	void ParkAtAssignedBuilding();

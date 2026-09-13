@@ -27,6 +27,7 @@ void AEnergyModule::BeginPlay()
 
 void AEnergyModule::SetPlacementPreview(bool bPreview)
 {
+	Super::SetPlacementPreview(bPreview);
 	bPlacementPreview = bPreview;
 	bIsSelectable = !bPreview;
 	SetActorEnableCollision(!bPreview);
@@ -43,6 +44,7 @@ void AEnergyModule::SetPlacementPreview(bool bPreview)
 
 void AEnergyModule::SetPlacementPreviewValid(bool bValidPlacement)
 {
+	Super::SetPlacementPreviewValid(bValidPlacement);
 	bPlacementPreviewValid = bValidPlacement;
 	RefreshPlacementPreviewVisual();
 }

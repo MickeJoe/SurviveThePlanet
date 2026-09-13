@@ -65,7 +65,9 @@ bool AExplorerDrone::ActivateExploration()
 
 void AExplorerDrone::Tick(float DeltaSeconds)
 {
+	const bool bWasMovingAside = IsMovingAsideForConstruction();
 	Super::Tick(DeltaSeconds);
+	if (bWasMovingAside) return;
 	if (bShowActivationPreview && !bIsExploring)
 	{
 		DrawActivationPreview();

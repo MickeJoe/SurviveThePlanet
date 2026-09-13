@@ -6,6 +6,9 @@
 #include "EngineUtils.h"
 #include "Engine/StaticMesh.h"
 #include "Gameplay/Planet/PlanetSurfaceManager.h"
+#include "DrawDebugHelpers.h"
+#include "Materials/MaterialInstanceDynamic.h"
+#include "UObject/ConstructorHelpers.h"
 #include "Gameplay/Drones/BaseDrone.h"
 #include "Gameplay/Cables/CableNetworkManager.h"
 #include "Gameplay/Buildings/BuildingManagerSubsystem.h"
@@ -31,6 +34,10 @@ ABaseBuilding::ABaseBuilding()
 	ConstructionProgressBar->SetHiddenInGame(false);
 
 	ConfigureMesh();
+	static ConstructorHelpers::FObjectFinder<UMaterialInterface> Ghost(TEXT("/Game/UI/Materials/M_BuildPlacement.M_BuildPlacement"));
+	static ConstructorHelpers::FObjectFinder<UStaticMesh> Cube(TEXT("/Engine/BasicShapes/Cube.Cube"));
+	PlacementMaterial = Ghost.Object;
+	PlacementLineMesh = Cube.Object;
 }
 
 void ABaseBuilding::OnConstruction(const FTransform& Transform)
@@ -321,13 +328,126 @@ void ABaseBuilding::HideConstructionProgress()
 
 void ABaseBuilding::SetPlacementPreview(bool bPreview)
 {
-	bPlacementPreview=bPreview; bIsSelectable=!bPreview; SetActorEnableCollision(!bPreview); SetConstructionProgress(bPreview?1.0f:0.0f);
-	if(BuildingMesh){BuildingMesh->SetCollisionEnabled(bPreview?ECollisionEnabled::NoCollision:ECollisionEnabled::QueryAndPhysics);BuildingMesh->SetRenderCustomDepth(bPreview);BuildingMesh->SetCustomDepthStencilValue(bPreview?(bPlacementPreviewValid?2:3):0);}
+	if (BuildingMesh && bPreview && !bPlacementPreview && PlacementMaterial)
+	{
+		PlacementOriginalOverlay = BuildingMesh->GetOverlayMaterial();
+		bPlacementOriginalDisallowNanite = BuildingMesh->bDisallowNanite;
+		BuildingMesh->bDisallowNanite = true;
+		BuildingMesh->MarkRenderStateDirty();
+		PlacementGhostMaterial = UMaterialInstanceDynamic::Create(PlacementMaterial, this);
+		PlacementGhostMaterial->SetScalarParameterValue(TEXT("PlacementOpacity"), 0.16f);
+		BuildingMesh->SetOverlayMaterial(PlacementGhostMaterial);
+		PlacementLineMaterial = UMaterialInstanceDynamic::Create(PlacementMaterial, this);
+		PlacementLineMaterial->SetScalarParameterValue(TEXT("PlacementOpacity"), 0.85f);
+		for (int32 Index = 0; Index < 90; ++Index)
+		{
+			UStaticMeshComponent* Line = NewObject<UStaticMeshComponent>(this);
+			Line->SetupAttachment(SceneRoot);
+			Line->SetStaticMesh(PlacementLineMesh);
+			Line->SetMaterial(0, PlacementLineMaterial);
+			Line->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+			Line->SetCastShadow(false);
+			Line->RegisterComponent();
+			PlacementLines.Add(Line);
+		}
+	}
+	else if (!bPreview && bPlacementPreview)
+	{
+		if (BuildingMesh)
+		{
+			BuildingMesh->bDisallowNanite = bPlacementOriginalDisallowNanite;
+			BuildingMesh->MarkRenderStateDirty();
+		}
+		if (BuildingMesh) BuildingMesh->SetOverlayMaterial(PlacementOriginalOverlay);
+		for (UStaticMeshComponent* Line : PlacementLines) if (Line) Line->DestroyComponent();
+		PlacementLines.Reset();
+		PlacementOriginalOverlay = nullptr;
+		PlacementGhostMaterial = nullptr;
+		PlacementLineMaterial = nullptr;
+	}
+	if (BuildingMesh && bPreview && !bPlacementPreviewMeshLocationSaved)
+	{
+		PlacementPreviewMeshLocation = BuildingMesh->GetRelativeLocation();
+		bPlacementPreviewMeshLocationSaved = true;
+		BuildingMesh->SetRelativeLocation(PlacementPreviewMeshLocation + FVector(0.0f, 0.0f, 15.0f));
+	}
+	else if (BuildingMesh && !bPreview && bPlacementPreviewMeshLocationSaved)
+	{
+		BuildingMesh->SetRelativeLocation(PlacementPreviewMeshLocation);
+		bPlacementPreviewMeshLocationSaved = false;
+	}
+
+	bPlacementPreview = bPreview;
+	bIsSelectable = !bPreview;
+	SetActorEnableCollision(!bPreview);
+	SetConstructionProgress(bPreview ? 1.0f : 0.0f);
+	if (BuildingMesh)
+	{
+		BuildingMesh->SetCollisionEnabled(bPreview ? ECollisionEnabled::NoCollision : ECollisionEnabled::QueryAndPhysics);
+		BuildingMesh->SetRenderCustomDepth(bPreview);
+		BuildingMesh->SetCustomDepthStencilValue(bPreview ? (bPlacementPreviewValid ? 2 : 3) : 0);
+	}
 }
 
 void ABaseBuilding::SetPlacementPreviewValid(bool bValidPlacement)
 {
-	bPlacementPreviewValid=bValidPlacement; if(BuildingMesh&&bPlacementPreview)BuildingMesh->SetCustomDepthStencilValue(bValidPlacement?2:3);
+	bPlacementPreviewValid = bValidPlacement;
+	if (!BuildingMesh || !bPlacementPreview)
+	{
+		return;
+	}
+
+	BuildingMesh->SetCustomDepthStencilValue(bValidPlacement ? 2 : 3);
+	const FLinearColor Color = bValidPlacement ? FLinearColor(0.08f, 0.85f, 0.42f) : FLinearColor(1, 0.16f, 0.12f);
+	if (PlacementGhostMaterial) PlacementGhostMaterial->SetVectorParameterValue(TEXT("PlacementColor"), Color);
+	if (PlacementLineMaterial) PlacementLineMaterial->SetVectorParameterValue(TEXT("PlacementColor"), Color);
+
+	APlanetSurfaceManager* Surface = nullptr;
+	for (TActorIterator<APlanetSurfaceManager> It(GetWorld()); It; ++It)
+	{
+		Surface = *It;
+		break;
+	}
+	if (!Surface)
+	{
+		return;
+	}
+
+	const float CellSize = Surface->GetTileSpacing();
+	const FIntPoint Footprint = GetGridFootprint();
+	const float HalfX = Footprint.X * CellSize * 0.5f;
+	const float HalfY = Footprint.Y * CellSize * 0.5f;
+	const float Gap = Surface->GetBuildingClearanceCells() * CellSize;
+	int32 LineIndex = 0;
+	auto SetLine = [&](const FVector& Center, float Length, bool bHorizontal, float Width)
+	{
+		if (!PlacementLines.IsValidIndex(LineIndex)) return;
+		UStaticMeshComponent* Line = PlacementLines[LineIndex++];
+		Line->SetRelativeLocation(Center);
+		Line->SetRelativeScale3D(bHorizontal ? FVector(Length / 100, Width / 100, 0.01f) : FVector(Width / 100, Length / 100, 0.01f));
+	};
+	// Fine footprint, dashed clearance perimeter, and a restrained holographic grid.
+	for (int32 Edge = 0; Edge < 4; ++Edge)
+	{
+		const bool bHorizontal = Edge < 2;
+		const float Sign = Edge % 2 == 0 ? -1.0f : 1.0f;
+		SetLine(bHorizontal ? FVector(0, Sign * HalfY, 12) : FVector(Sign * HalfX, 0, 12),
+			2 * (bHorizontal ? HalfX : HalfY), bHorizontal, 1.2f);
+		const float Along = (bHorizontal ? HalfX : HalfY) + Gap;
+		const float Across = (bHorizontal ? HalfY : HalfX) + Gap;
+		for (int32 Dash = 0; Dash < 16; ++Dash)
+		{
+			const float Position = -Along + (Dash + 0.5f) * (2 * Along / 16);
+			SetLine(bHorizontal ? FVector(Position, Sign * Across, 12) : FVector(Sign * Across, Position, 12),
+				2 * Along / 16 * 0.65f, bHorizontal, 3.0f);
+		}
+	}
+	for (int32 Grid = 1; Grid <= 11; ++Grid)
+	{
+		const float Fraction = Grid / 12.0f;
+		SetLine(FVector(0, FMath::Lerp(-HalfY, HalfY, Fraction), 11), 2 * HalfX, true, 0.35f);
+		SetLine(FVector(FMath::Lerp(-HalfX, HalfX, Fraction), 0, 11), 2 * HalfY, false, 0.35f);
+	}
 }
 
 void ABaseBuilding::RefreshConstructionProgressBar()
