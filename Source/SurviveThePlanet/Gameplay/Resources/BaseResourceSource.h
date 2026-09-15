@@ -44,6 +44,10 @@ public:
 	bool RemainsVisibleAfterDiscovery() const { return bRemainsVisibleAfterDiscovery; }
 
 	void SetFogOfWarVisible(bool bVisible);
+	/** Configure a deferred generated deposit before FinishSpawning. */
+	void ConfigureGeneratedDeposit(int32 Amount) { StartingAmount = FMath::Max(0, Amount); bRemainsVisibleAfterDiscovery = true; }
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Resource Source|Generation")
+	bool bRevealedBySector = false;
 
 	/** Mesh used to calculate the visual center when a mining building replaces this deposit. */
 	UStaticMeshComponent* GetResourceMeshComponent() const { return ResourceMesh; }

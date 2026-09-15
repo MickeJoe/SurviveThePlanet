@@ -102,19 +102,36 @@ void AHexSectorGrid::EnsureDefaultTemplates()
 		Template.TemplateId = Names[Index];
 		Template.DressingRuleTags = {Index % 2 == 0 ? TEXT("RockScatter") : TEXT("RidgeScatter"), TEXT("KeepCorridorsClear")};
 		Template.bSupportsHQ = Index == 0 || Index == 3;
-		Template.BuildablePockets.Add({FVector2D(-650.0f + Index * 75.0f, 150.0f), FVector2D(900.0f, 700.0f)});
-		Template.BuildablePockets.Add({FVector2D(850.0f, -500.0f + Index * 60.0f), FVector2D(550.0f, 450.0f)});
-		Template.ResourceSlots.Add({TEXT("Any"), FVector2D(-1450.0f, -800.0f + Index * 120.0f), 300.0f});
-		Template.ResourceSlots.Add({Index % 2 == 0 ? TEXT("Mineral") : TEXT("Water"), FVector2D(1350.0f, 700.0f), 250.0f});
+		// One HQ clearing and three satellite construction bays. Terrain formations
+		// occupy the spaces between these bays rather than being scattered randomly.
+		const float Offset = (Index % 3 - 1) * 90.0f;
+		Template.BuildablePockets.Add({FVector2D::ZeroVector, FVector2D(940.0f, 790.0f)});
+		Template.BuildablePockets.Add({FVector2D(-2050.0f, 1250.0f + Offset), FVector2D(590.0f, 510.0f)});
+		Template.BuildablePockets.Add({FVector2D(2050.0f + Offset, 1250.0f), FVector2D(590.0f, 510.0f)});
+		Template.BuildablePockets.Add({FVector2D(0.0f, -2250.0f - Offset), FVector2D(620.0f, 520.0f)});
+		// Slots sit between radial corridors and outside the protected building pockets.
+		Template.ResourceSlots.Add({TEXT("Any"), FVector2D(2400.0f, 0.0f), 300.0f});
+		Template.ResourceSlots.Add({Index % 2 == 0 ? TEXT("Mineral") : TEXT("Water"), FVector2D(1200.0f, 2078.0f), 250.0f});
 		Template.LandmarkSlots.Add(FVector2D(0.0f, 1250.0f));
 		Template.SubBaseSlots.Add(FVector2D(600.0f, 250.0f));
 		for (int32 Side = 0; Side < 6; ++Side)
 		{
 			const float Angle = FMath::DegreesToRadians(30.0f + Side * 60.0f);
-			Template.ConnectionSockets.Add(FVector2D(FMath::Cos(Angle), FMath::Sin(Angle)) * ExplorationSectorRadius);
-			Template.DroneCorridors.Add({FVector2D::ZeroVector,
-				FVector2D(FMath::Cos(Angle), FMath::Sin(Angle)) * ExplorationSectorRadius, 350.0f});
+			const FVector2D Socket = FVector2D(FMath::Cos(Angle), FMath::Sin(Angle)) * ExplorationSectorRadius;
+			Template.ConnectionSockets.Add(Socket);
+			// Feed each edge connection into the closest construction clearing.  These
+			// routes deliberately do not share the sector origin.
+			int32 ClosestPocket = 0;
+			for (int32 PocketIndex = 1; PocketIndex < Template.BuildablePockets.Num(); ++PocketIndex)
+				if (FVector2D::DistSquared(Socket, Template.BuildablePockets[PocketIndex].Center)
+					< FVector2D::DistSquared(Socket, Template.BuildablePockets[ClosestPocket].Center))
+					ClosestPocket = PocketIndex;
+			Template.DroneCorridors.Add({Socket, Template.BuildablePockets[ClosestPocket].Center, 300.0f});
 		}
+		// Narrow spokes keep every bay reachable while leaving broad terrain seams.
+		for (int32 PocketIndex = 1; PocketIndex < Template.BuildablePockets.Num(); ++PocketIndex)
+			Template.DroneCorridors.Add({Template.BuildablePockets[0].Center,
+				Template.BuildablePockets[PocketIndex].Center, 240.0f});
 		SectorTemplates.Add(MoveTemp(Template));
 	}
 }

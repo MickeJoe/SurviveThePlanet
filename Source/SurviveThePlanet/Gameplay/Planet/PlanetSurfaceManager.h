@@ -6,6 +6,7 @@
 
 class UStaticMesh;
 class UStaticMeshComponent;
+class UMaterialInterface;
 class ABaseBuilding;
 
 USTRUCT(BlueprintType)
@@ -138,6 +139,10 @@ protected:
 	/** Candidate meshes. A deterministic random choice is made for every spawned chunk. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Planet Surface|Chunks")
 	TArray<TObjectPtr<UStaticMesh>> ChunkMeshes;
+
+	/** Optional biome material applied to every generated surface chunk. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Planet Surface|Chunks")
+	TObjectPtr<UMaterialInterface> ChunkMaterial;
 
 	/** XY size of an imported chunk mesh before actor/component scaling. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Planet Surface|Chunks", meta = (ClampMin = "1.0", UIMin = "1.0", Units = "cm"))

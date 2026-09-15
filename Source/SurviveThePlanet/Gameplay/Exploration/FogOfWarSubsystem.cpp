@@ -57,7 +57,7 @@ void UFogOfWarSubsystem::RefreshResources()
 	for (TActorIterator<ABaseResourceSource> It(World); It; ++It)
 	{
 		ABaseResourceSource* Resource = *It;
-		const bool bVisibleNow = IsWorldLocationVisible(Resource->GetActorLocation());
+		const bool bVisibleNow = Resource->bRevealedBySector || IsWorldLocationVisible(Resource->GetActorLocation());
 		const bool bWasDiscovered = DiscoveredResources.Contains(Resource);
 		Resource->SetFogOfWarVisible(bVisibleNow || (bWasDiscovered && Resource->RemainsVisibleAfterDiscovery()));
 		if (bVisibleNow && !bWasDiscovered)

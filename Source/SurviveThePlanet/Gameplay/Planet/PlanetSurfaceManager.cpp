@@ -516,6 +516,10 @@ void APlanetSurfaceManager::SpawnChunks()
 
 			ChunkComponent->SetupAttachment(GetRootComponent());
 			ChunkComponent->SetStaticMesh(ValidMeshes[MeshIndex]);
+			if (ChunkMaterial)
+			{
+				ChunkComponent->SetMaterial(0, ChunkMaterial);
+			}
 			ChunkComponent->SetMobility(EComponentMobility::Static);
 			ChunkComponent->SetGenerateOverlapEvents(false);
 			ChunkComponent->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
