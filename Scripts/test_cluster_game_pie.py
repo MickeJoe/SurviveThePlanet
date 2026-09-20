@@ -10,10 +10,15 @@ assert str(project).lower()==r'C:\UE5\SurviveThePlanet 5.8'.lower()
 levels=unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
 editor=unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem)
 assert 'L_PlanetClusters' in editor.get_editor_world().get_path_name()
+# This test checks every composition, independently of camera residency.
+source_population=unreal.GameplayStatics.get_all_actors_of_class(editor.get_editor_world(),unreal.SectorPopulation)[0]
+previous_residency=source_population.get_editor_property('manage_cluster_residency')
+source_population.set_editor_property('manage_cluster_residency',False)
 state={'started':time.monotonic()}
 
 def check(delta):
     if time.monotonic()-state['started']>120:
+        source_population.set_editor_property('manage_cluster_residency',previous_residency)
         unreal.unregister_slate_post_tick_callback(handle)
         (project/'Saved'/'ClusterGamePIE.json').write_text(json.dumps({'error':'PIE startup timed out'}))
         return
@@ -66,6 +71,7 @@ def check(delta):
         (project/'Saved'/'ClusterGamePIE.json').write_text(json.dumps({'error':str(error)}))
         unreal.log_error('CLUSTER_GAME_PIE_FAILED '+str(error))
     finally:
+        source_population.set_editor_property('manage_cluster_residency',previous_residency)
         unreal.unregister_slate_post_tick_callback(handle)
 
 handle=unreal.register_slate_post_tick_callback(check)

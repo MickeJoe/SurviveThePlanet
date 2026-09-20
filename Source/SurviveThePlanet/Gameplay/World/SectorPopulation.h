@@ -39,6 +39,7 @@ class SURVIVETHEPLANET_API ASectorPopulation : public AActor
 public:
 	ASectorPopulation();
 	virtual void BeginPlay() override;
+	virtual void Tick(float DeltaSeconds) override;
 	virtual void EndPlay(const EEndPlayReason::Type Reason) override;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Population") TObjectPtr<AHexSectorGrid> Grid;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Population") int32 Seed = 71237;
@@ -46,6 +47,13 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Population|Authored Clusters") TObjectPtr<UPlanetSectorTemplate> AuthoredSectorTemplate;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Population|Authored Clusters") TObjectPtr<UPlanetTerrainClusterLibrary> ClusterVariantLibrary;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Transient, Category="Population|Authored Clusters") TMap<int32, TObjectPtr<APlanetGeneratedSector>> GeneratedClusters;
+	/** Only visual dressing is streamed. Discovery, deposits and simulation stay loaded. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Population|Performance") bool bManageClusterResidency = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Population|Performance") bool bOptimizeClusterRendering = true;
+	UPROPERTY(EditAnywhere, Category="Population|Performance", meta=(ClampMin="0")) float ClusterPrefetchMargin = 2500.0f;
+	UPROPERTY(EditAnywhere, Category="Population|Performance", meta=(ClampMin="0")) float ClusterUnloadDelay = 3.0f;
+	UPROPERTY(EditAnywhere, Category="Population|Performance", meta=(ClampMin="1")) int32 ClusterLoadsPerUpdate = 2;
+	UFUNCTION(BlueprintCallable, Category="Population|Performance") void UpdateClusterResidency();
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Population") int32 DecorationsPerSector = 48;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Population", meta=(ClampMin="1")) int32 FormationCountPerSector = 4;
 	/** Fraction of a sector's ground covered by environment formation footprints. */
@@ -77,4 +85,6 @@ private:
 	UPROPERTY(Transient) TArray<TObjectPtr<ABaseResourceSource>> SpawnedDeposits;
 	UPROPERTY(Transient) TArray<TObjectPtr<UInstancedStaticMeshComponent>> InstanceGroups;
 	bool bInitialized = false;
+	double NextClusterResidencyUpdate = 0.0;
+	TMap<int32, double> ClusterLastNeededTime;
 };

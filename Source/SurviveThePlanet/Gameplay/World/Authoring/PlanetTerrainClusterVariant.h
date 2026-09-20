@@ -55,6 +55,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Generation") TObjectPtr<UPlanetSectorTemplate> SectorTemplate;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Generation") TObjectPtr<UPlanetTerrainClusterLibrary> VariantLibrary;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Generation") int32 Seed = 12345;
+	/** Population owns residency; editor previews still generate immediately. */
+	UPROPERTY(Transient) bool bDeferRuntimeGeneration = false;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Generation|Performance") bool bOptimizeRendering = true;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Transient, Category="Generation|Performance") bool bResident = false;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Generation") TArray<FName> SelectedVariantIds;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Generation") TArray<FString> Diagnostics;
 	UFUNCTION(BlueprintCallable, CallInEditor, Category="Generation") void Generate();

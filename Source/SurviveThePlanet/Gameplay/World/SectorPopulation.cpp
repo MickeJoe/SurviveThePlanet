@@ -8,10 +8,16 @@
 #include "TimerManager.h"
 #include "Gameplay/World/Authoring/PlanetSectorTemplate.h"
 #include "Gameplay/World/Authoring/PlanetTerrainClusterVariant.h"
+#include "Engine/LocalPlayer.h"
+#include "Engine/GameViewportClient.h"
+#include "GameFramework/PlayerController.h"
+#include "SceneView.h"
 
 ASectorPopulation::ASectorPopulation()
 {
-	PrimaryActorTick.bCanEverTick = false;
+	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bStartWithTickEnabled = false;
+	PrimaryActorTick.bTickEvenWhenPaused = true;
 	SetRootComponent(CreateDefaultSubobject<USceneComponent>(TEXT("Root")));
 }
 
@@ -19,6 +25,19 @@ void ASectorPopulation::BeginPlay()
 {
 	Super::BeginPlay();
 	GetWorldTimerManager().SetTimerForNextTick(this, &ASectorPopulation::InitializePopulation);
+}
+
+void ASectorPopulation::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+	// The camera moves while simulation is paused (global dilation 0.0001).
+	// A gameplay timer would freeze streaming and leave visible sectors empty.
+	const double Now = GetWorld()->GetRealTimeSeconds();
+	if (Now >= NextClusterResidencyUpdate)
+	{
+		NextClusterResidencyUpdate = Now + 0.1;
+		UpdateClusterResidency();
+	}
 }
 
 bool ASectorPopulation::GroundPosition(FVector Position, FVector& Ground) const
@@ -74,6 +93,11 @@ void ASectorPopulation::InitializePopulation()
 	bInitialized = true;
 	Grid->OnSectorStateChanged.AddDynamic(this, &ASectorPopulation::OnSectorChanged);
 	for (const auto& Sector : Grid->Sectors) if (Sector.State != ESectorState::Undiscovered) RevealSector(Sector.Id);
+	if (!GeneratedClusters.IsEmpty())
+	{
+		UpdateClusterResidency();
+		SetActorTickEnabled(true);
+	}
 	UE_LOG(LogTemp, Display, TEXT("SECTOR_POPULATION: planned %d deposits, %d legacy decorations, %d authored clusters across %d sectors."),
 		Resources.Deposits.Num(), Decorations.Num(), GeneratedClusters.Num(), Grid->Sectors.Num());
 }
@@ -131,12 +155,64 @@ bool ASectorPopulation::GenerateAuthoredClusters()
 		Generated->SectorTemplate = AuthoredSectorTemplate;
 		Generated->VariantLibrary = ClusterVariantLibrary;
 		Generated->Seed = static_cast<int32>((static_cast<uint32>(Seed) ^ (static_cast<uint32>(Sector.Id) * 7919u)) & 0x7fffffffu);
+		Generated->bDeferRuntimeGeneration = bManageClusterResidency;
+		Generated->bOptimizeRendering = bOptimizeClusterRendering;
 		// Construction generates ISMs after the authoritative slot data is set.
 		Generated->FinishSpawning(Transforms[Index]);
 		Generated->SetActorHiddenInGame(Sector.State == ESectorState::Undiscovered);
 		GeneratedClusters.Add(Sector.Id, Generated);
 	}
 	return true;
+}
+
+void ASectorPopulation::UpdateClusterResidency()
+{
+	if (!bInitialized || !Grid || GeneratedClusters.IsEmpty()) return;
+	FConvexVolume ViewFrustum;
+	FVector ViewOrigin = FVector::ZeroVector;
+	bool bHasView = false;
+	if (APlayerController* Controller = GetWorld()->GetFirstPlayerController())
+	{
+		ULocalPlayer* Player = Controller->GetLocalPlayer();
+		FSceneViewProjectionData Projection;
+		if (Player && Player->ViewportClient && Player->GetProjectionData(Player->ViewportClient->Viewport, Projection))
+		{
+			GetViewFrustumBounds(ViewFrustum, Projection.ComputeViewProjectionMatrix(), false);
+			ViewOrigin = Projection.ViewOrigin;
+			bHasView = true;
+		}
+	}
+	const double Now = GetWorld()->GetRealTimeSeconds();
+	TArray<APlanetGeneratedSector*> Pending;
+	const double Radius = Grid->ExplorationSectorRadius * Grid->GetActorScale3D().GetAbsMax() + FMath::Max(0.0f, ClusterPrefetchMargin);
+	for (const FHexSector& Sector : Grid->Sectors)
+	{
+		APlanetGeneratedSector* Generated = GeneratedClusters.FindRef(Sector.Id);
+		if (!IsValid(Generated)) continue;
+		const bool bDiscovered = Sector.State != ESectorState::Undiscovered;
+		// Without a view (startup/headless) retain discovered sectors rather than hide them.
+		const bool bNeeded = !bManageClusterResidency || (bDiscovered && (!bHasView
+			|| ViewFrustum.IntersectSphere(Generated->GetActorLocation(), Radius)));
+		Generated->SetActorHiddenInGame(!bDiscovered);
+		if (bNeeded)
+		{
+			ClusterLastNeededTime.Add(Sector.Id, Now);
+			if (!Generated->bResident) Pending.Add(Generated);
+		}
+		else if (Generated->bResident && (!bDiscovered
+			|| Now - ClusterLastNeededTime.FindRef(Sector.Id) > FMath::Max(0.0f, ClusterUnloadDelay)))
+		{
+			Generated->ClearGenerated();
+		}
+	}
+	Pending.Sort([&ViewOrigin](const APlanetGeneratedSector& A, const APlanetGeneratedSector& B)
+	{
+		return FVector::DistSquared(A.GetActorLocation(), ViewOrigin) < FVector::DistSquared(B.GetActorLocation(), ViewOrigin);
+	});
+	for (int32 Index = 0; Index < FMath::Min(Pending.Num(), FMath::Max(1, ClusterLoadsPerUpdate)); ++Index)
+	{
+		Pending[Index]->Generate();
+	}
 }
 
 bool ASectorPopulation::GenerateLegacyDecorations()
@@ -379,6 +455,7 @@ void ASectorPopulation::RevealSector(int32 SectorId)
 
 void ASectorPopulation::EndPlay(const EEndPlayReason::Type Reason)
 {
+	SetActorTickEnabled(false);
 	if (Grid) Grid->OnSectorStateChanged.RemoveDynamic(this, &ASectorPopulation::OnSectorChanged);
 	for (ABaseResourceSource* Deposit : SpawnedDeposits) if (IsValid(Deposit)) Deposit->Destroy();
 	for (auto& Pair : GeneratedClusters) if (IsValid(Pair.Value)) Pair.Value->Destroy();
