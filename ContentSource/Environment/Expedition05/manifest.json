@@ -1,0 +1,10 @@
+[
+  {
+    "mesh": "SM_Pebbles05_Scatter",
+    "triangles": 480
+  },
+  {
+    "mesh": "SM_Pebbles05_Shards",
+    "triangles": 280
+  }
+]

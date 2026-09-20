@@ -1,0 +1,6 @@
+Explorer Drone popup icon
+Generated with the built-in image_gen tool.
+Source reference: Codex Image Sep 9, 2026, 07_48_43 AM.png (user supplied).
+Prompt: Recreate ONLY the compact orange, white and charcoal explorer drone icon in the bottom popup of this reference screenshot, isolated, centered on transparent background. Square game inventory icon, overhead three-quarter view, four ducted rotors, dark front sensor. No UI, no text, no frame, no scenery. Match the drone in the reference popup as closely as possible, crisp detailed 3D render. The drone fills most of the square.
+Source image: ContentSource/UI/ExplorerDroneIcon.png
+Imported asset: /Game/UI/Icons/T_ExplorerDroneIcon

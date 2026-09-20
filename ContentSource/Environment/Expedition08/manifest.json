@@ -1,0 +1,68 @@
+[
+  {
+    "name": "SM_Cliff08_Corner",
+    "category": "cliff",
+    "polygons": 51936,
+    "note": "L-shaped corner assembled from Rock04 modules"
+  },
+  {
+    "name": "SM_Cliff08_End",
+    "category": "cliff",
+    "polygons": 42400,
+    "note": "Tapered end cap"
+  },
+  {
+    "name": "SM_Cliff08_Arch",
+    "category": "cliff",
+    "polygons": 182080,
+    "note": "Asymmetric overlapping slabs, uneven piers and rubble; modular Rock04 source geometry"
+  },
+  {
+    "name": "SM_Organic08_DeadTree",
+    "category": "organic",
+    "polygons": 216,
+    "note": ""
+  },
+  {
+    "name": "SM_Organic08_DeadLog",
+    "category": "organic",
+    "polygons": 52,
+    "note": ""
+  },
+  {
+    "name": "SM_Organic08_Roots",
+    "category": "organic",
+    "polygons": 182,
+    "note": ""
+  },
+  {
+    "name": "SM_Organic08_RibBones",
+    "category": "organic",
+    "polygons": 678,
+    "note": ""
+  },
+  {
+    "name": "SM_Atmos08_Vent",
+    "category": "atmosphere",
+    "polygons": 58448,
+    "note": "Static vent with upward-facing rim; no smoke VFX"
+  },
+  {
+    "name": "SM_Atmos08_CraterRim",
+    "category": "atmosphere",
+    "polygons": 80,
+    "note": "Upward-facing rim; ground is not excavated"
+  },
+  {
+    "name": "SM_Atmos08_WreckFrame",
+    "category": "atmosphere",
+    "polygons": 464,
+    "note": "Damaged cylindrical machinery frame"
+  },
+  {
+    "name": "SM_Mineral08_CrystalCluster",
+    "category": "atmosphere",
+    "polygons": 42,
+    "note": "Decorative crystals; no resource gameplay assigned"
+  }
+]

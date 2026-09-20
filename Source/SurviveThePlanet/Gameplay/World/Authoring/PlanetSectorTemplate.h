@@ -1,0 +1,43 @@
+#pragma once
+
+#include "CoreMinimal.h"
+#include "Engine/DataAsset.h"
+#include "PlanetSectorTemplate.generated.h"
+
+class UPlanetTerrainClusterShape;
+
+USTRUCT(BlueprintType)
+struct SURVIVETHEPLANET_API FPlanetSectorClusterSlot
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sector Template")
+	TObjectPtr<UPlanetTerrainClusterShape> Shape = nullptr;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sector Template")
+	FTransform Transform = FTransform::Identity;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sector Template")
+	FName SlotId = NAME_None;
+};
+
+/** Baked, runtime-independent description of an authored sector layout. */
+UCLASS(BlueprintType)
+class SURVIVETHEPLANET_API UPlanetSectorTemplate : public UDataAsset
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sector Template")
+	FName TemplateId = NAME_None;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sector Template", meta = (ClampMin = "1.0"))
+	FVector2D SectorSize = FVector2D(6928.203, 8000.0);
+
+	/** Center-to-corner radius matching AHexSectorGrid::ExplorationSectorRadius. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sector Template", meta = (ClampMin = "100.0", Units = "cm"))
+	float SectorRadius = 4000.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sector Template")
+	TArray<FPlanetSectorClusterSlot> ClusterSlots;
+};

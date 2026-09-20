@@ -9,6 +9,9 @@ class ABaseResourceSource;
 class UInstancedStaticMeshComponent;
 class UStaticMesh;
 class UMaterialInterface;
+class UPlanetSectorTemplate;
+class UPlanetTerrainClusterLibrary;
+class APlanetGeneratedSector;
 
 USTRUCT(BlueprintType)
 struct FSectorMeshMaterialSet
@@ -39,6 +42,10 @@ public:
 	virtual void EndPlay(const EEndPlayReason::Type Reason) override;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Population") TObjectPtr<AHexSectorGrid> Grid;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Population") int32 Seed = 71237;
+	/** Assign both to replace legacy dressing with authored cluster compositions. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Population|Authored Clusters") TObjectPtr<UPlanetSectorTemplate> AuthoredSectorTemplate;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Population|Authored Clusters") TObjectPtr<UPlanetTerrainClusterLibrary> ClusterVariantLibrary;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Transient, Category="Population|Authored Clusters") TMap<int32, TObjectPtr<APlanetGeneratedSector>> GeneratedClusters;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Population") int32 DecorationsPerSector = 48;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Population", meta=(ClampMin="1")) int32 FormationCountPerSector = 4;
 	/** Fraction of a sector's ground covered by environment formation footprints. */
@@ -64,6 +71,8 @@ public:
 private:
 	UFUNCTION() void OnSectorChanged(int32 SectorId, ESectorState State);
 	bool GroundPosition(FVector Position, FVector& Ground) const;
+	bool GenerateAuthoredClusters();
+	bool GenerateLegacyDecorations();
 	UPROPERTY(Transient) TSet<int32> LoadedSectors;
 	UPROPERTY(Transient) TArray<TObjectPtr<ABaseResourceSource>> SpawnedDeposits;
 	UPROPERTY(Transient) TArray<TObjectPtr<UInstancedStaticMeshComponent>> InstanceGroups;

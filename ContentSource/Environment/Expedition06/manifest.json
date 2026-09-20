@@ -1,0 +1,12 @@
+[
+  {
+    "name": "SM_Alien06_LowShrub",
+    "polygons": 351,
+    "wind": "vertex R root 0 tip 1"
+  },
+  {
+    "name": "SM_Alien06_DiscFungus",
+    "polygons": 552,
+    "wind": "vertex R root 0 tip 1"
+  }
+]

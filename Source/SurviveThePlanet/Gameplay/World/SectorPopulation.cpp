@@ -6,6 +6,8 @@
 #include "Engine/World.h"
 #include "EngineUtils.h"
 #include "TimerManager.h"
+#include "Gameplay/World/Authoring/PlanetSectorTemplate.h"
+#include "Gameplay/World/Authoring/PlanetTerrainClusterVariant.h"
 
 ASectorPopulation::ASectorPopulation()
 {
@@ -60,13 +62,92 @@ void ASectorPopulation::InitializePopulation()
 		Deposit.Location = Ground;
 	}
 	if (!Diagnostics.IsEmpty()) { Resources.bSuccess = false; UE_LOG(LogTemp, Error, TEXT("SECTOR_POPULATION: %s"), *FString::Join(Diagnostics,TEXT("; "))); return; }
+	if (AuthoredSectorTemplate || ClusterVariantLibrary)
+	{
+		if (!GenerateAuthoredClusters())
+		{
+			UE_LOG(LogTemp, Error, TEXT("SECTOR_POPULATION: %s"), *FString::Join(Diagnostics, TEXT("; ")));
+			return;
+		}
+	}
+	else if (!GenerateLegacyDecorations()) return;
+	bInitialized = true;
+	Grid->OnSectorStateChanged.AddDynamic(this, &ASectorPopulation::OnSectorChanged);
+	for (const auto& Sector : Grid->Sectors) if (Sector.State != ESectorState::Undiscovered) RevealSector(Sector.Id);
+	UE_LOG(LogTemp, Display, TEXT("SECTOR_POPULATION: planned %d deposits, %d legacy decorations, %d authored clusters across %d sectors."),
+		Resources.Deposits.Num(), Decorations.Num(), GeneratedClusters.Num(), Grid->Sectors.Num());
+}
+
+bool ASectorPopulation::GenerateAuthoredClusters()
+{
+	if (!AuthoredSectorTemplate || !ClusterVariantLibrary
+		|| !FMath::IsNearlyEqual(AuthoredSectorTemplate->SectorRadius, Grid->ExplorationSectorRadius))
+	{
+		Diagnostics.Add(TEXT("Authored clusters require a template and library, with a radius matching the sector grid."));
+		return false;
+	}
+	for (const FPlanetSectorClusterSlot& Slot : AuthoredSectorTemplate->ClusterSlots)
+	{
+		if (ClusterVariantLibrary->FindCompatible(Slot.Shape).IsEmpty())
+		{
+			Diagnostics.Add(FString::Printf(TEXT("No compatible cluster for slot %s."), *Slot.SlotId.ToString()));
+			return false;
+		}
+	}
+	APlanetSurfaceManager* Surface = nullptr;
+	for (TActorIterator<APlanetSurfaceManager> It(GetWorld()); It; ++It) { Surface = *It; break; }
+	if (!Surface)
+	{
+		Diagnostics.Add(TEXT("No planet surface for authored clusters."));
+		return false;
+	}
+	// Resolve every sector's floor before spawning anything. Trace the surface
+	// actor itself so the HQ or a resource actor cannot obscure the ground.
+	TArray<FTransform> Transforms;
+	for (const FHexSector& Sector : Grid->Sectors)
+	{
+		FHitResult Hit;
+		FCollisionQueryParams Params(SCENE_QUERY_STAT(AuthoredClusterGround), true);
+		if (!Surface->ActorLineTraceSingle(Hit, Sector.WorldCenter + FVector(0,0,10000),
+			Sector.WorldCenter - FVector(0,0,20000), ECC_Visibility, Params))
+		{
+			Diagnostics.Add(FString::Printf(TEXT("No ground under sector %d."), Sector.Id));
+			return false;
+		}
+		Transforms.Add(FTransform(Grid->GetActorQuat(), Hit.ImpactPoint, Grid->GetActorScale3D()));
+	}
+	for (int32 Index = 0; Index < Grid->Sectors.Num(); ++Index)
+	{
+		const FHexSector& Sector = Grid->Sectors[Index];
+		APlanetGeneratedSector* Generated = GetWorld()->SpawnActorDeferred<APlanetGeneratedSector>(
+			APlanetGeneratedSector::StaticClass(), Transforms[Index], this, nullptr, ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+		if (!Generated)
+		{
+			for (auto& Pair : GeneratedClusters) if (IsValid(Pair.Value)) Pair.Value->Destroy();
+			GeneratedClusters.Reset();
+			Diagnostics.Add(TEXT("Failed to spawn an authored sector."));
+			return false;
+		}
+		Generated->SectorTemplate = AuthoredSectorTemplate;
+		Generated->VariantLibrary = ClusterVariantLibrary;
+		Generated->Seed = static_cast<int32>((static_cast<uint32>(Seed) ^ (static_cast<uint32>(Sector.Id) * 7919u)) & 0x7fffffffu);
+		// Construction generates ISMs after the authoritative slot data is set.
+		Generated->FinishSpawning(Transforms[Index]);
+		Generated->SetActorHiddenInGame(Sector.State == ESectorState::Undiscovered);
+		GeneratedClusters.Add(Sector.Id, Generated);
+	}
+	return true;
+}
+
+bool ASectorPopulation::GenerateLegacyDecorations()
+{
 	const int32 LandmarkEnd = FMath::Clamp(LandmarkMeshCount, 1, DecorationMeshes.Num());
 	const int32 RockEnd = FMath::Clamp(LandmarkEnd + RockMeshCount, LandmarkEnd, DecorationMeshes.Num());
 	if (RockEnd >= DecorationMeshes.Num())
 	{
 		Diagnostics.Add(TEXT("DecorationMeshes must contain landmarks, rocks and at least one plant mesh."));
 		Resources.bSuccess = false;
-		return;
+		return false;
 	}
 	for (const FHexSector& Sector : Grid->Sectors)
 	{
@@ -249,10 +330,7 @@ void ASectorPopulation::InitializePopulation()
 			Diagnostics.Add(FString::Printf(TEXT("Sector %d reached %.1f%% of %.1f%% target terrain coverage."),
 				Sector.Id, ActualCoverage * 100.0f, TargetCoverage * 100.0f));
 	}
-	bInitialized = true;
-	Grid->OnSectorStateChanged.AddDynamic(this, &ASectorPopulation::OnSectorChanged);
-	for (const auto& Sector : Grid->Sectors) if (Sector.State != ESectorState::Undiscovered) RevealSector(Sector.Id);
-	UE_LOG(LogTemp, Display, TEXT("SECTOR_POPULATION: planned %d deposits, %d decorations across %d sectors."), Resources.Deposits.Num(), Decorations.Num(), Grid->Sectors.Num());
+	return true;
 }
 
 void ASectorPopulation::OnSectorChanged(int32 SectorId, ESectorState State)
@@ -274,6 +352,11 @@ void ASectorPopulation::RevealSector(int32 SectorId)
 		Actor->bRevealedBySector = true;
 		Actor->FinishSpawning(FTransform(Deposit.Location));
 		SpawnedDeposits.Add(Actor);
+	}
+	if (APlanetGeneratedSector* Generated = GeneratedClusters.FindRef(SectorId))
+	{
+		Generated->SetActorHiddenInGame(false);
+		return;
 	}
 	for (int32 MeshIndex = 0; MeshIndex < DecorationMeshes.Num(); ++MeshIndex)
 	{
@@ -298,5 +381,7 @@ void ASectorPopulation::EndPlay(const EEndPlayReason::Type Reason)
 {
 	if (Grid) Grid->OnSectorStateChanged.RemoveDynamic(this, &ASectorPopulation::OnSectorChanged);
 	for (ABaseResourceSource* Deposit : SpawnedDeposits) if (IsValid(Deposit)) Deposit->Destroy();
+	for (auto& Pair : GeneratedClusters) if (IsValid(Pair.Value)) Pair.Value->Destroy();
+	GeneratedClusters.Reset();
 	Super::EndPlay(Reason);
 }

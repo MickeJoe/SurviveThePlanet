@@ -1,0 +1,7 @@
+# Expedition05 – Ground transitions
+Saved in /Game/PlanetLevel_RockPreview on 2026-09-12. Backup: /Game/Environment/Expedition05/PlanetLevel_Before05.
+Two reusable Blender pebble meshes: Scatter (480 triangles) and Shards (280 triangles), instanced as 68 decorative actors around the two Expedition04 formations. No collision or grid blockers added.
+M_Terrain_05 retains the Expedition03 ground recipe and adds local irregular earth/gravel masks and sparse cracked-soil detail around (-1550,-1650) and (700,-2350). Masks are currently defined in the material recipe; they are not movable decal actors. Preview-only terrain mesh SM_TerrainFlat_05 carries the material, with 80 surface components retained.
+UE visual checks: Saved/Expedition05/Transition_A.png and Transition_B.png. Build and review reports saved alongside them. Both detail captures inspected. No new full drone movement test was performed in this decorative-only stage.
+The script unregisters its review callback and disables keep-alive when complete; it no longer leaves the executing-Python notification indefinitely. Editor is reopened normally without -ExecutePythonScript.
+Art remains a preview, not reference-image final quality. Existing large rock shapes and plants are unchanged in this stage. Future work: less uniformly faceted rock surfaces, refine pebble distribution and colour, and coordinate vegetation with ground patches.

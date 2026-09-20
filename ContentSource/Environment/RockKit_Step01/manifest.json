@@ -1,0 +1,35 @@
+[
+  {
+    "name": "SM_Rock_Large_01",
+    "dimensions_m": [
+      3.5908188819885254,
+      2.4069151878356934,
+      3.9731123447418213
+    ],
+    "triangles": 6086,
+    "pivot": "ground origin",
+    "fbx": "SM_Rock_Large_01.fbx"
+  },
+  {
+    "name": "SM_Rock_Ridge_01",
+    "dimensions_m": [
+      4.64746618270874,
+      2.006334066390991,
+      2.2214033603668213
+    ],
+    "triangles": 6700,
+    "pivot": "ground origin",
+    "fbx": "SM_Rock_Ridge_01.fbx"
+  },
+  {
+    "name": "SM_Rock_Medium_01",
+    "dimensions_m": [
+      3.139387607574463,
+      1.9513144493103027,
+      1.40024995803833
+    ],
+    "triangles": 2762,
+    "pivot": "ground origin",
+    "fbx": "SM_Rock_Medium_01.fbx"
+  }
+]

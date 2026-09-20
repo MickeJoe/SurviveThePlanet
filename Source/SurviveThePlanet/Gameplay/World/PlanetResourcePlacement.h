@@ -82,15 +82,16 @@ UCLASS(ClassGroup=(World), meta=(BlueprintSpawnableComponent))
 class SURVIVETHEPLANET_API UPlanetResourcePlacementComponent : public UActorComponent
 {
 	GENERATED_BODY()
+
 public:
 	UPlanetResourcePlacementComponent();
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) TObjectPtr<UPlanetResourceDistribution> Distribution;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) int32 PlacementSeed = 42;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite) bool bShowDebug = false;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite) FName DebugRuleId;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly) FPlanetResourcePlacementResult Result;
+
 	UFUNCTION(BlueprintCallable, CallInEditor) void Generate();
+
 	UFUNCTION(BlueprintCallable, Category="Planet|Resources")
 	static FPlanetResourcePlacementResult PlaceResources(const AHexSectorGrid* Grid, const UPlanetResourceDistribution* Input, int32 Seed);
-	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 };

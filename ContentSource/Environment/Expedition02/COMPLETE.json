@@ -1,0 +1,123 @@
+[
+  {
+    "name": "SM_Cliff_Crown_02",
+    "kind": "rock",
+    "triangles": 11170,
+    "dimensions_m": [
+      3.6360983848571777,
+      2.2842769622802734,
+      3.953578472137451
+    ],
+    "baked": true
+  },
+  {
+    "name": "SM_Cliff_Ridge_02",
+    "kind": "rock",
+    "triangles": 11092,
+    "dimensions_m": [
+      5.419707775115967,
+      2.97265625,
+      3.1724014282226562
+    ],
+    "baked": true
+  },
+  {
+    "name": "SM_Cliff_Wall_02",
+    "kind": "rock",
+    "triangles": 10832,
+    "dimensions_m": [
+      5.578433990478516,
+      2.526196241378784,
+      4.080613136291504
+    ],
+    "baked": true
+  },
+  {
+    "name": "SM_Boulder_02",
+    "kind": "rock",
+    "triangles": 9568,
+    "dimensions_m": [
+      2.744633674621582,
+      2.149583101272583,
+      1.8678202629089355
+    ],
+    "baked": true
+  },
+  {
+    "name": "SM_Scree_02",
+    "kind": "rock",
+    "triangles": 14846,
+    "dimensions_m": [
+      3.6994900703430176,
+      2.212968111038208,
+      0.4325726330280304
+    ],
+    "baked": true
+  },
+  {
+    "name": "SM_Alien_Coral_02",
+    "kind": "plant",
+    "triangles": 3080,
+    "dimensions_m": [
+      1.4784343242645264,
+      1.3902535438537598,
+      1.5546061992645264
+    ],
+    "baked": false
+  },
+  {
+    "name": "SM_Alien_Rosette_02",
+    "kind": "plant",
+    "triangles": 1976,
+    "dimensions_m": [
+      1.580047369003296,
+      1.7518718242645264,
+      0.7506794333457947
+    ],
+    "baked": false
+  },
+  {
+    "name": "SM_Alien_Trumpets_02",
+    "kind": "plant",
+    "triangles": 1996,
+    "dimensions_m": [
+      1.3111727237701416,
+      1.3111727237701416,
+      1.532721996307373
+    ],
+    "baked": false
+  },
+  {
+    "name": "SM_Alien_Bloom_Base_02",
+    "kind": "plant",
+    "triangles": 1102,
+    "dimensions_m": [
+      0.924170732498169,
+      0.9475297331809998,
+      0.47999998927116394
+    ],
+    "baked": false
+  },
+  {
+    "name": "SM_Alien_Bloom_Petal_02",
+    "kind": "petal",
+    "triangles": 152,
+    "dimensions_m": [
+      0.26660898327827454,
+      0.3799999952316284,
+      0.8500000238418579
+    ],
+    "baked": false
+  },
+  {
+    "name": "SM_Ground_Sample_02",
+    "kind": "ground",
+    "triangles": 2,
+    "dimensions_m": [
+      4.0,
+      4.0,
+      0.0
+    ],
+    "baked": true
+  }
+]
