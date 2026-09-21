@@ -40,7 +40,7 @@ public:
 	void GeneratePreview();
 	UFUNCTION(BlueprintCallable, CallInEditor, Category="Sector Template|Preview")
 	void ClearPreview();
-	UFUNCTION(CallInEditor, Category = "Sector Template|Authoring")
+	UFUNCTION(BlueprintCallable, CallInEditor, Category = "Sector Template|Authoring")
 	void BakeSectorTemplate();
 
 	UFUNCTION(CallInEditor, Category = "Sector Template|Authoring")

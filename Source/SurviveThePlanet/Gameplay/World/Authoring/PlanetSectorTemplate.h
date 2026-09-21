@@ -31,6 +31,14 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sector Template")
 	FName TemplateId = NAME_None;
 
+	/** Explicit opt-in. Ordinary sectors may use any template, including these. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sector Template|Generation")
+	bool bCanBeStartingSector = false;
+
+	/** Stable selection independent of catalog order; never substitutes an ineligible start. */
+	static UPlanetSectorTemplate* SelectForSector(const TArray<UPlanetSectorTemplate*>& Templates,
+		int32 WorldSeed, int32 SectorId, bool bStartingSector);
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sector Template", meta = (ClampMin = "1.0"))
 	FVector2D SectorSize = FVector2D(6928.203, 8000.0);
 

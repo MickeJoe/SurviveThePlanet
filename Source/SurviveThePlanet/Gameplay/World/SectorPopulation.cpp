@@ -81,7 +81,7 @@ void ASectorPopulation::InitializePopulation()
 		Deposit.Location = Ground;
 	}
 	if (!Diagnostics.IsEmpty()) { Resources.bSuccess = false; UE_LOG(LogTemp, Error, TEXT("SECTOR_POPULATION: %s"), *FString::Join(Diagnostics,TEXT("; "))); return; }
-	if (AuthoredSectorTemplate || ClusterVariantLibrary)
+	if (AuthoredSectorTemplate || !AuthoredSectorTemplates.IsEmpty() || ClusterVariantLibrary)
 	{
 		if (!GenerateAuthoredClusters())
 		{
@@ -102,20 +102,53 @@ void ASectorPopulation::InitializePopulation()
 		Resources.Deposits.Num(), Decorations.Num(), GeneratedClusters.Num(), Grid->Sectors.Num());
 }
 
+TArray<UPlanetSectorTemplate*> ASectorPopulation::GetAuthoredTemplateCatalog() const
+{
+	TArray<UPlanetSectorTemplate*> Result;
+	if (AuthoredSectorTemplates.IsEmpty())
+	{
+		if (AuthoredSectorTemplate) Result.Add(AuthoredSectorTemplate);
+	}
+	else
+	{
+		for (UPlanetSectorTemplate* Template : AuthoredSectorTemplates) if (Template) Result.AddUnique(Template);
+	}
+	return Result;
+}
+
+UPlanetSectorTemplate* ASectorPopulation::SelectTemplateForSector(int32 SectorId) const
+{
+	if (!Grid || !Grid->Sectors.ContainsByPredicate([SectorId](const FHexSector& Sector) { return Sector.Id == SectorId; })) return nullptr;
+	return UPlanetSectorTemplate::SelectForSector(GetAuthoredTemplateCatalog(), Seed, SectorId, SectorId == Grid->StartingSectorId);
+}
+
 bool ASectorPopulation::GenerateAuthoredClusters()
 {
-	if (!AuthoredSectorTemplate || !ClusterVariantLibrary
-		|| !FMath::IsNearlyEqual(AuthoredSectorTemplate->SectorRadius, Grid->ExplorationSectorRadius))
+	const TArray<UPlanetSectorTemplate*> Templates = GetAuthoredTemplateCatalog();
+	if (Templates.IsEmpty() || !ClusterVariantLibrary)
 	{
-		Diagnostics.Add(TEXT("Authored clusters require a template and library, with a radius matching the sector grid."));
+		Diagnostics.Add(TEXT("Authored clusters require a template catalog and cluster variant library."));
 		return false;
 	}
-	for (const FPlanetSectorClusterSlot& Slot : AuthoredSectorTemplate->ClusterSlots)
+	if (!SelectTemplateForSector(Grid->StartingSectorId))
 	{
-		if (ClusterVariantLibrary->FindCompatible(Slot.Shape).IsEmpty())
+		Diagnostics.Add(TEXT("No eligible starting-sector template. Enable Can Be Starting Sector on an intended template; no unsafe fallback was used."));
+		return false;
+	}
+	for (const UPlanetSectorTemplate* Template : Templates)
+	{
+		if (!FMath::IsNearlyEqual(Template->SectorRadius, Grid->ExplorationSectorRadius) || Template->ClusterSlots.IsEmpty())
 		{
-			Diagnostics.Add(FString::Printf(TEXT("No compatible cluster for slot %s."), *Slot.SlotId.ToString()));
+			Diagnostics.Add(FString::Printf(TEXT("Template %s is empty or has a radius different from the grid."), *Template->GetName()));
 			return false;
+		}
+		for (const FPlanetSectorClusterSlot& Slot : Template->ClusterSlots)
+		{
+			if (ClusterVariantLibrary->FindCompatible(Slot.Shape).IsEmpty())
+			{
+				Diagnostics.Add(FString::Printf(TEXT("Template %s has no compatible cluster for slot %s."), *Template->GetName(), *Slot.SlotId.ToString()));
+				return false;
+			}
 		}
 	}
 	APlanetSurfaceManager* Surface = nullptr;
@@ -152,7 +185,7 @@ bool ASectorPopulation::GenerateAuthoredClusters()
 			Diagnostics.Add(TEXT("Failed to spawn an authored sector."));
 			return false;
 		}
-		Generated->SectorTemplate = AuthoredSectorTemplate;
+		Generated->SectorTemplate = SelectTemplateForSector(Sector.Id);
 		Generated->VariantLibrary = ClusterVariantLibrary;
 		Generated->Seed = static_cast<int32>((static_cast<uint32>(Seed) ^ (static_cast<uint32>(Sector.Id) * 7919u)) & 0x7fffffffu);
 		Generated->bDeferRuntimeGeneration = bManageClusterResidency;

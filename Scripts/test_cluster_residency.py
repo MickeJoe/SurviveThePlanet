@@ -77,7 +77,7 @@ def tick(delta):
             state['visit_ids'] = sorted(state['actors'])
             state['visited'] = 0
             state['expected'] = {r['sector_id']: r['transform_hash'] for r in
-                                 json.loads((project/'Saved'/'ClusterGamePIE.json').read_text())['sectors']}
+                                 json.loads((project/'Saved'/'SectorCatalogPIE.json').read_text())['sectors']}
             unreal.SystemLibrary.execute_console_command(world, 'csvprofile start')
             state['pawn'].get_component_by_class(unreal.SpringArmComponent).set_editor_property('target_arm_length', 6000)
             target_location = state['actors'][state['visit_ids'][0]].get_actor_location()

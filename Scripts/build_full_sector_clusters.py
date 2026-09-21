@@ -148,80 +148,84 @@ def compose(shape,variant_index,shape_index):
         if i%2==0: add('shards',t,.12,rng.uniform(150,240),rng.uniform(0,360))
     return elements
 
-variants=[]
-report={'shapes':{},'meshes':mesh_paths}
-for shape_index,slot in enumerate(slots,1):
-    shape=slot.get_editor_property('shape')
-    folder=ROOT+f'/Shape{shape_index:02}'
-    assets.make_directory(folder)
-    level=folder+f'/L_ClusterVariants_{shape_index:02}_Dense'
-    # Never discard a previously hand-edited authoring map on a recipe rerun.
-    if assets.does_asset_exist(level):
-        raise RuntimeError('Authoring map already exists; edit/bake it rather than rebuilding: '+level)
-    assert levels.new_level(level)
-    lighting()
-    counts=[]
-    for variant_index,label in enumerate(['A_Rock','B_Mixed','C_Vegetation']):
-        variant=make_asset(folder,f'DA_Cluster{shape_index:02}_{label}_Dense',unreal.PlanetTerrainClusterVariant)
-        variant.set_editor_property('variant_id',f'Cluster{shape_index:02}_{label}_Dense')
-        root=actors.spawn_actor_from_class(unreal.PlanetTerrainClusterAuthoringActor,unreal.Vector((variant_index-1)*5000,0,0))
-        root.set_actor_label(f'Author_{shape_index:02}_{label}_Dense')
-        root.set_editor_property('shape',shape)
-        root.set_editor_property('slot_id',label)
-        root.set_editor_property('target_cluster_variant',variant)
-        members=[]
-        for index,(key,transform) in enumerate(compose(shape,variant_index,shape_index)):
-            p=transform.translation+root.get_actor_location()
-            actor=actors.spawn_actor_from_class(unreal.StaticMeshActor,p,transform.rotation.rotator())
-            actor.set_actor_label(f'{label}_{index:03}_{key}')
-            actor.static_mesh_component.set_static_mesh(meshes[key])
-            actor.static_mesh_component.set_collision_enabled(unreal.CollisionEnabled.NO_COLLISION)
-            actor.set_actor_scale3d(transform.scale3d)
-            actor.attach_to_actor(root,'',unreal.AttachmentRule.KEEP_WORLD,unreal.AttachmentRule.KEEP_WORLD,unreal.AttachmentRule.KEEP_WORLD,False)
-            members.append(actor)
-        root.set_editor_property('mesh_actors',members)
-        root.bake_cluster_variant()
-        assert len(variant.get_editor_property('elements'))==len(members)>80
-        assets.save_loaded_asset(variant)
-        variants.append(variant)
-        counts.append(len(members))
-    unreal.EditorLevelLibrary.set_level_viewport_camera_info(unreal.Vector(0,-4400,7200),unreal.Rotator(pitch=-58,yaw=90,roll=0))
+def main():
+    variants=[]
+    report={'shapes':{},'meshes':mesh_paths}
+    for shape_index,slot in enumerate(slots,1):
+        shape=slot.get_editor_property('shape')
+        folder=ROOT+f'/Shape{shape_index:02}'
+        assets.make_directory(folder)
+        level=folder+f'/L_ClusterVariants_{shape_index:02}_Dense'
+        # Never discard a previously hand-edited authoring map on a recipe rerun.
+        if assets.does_asset_exist(level):
+            raise RuntimeError('Authoring map already exists; edit/bake it rather than rebuilding: '+level)
+        assert levels.new_level(level)
+        lighting()
+        counts=[]
+        for variant_index,label in enumerate(['A_Rock','B_Mixed','C_Vegetation']):
+            variant=make_asset(folder,f'DA_Cluster{shape_index:02}_{label}_Dense',unreal.PlanetTerrainClusterVariant)
+            variant.set_editor_property('variant_id',f'Cluster{shape_index:02}_{label}_Dense')
+            root=actors.spawn_actor_from_class(unreal.PlanetTerrainClusterAuthoringActor,unreal.Vector((variant_index-1)*5000,0,0))
+            root.set_actor_label(f'Author_{shape_index:02}_{label}_Dense')
+            root.set_editor_property('shape',shape)
+            root.set_editor_property('slot_id',label)
+            root.set_editor_property('target_cluster_variant',variant)
+            members=[]
+            for index,(key,transform) in enumerate(compose(shape,variant_index,shape_index)):
+                p=transform.translation+root.get_actor_location()
+                actor=actors.spawn_actor_from_class(unreal.StaticMeshActor,p,transform.rotation.rotator())
+                actor.set_actor_label(f'{label}_{index:03}_{key}')
+                actor.static_mesh_component.set_static_mesh(meshes[key])
+                actor.static_mesh_component.set_collision_enabled(unreal.CollisionEnabled.NO_COLLISION)
+                actor.set_actor_scale3d(transform.scale3d)
+                actor.attach_to_actor(root,'',unreal.AttachmentRule.KEEP_WORLD,unreal.AttachmentRule.KEEP_WORLD,unreal.AttachmentRule.KEEP_WORLD,False)
+                members.append(actor)
+            root.set_editor_property('mesh_actors',members)
+            root.bake_cluster_variant()
+            assert len(variant.get_editor_property('elements'))==len(members)>80
+            assets.save_loaded_asset(variant)
+            variants.append(variant)
+            counts.append(len(members))
+        unreal.EditorLevelLibrary.set_level_viewport_camera_info(unreal.Vector(0,-4400,7200),unreal.Rotator(pitch=-58,yaw=90,roll=0))
+        assert levels.save_current_level()
+        report['shapes'][str(shape_index)]=counts
+        unreal.log(f'DENSE_SHAPE_COMPLETE {shape_index}: {counts}')
+
+    library=make_asset(ROOT,'DA_ClusterVariantLibrary_FullSector',unreal.PlanetTerrainClusterLibrary)
+    library.set_editor_property('variants',variants)
+    assets.save_loaded_asset(library)
+    assert levels.load_level(SECTOR)
+    sector=next(a for a in actors.get_all_level_actors() if isinstance(a,unreal.PlanetSectorTemplateActor))
+    authored=[a.get_path_name() for a in actors.get_all_level_actors() if isinstance(a,unreal.PlanetTerrainClusterShapeActor)]
+    sector.set_editor_property('variant_library',library)
+    sector.set_editor_property('preview_seed',4)
+
+    def snapshot():
+        generated=sector.get_editor_property('generated_preview')
+        values=[]
+        for component in generated.get_components_by_class(unreal.InstancedStaticMeshComponent):
+            for i in range(component.get_instance_count()):
+                t=component.get_instance_transform(i,False)
+                p,q,s=t.translation,t.rotation,t.scale3d
+                values.append((component.static_mesh.get_path_name(),(p.x,p.y,p.z,q.x,q.y,q.z,q.w,s.x,s.y,s.z)))
+        return [str(v) for v in generated.get_editor_property('selected_variant_ids')],values
+
+    sector.generate_preview()
+    first=snapshot()
+    assert len(first[0])==6 and 'None' not in first[0]
+    assert not sector.get_editor_property('generated_preview').get_editor_property('diagnostics')
+    sector.generate_preview()
+    assert snapshot()==first
+    sector.clear_preview()
+    assert authored==[a.get_path_name() for a in actors.get_all_level_actors() if isinstance(a,unreal.PlanetTerrainClusterShapeActor)]
+    assert not any(isinstance(a,unreal.PlanetGeneratedSector) for a in actors.get_all_level_actors())
+    sector.generate_preview()
+    assert snapshot()==first
+    unreal.EditorLevelLibrary.set_level_viewport_camera_info(unreal.Vector(700,-5200,6700),unreal.Rotator(pitch=-52,yaw=98,roll=0))
     assert levels.save_current_level()
-    report['shapes'][str(shape_index)]=counts
-    unreal.log(f'DENSE_SHAPE_COMPLETE {shape_index}: {counts}')
+    report.update({'selected':first[0],'instances':len(first[1]),'seed':4,'determinism':'passed','clear_preserves_shapes':'passed'})
+    (PROJECT/'Saved'/'FullSectorClusters.json').write_text(json.dumps(report,indent=2))
+    unreal.log('FULL_SECTOR_COMPLETE '+json.dumps(report))
 
-library=make_asset(ROOT,'DA_ClusterVariantLibrary_FullSector',unreal.PlanetTerrainClusterLibrary)
-library.set_editor_property('variants',variants)
-assets.save_loaded_asset(library)
-assert levels.load_level(SECTOR)
-sector=next(a for a in actors.get_all_level_actors() if isinstance(a,unreal.PlanetSectorTemplateActor))
-authored=[a.get_path_name() for a in actors.get_all_level_actors() if isinstance(a,unreal.PlanetTerrainClusterShapeActor)]
-sector.set_editor_property('variant_library',library)
-sector.set_editor_property('preview_seed',4)
-
-def snapshot():
-    generated=sector.get_editor_property('generated_preview')
-    values=[]
-    for component in generated.get_components_by_class(unreal.InstancedStaticMeshComponent):
-        for i in range(component.get_instance_count()):
-            t=component.get_instance_transform(i,False)
-            p,q,s=t.translation,t.rotation,t.scale3d
-            values.append((component.static_mesh.get_path_name(),(p.x,p.y,p.z,q.x,q.y,q.z,q.w,s.x,s.y,s.z)))
-    return [str(v) for v in generated.get_editor_property('selected_variant_ids')],values
-
-sector.generate_preview()
-first=snapshot()
-assert len(first[0])==6 and 'None' not in first[0]
-assert not sector.get_editor_property('generated_preview').get_editor_property('diagnostics')
-sector.generate_preview()
-assert snapshot()==first
-sector.clear_preview()
-assert authored==[a.get_path_name() for a in actors.get_all_level_actors() if isinstance(a,unreal.PlanetTerrainClusterShapeActor)]
-assert not any(isinstance(a,unreal.PlanetGeneratedSector) for a in actors.get_all_level_actors())
-sector.generate_preview()
-assert snapshot()==first
-unreal.EditorLevelLibrary.set_level_viewport_camera_info(unreal.Vector(700,-5200,6700),unreal.Rotator(pitch=-52,yaw=98,roll=0))
-assert levels.save_current_level()
-report.update({'selected':first[0],'instances':len(first[1]),'seed':4,'determinism':'passed','clear_preserves_shapes':'passed'})
-(PROJECT/'Saved'/'FullSectorClusters.json').write_text(json.dumps(report,indent=2))
-unreal.log('FULL_SECTOR_COMPLETE '+json.dumps(report))
+if __name__ == '__main__':
+    main()

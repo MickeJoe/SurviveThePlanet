@@ -45,6 +45,8 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Population") int32 Seed = 71237;
 	/** Assign both to replace legacy dressing with authored cluster compositions. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Population|Authored Clusters") TObjectPtr<UPlanetSectorTemplate> AuthoredSectorTemplate;
+	/** Optional catalog. When nonempty, replaces the single-template setting above. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Population|Authored Clusters") TArray<TObjectPtr<UPlanetSectorTemplate>> AuthoredSectorTemplates;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Population|Authored Clusters") TObjectPtr<UPlanetTerrainClusterLibrary> ClusterVariantLibrary;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Transient, Category="Population|Authored Clusters") TMap<int32, TObjectPtr<APlanetGeneratedSector>> GeneratedClusters;
 	/** Only visual dressing is streamed. Discovery, deposits and simulation stay loaded. */
@@ -54,6 +56,7 @@ public:
 	UPROPERTY(EditAnywhere, Category="Population|Performance", meta=(ClampMin="0")) float ClusterUnloadDelay = 3.0f;
 	UPROPERTY(EditAnywhere, Category="Population|Performance", meta=(ClampMin="1")) int32 ClusterLoadsPerUpdate = 2;
 	UFUNCTION(BlueprintCallable, Category="Population|Performance") void UpdateClusterResidency();
+	UFUNCTION(BlueprintPure, Category="Population|Authored Clusters") UPlanetSectorTemplate* SelectTemplateForSector(int32 SectorId) const;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Population") int32 DecorationsPerSector = 48;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Population", meta=(ClampMin="1")) int32 FormationCountPerSector = 4;
 	/** Fraction of a sector's ground covered by environment formation footprints. */
@@ -80,6 +83,7 @@ private:
 	UFUNCTION() void OnSectorChanged(int32 SectorId, ESectorState State);
 	bool GroundPosition(FVector Position, FVector& Ground) const;
 	bool GenerateAuthoredClusters();
+	TArray<UPlanetSectorTemplate*> GetAuthoredTemplateCatalog() const;
 	bool GenerateLegacyDecorations();
 	UPROPERTY(Transient) TSet<int32> LoadedSectors;
 	UPROPERTY(Transient) TArray<TObjectPtr<ABaseResourceSource>> SpawnedDeposits;

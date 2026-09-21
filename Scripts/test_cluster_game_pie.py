@@ -12,6 +12,15 @@ editor=unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem)
 assert 'L_PlanetClusters' in editor.get_editor_world().get_path_name()
 # This test checks every composition, independently of camera residency.
 source_population=unreal.GameplayStatics.get_all_actors_of_class(editor.get_editor_world(),unreal.SectorPopulation)[0]
+catalog=source_population.get_editor_property('authored_sector_templates')
+assert len(catalog)==7
+assert sum(t.get_editor_property('can_be_starting_sector') for t in catalog)==3
+source_seed=source_population.get_editor_property('seed')
+source_grid=source_population.get_editor_property('grid')
+for seed in range(1000):
+    source_population.set_editor_property('seed',seed)
+    assert source_population.select_template_for_sector(source_grid.get_editor_property('starting_sector_id')).get_editor_property('can_be_starting_sector')
+source_population.set_editor_property('seed',source_seed)
 previous_residency=source_population.get_editor_property('manage_cluster_residency')
 source_population.set_editor_property('manage_cluster_residency',False)
 state={'started':time.monotonic()}
@@ -20,7 +29,7 @@ def check(delta):
     if time.monotonic()-state['started']>120:
         source_population.set_editor_property('manage_cluster_residency',previous_residency)
         unreal.unregister_slate_post_tick_callback(handle)
-        (project/'Saved'/'ClusterGamePIE.json').write_text(json.dumps({'error':'PIE startup timed out'}))
+        (project/'Saved'/'SectorCatalogPIE.json').write_text(json.dumps({'error':'PIE startup timed out'}))
         return
     world=editor.get_game_world()
     if not world or time.monotonic()-state['started']<8: return
@@ -37,7 +46,10 @@ def check(delta):
         rows=[]
         for sector_id,actor in population.get_editor_property('generated_clusters').items():
             selected=[str(v) for v in actor.get_editor_property('selected_variant_ids')]
-            assert len(selected)==6 and 'None' not in selected
+            template=actor.get_editor_property('sector_template')
+            assert len(selected)==len(template.get_editor_property('cluster_slots')) and 'None' not in selected
+            if sector_id==grid.get_editor_property('starting_sector_id'):
+                assert template.get_editor_property('can_be_starting_sector')
             assert not actor.get_editor_property('diagnostics')
             values=[]
             for c in actor.get_components_by_class(unreal.InstancedStaticMeshComponent):
@@ -46,9 +58,10 @@ def check(delta):
                     p,q,s=t.translation,t.rotation,t.scale3d
                     values.append((c.static_mesh.get_path_name(),p.x,p.y,p.z,q.x,q.y,q.z,q.w,s.x,s.y,s.z))
             assert len(values)>700
-            rows.append({'sector_id':sector_id,'seed':actor.get_editor_property('seed'),'selected':selected,'instances':len(values),'visible':not actor.get_editor_property('hidden'),'transform_hash':hashlib.sha256(json.dumps(sorted(values)).encode()).hexdigest()})
+            rows.append({'sector_id':sector_id,'template':template.get_path_name(),'seed':actor.get_editor_property('seed'),'selected':selected,'instances':len(values),'visible':not actor.get_editor_property('hidden'),'transform_hash':hashlib.sha256(json.dumps(sorted(values)).encode()).hexdigest()})
         assert len({r['seed'] for r in rows})==37
         assert len({tuple(r['selected']) for r in rows})>1
+        assert len({r['template'] for r in rows})==7,'Expected all seven templates in the saved test world'
         start=grid.get_editor_property('starting_sector_id')
         assert next(r for r in rows if r['sector_id']==start)['visible']
         hidden=next(r for r in rows if r['sector_id']!=start)
@@ -59,7 +72,7 @@ def check(delta):
         pawn=unreal.GameplayStatics.get_player_pawn(world,0)
         assert controller and pawn,'No player pawn in PIE'
         report={'result':'passed','sector_count':37,'instances':sum(r['instances'] for r in rows),'distinct_layouts':len({tuple(r['selected']) for r in rows}),'no_legacy_scatter':True,'discovery_reveals_clusters':True,'pawn':pawn.get_class().get_name(),'sectors':sorted(rows,key=lambda r:r['sector_id'])}
-        previous=project/'Saved'/'ClusterGamePIE.json'
+        previous=project/'Saved'/'SectorCatalogPIE.json'
         if previous.exists():
             old=json.loads(previous.read_text())
             if old.get('result')=='passed':
@@ -68,7 +81,7 @@ def check(delta):
         previous.write_text(json.dumps(report,indent=2))
         unreal.log('CLUSTER_GAME_PIE_PASSED '+str(report['instances']))
     except Exception as error:
-        (project/'Saved'/'ClusterGamePIE.json').write_text(json.dumps({'error':str(error)}))
+        (project/'Saved'/'SectorCatalogPIE.json').write_text(json.dumps({'error':str(error)}))
         unreal.log_error('CLUSTER_GAME_PIE_FAILED '+str(error))
     finally:
         source_population.set_editor_property('manage_cluster_residency',previous_residency)
