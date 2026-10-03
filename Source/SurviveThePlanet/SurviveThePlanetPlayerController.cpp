@@ -703,6 +703,12 @@ bool ASurviveThePlanetPlayerController::TryPlaceMiningMachineAtCursor()
 {
 	UWorld* World = GetWorld();
 	ABaseResourceSource* ResourceSource = GetResourceSourceUnderCursor();
+	if (!IsValid(ResourceSource)
+		&& IsValid(MiningMachinePlacementPreview)
+		&& MiningMachinePlacementPreview->IsMiningPlacementPreviewValid())
+	{
+		ResourceSource = MiningMachinePlacementPreview->GetPreviewResourceSource();
+	}
 	if (!World || !IsValid(ResourceSource))
 	{
 		UE_LOG(LogSurviveThePlanet, Warning, TEXT("STP_BUILD Mining machine placement failed: cursor is not over a resource source."));
@@ -742,6 +748,23 @@ bool ASurviveThePlanetPlayerController::TryPlaceMiningMachineAtCursor()
 	SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
 	const FTransform PlacementTransform = DefaultMachine->GetPlacementTransformForSource(ResourceSource);
+	if (APlanetSurfaceManager* Surface = FindPlanetSurfaceManager())
+	{
+		auto LogTransform = [Surface](const TCHAR* Stage, const AMiningMachine* Machine, const FTransform& Transform)
+		{
+			const FIntPoint Footprint = Machine->GetGridFootprint();
+			const FSTPGridPlacement Placement = Surface->GetPlacementForWorldLocation(Transform.GetLocation(), Footprint);
+			UE_LOG(LogSurviveThePlanet, Display, TEXT("STP_MINING_DIAG stage=%s actor=%s class=%s transform=%s origin=(%d,%d) footprint=%s"),
+				Stage, *Machine->GetName(), *Machine->GetClass()->GetPathName(), *Transform.ToString(), Placement.OriginCell.X, Placement.OriginCell.Y, *Footprint.ToString());
+		};
+		LogTransform(TEXT("requested spawn"), DefaultMachine, PlacementTransform);
+		if (IsValid(MiningMachinePlacementPreview))
+		{
+			LogTransform(TEXT("cached preview"), MiningMachinePlacementPreview, MiningMachinePlacementPreview->GetActorTransform());
+			UE_LOG(LogSurviveThePlanet, Display, TEXT("STP_MINING_DIAG preview source=%s clickedSource=%s valid=%d"),
+				*GetNameSafe(MiningMachinePlacementPreview->GetPreviewResourceSource()), *ResourceSource->GetName(), MiningMachinePlacementPreview->IsMiningPlacementPreviewValid());
+		}
+	}
 	AMiningMachine* SpawnedMachine = World->SpawnActor<AMiningMachine>(
 		ClassToSpawn,
 		PlacementTransform,
@@ -754,6 +777,7 @@ bool ASurviveThePlanetPlayerController::TryPlaceMiningMachineAtCursor()
 		return true;
 	}
 
+	UE_LOG(LogSurviveThePlanet, Display, TEXT("STP_MINING_DIAG spawned actor=%s transform=%s requestedDelta=%s"), *SpawnedMachine->GetName(), *SpawnedMachine->GetActorTransform().ToString(), *(SpawnedMachine->GetActorLocation() - PlacementTransform.GetLocation()).ToString());
 	SpawnedMachine->SetPlacementPreview(false);
 	if (!SpawnedMachine->AttachToResourceSource(ResourceSource))
 	{

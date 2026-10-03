@@ -1,4 +1,5 @@
 #include "PlanetSurfaceManager.h"
+#include "SurviveThePlanet.h"
 
 #include "Components/StaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
@@ -6,6 +7,8 @@
 #include "EngineUtils.h"
 #include "Gameplay/Drones/BaseDrone.h"
 #include "Gameplay/Base/BaseBuilding.h"
+#include "Gameplay/World/Authoring/PlanetSectorTemplate.h"
+#include "Gameplay/World/Authoring/PlanetTerrainClusterVariant.h"
 
 APlanetSurfaceManager::APlanetSurfaceManager()
 {
@@ -90,6 +93,7 @@ FSTPGridPlacement APlanetSurfaceManager::GetPlacementForWorldLocation(const FVec
 FSTPGridPlacement APlanetSurfaceManager::GetBuildingPlacementForWorldLocation(const FVector& WorldLocation, FIntPoint Footprint) const
 {
 	FSTPGridPlacement Placement = GetPlacementForWorldLocation(WorldLocation, Footprint);
+	Placement.WorldLocation += GetActorUpVector() * BuildingPlacementHeightOffset;
 	Placement.bValid = Placement.bValid && HasBuildingClearance(Placement.OriginCell, Footprint);
 	return Placement;
 }
@@ -99,9 +103,12 @@ int32 APlanetSurfaceManager::GetBuildingClearanceCells() const
 	return FMath::CeilToInt(FMath::Max(200.0f, MinimumBuildingClearance) / FMath::Max(1.0f, TileSpacing));
 }
 
-bool APlanetSurfaceManager::HasBuildingClearance(FSTPGridCell OriginCell, FIntPoint Footprint, ABaseBuilding* IgnoredBuilding) const
+bool APlanetSurfaceManager::HasBuildingClearance(FSTPGridCell OriginCell, FIntPoint Footprint, ABaseBuilding* IgnoredBuilding, bool bLogDiagnostics) const
 {
 	Footprint = SanitizeFootprint(Footprint);
+	const bool bTerrainOverlap = !HasTerrainClearance(OriginCell, Footprint, GetBuildingClearanceCells(), bLogDiagnostics);
+	if (bLogDiagnostics) UE_LOG(LogSurviveThePlanet, Display, TEXT("STP_MINING_DIAG terrain surface=%s origin=(%d,%d) footprint=(%d,%d) OverlapsTerrainCluster=%d"), *GetName(), OriginCell.X, OriginCell.Y, Footprint.X, Footprint.Y, bTerrainOverlap);
+	if (bTerrainOverlap) return false;
 	const int32 Clearance = GetBuildingClearanceCells();
 	const int32 CandidateMinX = OriginCell.X - Clearance;
 	const int32 CandidateMinY = OriginCell.Y - Clearance;
@@ -124,9 +131,56 @@ bool APlanetSurfaceManager::HasBuildingClearance(FSTPGridCell OriginCell, FIntPo
 		const int32 ExistingMaxY = ExistingMinY + ExistingFootprint.Y - 1;
 		const bool bSeparated = CandidateMaxX < ExistingMinX || CandidateMinX > ExistingMaxX
 			|| CandidateMaxY < ExistingMinY || CandidateMinY > ExistingMaxY;
-		if (!bSeparated) return false;
+		if (!bSeparated)
+		{
+			if (bLogDiagnostics) UE_LOG(LogSurviveThePlanet, Display, TEXT("STP_MINING_DIAG clearance_blocker actor=%s class=%s origin=(%d,%d) footprint=(%d,%d) ignored=%s preview=%d"), *ExistingBuilding->GetName(), *ExistingBuilding->GetClass()->GetPathName(), ExistingMinX, ExistingMinY, ExistingFootprint.X, ExistingFootprint.Y, *GetNameSafe(IgnoredBuilding), ExistingBuilding->IsPlacementPreview());
+			return false;
+		}
 	}
 	return true;
+}
+
+bool APlanetSurfaceManager::OverlapsTerrainCluster(FSTPGridCell OriginCell, FIntPoint Footprint, bool bLogDiagnostics) const
+{
+	const FTransform SurfaceTransform = GetActorTransform();
+	const FVector CellCenter = SurfaceTransform.InverseTransformPosition(GetWorldLocationForCell(OriginCell));
+	const FVector Min = CellCenter - FVector(TileSpacing * 0.5, TileSpacing * 0.5, 0);
+	const FVector Max = Min + FVector(Footprint.X * TileSpacing, Footprint.Y * TileSpacing, 0);
+	const FVector Corners[] = {
+		SurfaceTransform.TransformPosition(Min),
+		SurfaceTransform.TransformPosition(FVector(Max.X, Min.Y, Min.Z)),
+		SurfaceTransform.TransformPosition(Max),
+		SurfaceTransform.TransformPosition(FVector(Min.X, Max.Y, Min.Z))
+	};
+	for (TActorIterator<APlanetGeneratedSector> It(GetWorld()); It; ++It)
+	{
+		if (It->IsActorBeingDestroyed()) continue;
+		// Test each selected mesh, not a whole-sector box. Bounds remain available
+		// while ISMs are unloaded and conservatively include all transformed vertices.
+		const FBox2D CandidateBounds(FVector2D(Min.X, Min.Y), FVector2D(Max.X, Max.Y));
+		const FTransform SectorToSurface = It->GetActorTransform().GetRelativeTransform(SurfaceTransform);
+		const FBox CombinedBounds = It->GetCombinedPlacementBounds().TransformBy(SectorToSurface);
+		if (CombinedBounds.IsValid && CandidateBounds.Intersect(FBox2D(FVector2D(CombinedBounds.Min), FVector2D(CombinedBounds.Max))))
+		{
+			for (const FBox& MeshBounds : It->GetPlacementMeshBounds())
+			{
+				const FBox LocalBounds = MeshBounds.TransformBy(SectorToSurface);
+				if (CandidateBounds.Intersect(FBox2D(FVector2D(LocalBounds.Min), FVector2D(LocalBounds.Max))))
+				{
+					if (bLogDiagnostics) UE_LOG(LogSurviveThePlanet, Display, TEXT("STP_MINING_DIAG terrain_mesh_blocker actor=%s bounds=%s candidateMin=%s candidateMax=%s"), *It->GetName(), *LocalBounds.ToString(), *Min.ToString(), *Max.ToString());
+					return true;
+				}
+			}
+		}
+		// Shell actors and their templates persist when camera residency clears meshes.
+		if (!It->IsActorBeingDestroyed() && It->SectorTemplate
+			&& It->SectorTemplate->OverlapsBuildingFootprint(MakeArrayView(Corners), It->GetActorTransform()))
+		{
+			if (bLogDiagnostics) UE_LOG(LogSurviveThePlanet, Display, TEXT("STP_MINING_DIAG terrain_blocker actor=%s class=%s template=%s"), *It->GetName(), *It->GetClass()->GetPathName(), *It->SectorTemplate->GetPathName());
+			return true;
+		}
+	}
+	return false;
 }
 
 bool APlanetSurfaceManager::GetCellForWorldLocation(const FVector& WorldLocation, FSTPGridCell& OutCell) const
@@ -176,16 +230,54 @@ bool APlanetSurfaceManager::CanOccupyCells(FSTPGridCell OriginCell, FIntPoint Fo
 	return true;
 }
 
+bool APlanetSurfaceManager::HasTerrainClearance(FSTPGridCell OriginCell, FIntPoint Footprint, int32 MarginCells, bool bLogDiagnostics) const
+{
+	const int32 Margin = FMath::Max(0, MarginCells);
+	Footprint = SanitizeFootprint(Footprint);
+	return !OverlapsTerrainCluster(FSTPGridCell(OriginCell.X - Margin, OriginCell.Y - Margin),
+		Footprint + FIntPoint(2 * Margin, 2 * Margin), bLogDiagnostics);
+}
+
+bool APlanetSurfaceManager::CanReserveBuildingCells(ABaseBuilding* Building, FSTPGridCell OriginCell, FIntPoint Footprint, const AActor* ReplacedActor) const
+{
+	Footprint = SanitizeFootprint(Footprint);
+	for (int32 Y = 0; Y < Footprint.Y; ++Y)
+	{
+		for (int32 X = 0; X < Footprint.X; ++X)
+		{
+			const FSTPGridCell Cell(OriginCell.X + X, OriginCell.Y + Y);
+			if (!IsCellPlayable(Cell)) return false;
+			const TObjectPtr<AActor>* Entry = OccupiedCells.Find(MakeCellKey(Cell));
+			const AActor* Existing = Entry ? Entry->Get() : nullptr;
+			if (IsValid(Existing) && Existing != ReplacedActor && !Existing->IsA<ABaseDrone>()) return false;
+		}
+	}
+	return HasBuildingClearance(OriginCell, Footprint, Building);
+}
 bool APlanetSurfaceManager::ReserveCells(AActor* Occupier, FSTPGridCell OriginCell, FIntPoint Footprint)
 {
 	ABaseBuilding* BuildingOccupier = Cast<ABaseBuilding>(Occupier);
-	if (!IsValid(Occupier) || !CanOccupyCells(OriginCell, Footprint)
-		|| (BuildingOccupier && !HasBuildingClearance(OriginCell, Footprint, BuildingOccupier)))
+	if (!IsValid(Occupier))
 	{
+		LogPlacementDiagnostics(Occupier, OriginCell, Footprint, TEXT("ReserveCells rejected"));
 		return false;
 	}
 
 	Footprint = SanitizeFootprint(Footprint);
+	if (BuildingOccupier)
+	{
+		if (!CanReserveBuildingCells(BuildingOccupier, OriginCell, Footprint))
+		{
+			LogPlacementDiagnostics(Occupier, OriginCell, Footprint, TEXT("ReserveCells rejected"));
+			return false;
+		}
+	}
+	else if (!CanOccupyCells(OriginCell, Footprint))
+	{
+		LogPlacementDiagnostics(Occupier, OriginCell, Footprint, TEXT("ReserveCells rejected"));
+		return false;
+	}
+
 	if (BuildingOccupier)
 	{
 		// Drones are mobile agents, not placement obstacles. Send any idle drone
@@ -223,6 +315,29 @@ bool APlanetSurfaceManager::ReserveCells(AActor* Occupier, FSTPGridCell OriginCe
 	return true;
 }
 
+void APlanetSurfaceManager::LogPlacementDiagnostics(AActor* Occupier, FSTPGridCell OriginCell, FIntPoint Footprint, const TCHAR* Stage) const
+{
+	const FIntPoint Sanitized = SanitizeFootprint(Footprint);
+	ABaseBuilding* Building = Cast<ABaseBuilding>(Occupier);
+	const bool bClearance = HasBuildingClearance(OriginCell, Sanitized, Building, true);
+	UE_LOG(LogSurviveThePlanet, Display, TEXT("STP_MINING_DIAG stage=%s surface=%s actor=%s class=%s origin=(%d,%d) footprint=(%d,%d) sanitized=(%d,%d) HasBuildingClearance=%d ignored=%s"),
+		Stage, *GetName(), *GetNameSafe(Occupier), *GetNameSafe(Occupier ? Occupier->GetClass() : nullptr), OriginCell.X, OriginCell.Y, Footprint.X, Footprint.Y, Sanitized.X, Sanitized.Y, bClearance, *GetNameSafe(Building));
+	for (int32 Y = 0; Y < Sanitized.Y; ++Y)
+	{
+		for (int32 X = 0; X < Sanitized.X; ++X)
+		{
+			const FSTPGridCell Cell(OriginCell.X + X, OriginCell.Y + Y);
+			const TObjectPtr<AActor>* Entry = OccupiedCells.Find(MakeCellKey(Cell));
+			AActor* Existing = Entry ? Entry->Get() : nullptr;
+			const bool bPlayable = IsCellPlayable(Cell);
+			if (!bPlayable || Entry)
+			{
+				UE_LOG(LogSurviveThePlanet, Display, TEXT("STP_MINING_DIAG cell=(%d,%d) playable=%d entry=%d actor=%s class=%s valid=%d mobileDrone=%d"),
+					Cell.X, Cell.Y, bPlayable, Entry != nullptr, *GetNameSafe(Existing), *GetNameSafe(Existing ? Existing->GetClass() : nullptr), IsValid(Existing), IsValid(Existing) && Existing->IsA<ABaseDrone>());
+			}
+		}
+	}
+}
 void APlanetSurfaceManager::ReleaseCells(AActor* Occupier)
 {
 	if (!Occupier)

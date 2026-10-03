@@ -16,11 +16,13 @@
 #include "Components/TextBlock.h"
 #include "Engine/Texture2D.h"
 #include "EngineUtils.h"
+#include "TimerManager.h"
 #include "Components/SizeBox.h"
 #include "Components/Spacer.h"
 #include "SurviveThePlanet.h"
 #include "SurviveThePlanetPlayerController.h"
 #include "Gameplay/Base/BuildingDataAsset.h"
+#include "Gameplay/Base/BaseBuilding.h"
 #include "Gameplay/Buildings/BuildingManagerSubsystem.h"
 #include "Gameplay/Buildings/BuildingBlueprintSubsystem.h"
 #include "Gameplay/Resources/ResourceManager.h"
@@ -55,7 +57,11 @@ TSharedRef<SWidget> UBuildToolbarWidget::RebuildWidget()
 {
 	EnsureRequiredButtonConfigs();
 	RefreshButtonConfigsFromCatalog();
-	if (HasDesignedToolbar()) BindDesignedToolbar();
+	if (HasDesignedToolbar())
+	{
+		BindDesignedToolbar();
+		RebuildToolbar();
+	}
 	else RebuildToolbar();
 	return Super::RebuildWidget();
 }
@@ -83,7 +89,12 @@ void UBuildToolbarWidget::NativeConstruct()
 		ResourceManager->OnResourceAmountChanged.RemoveDynamic(this, &UBuildToolbarWidget::HandleResourceAmountChanged);
 		ResourceManager->OnResourceAmountChanged.AddDynamic(this, &UBuildToolbarWidget::HandleResourceAmountChanged);
 	}
+	RefreshToolbarVisibility();
 	RefreshButtonStates();
+	if (!ResourceManager && GetWorld())
+	{
+		GetWorld()->GetTimerManager().SetTimer(ResourceRetryTimer, this, &UBuildToolbarWidget::RefreshButtonStates, 0.25f, true);
+	}
 }
 
 void UBuildToolbarWidget::EnsureRequiredButtonConfigs()
@@ -145,6 +156,7 @@ void UBuildToolbarWidget::RefreshButtonConfigsFromCatalog()
 
 void UBuildToolbarWidget::NativeDestruct()
 {
+	if (GetWorld()) GetWorld()->GetTimerManager().ClearTimer(ResourceRetryTimer);
 	if (ASurviveThePlanetPlayerController* Controller = GetOwningPlayer<ASurviveThePlanetPlayerController>())
 	{
 		Controller->OnBuildToolChanged.RemoveDynamic(this, &UBuildToolbarWidget::HandleControllerBuildToolChanged);
@@ -177,22 +189,35 @@ void UBuildToolbarWidget::RebuildToolbar()
 		return;
 	}
 
-	ButtonBorders.Reset();
-	ToolButtons.Reset();
-	ToolWidgets.Reset();
+	if (!DesignedHost)
+	{
+		ButtonBorders.Reset();
+		ToolButtons.Reset();
+		ToolWidgets.Reset();
+		ClickBindings.Reset();
+	}
 	CategoryRows.Reset();
 	CategoryBorders.Reset();
 
-	UCanvasPanel* RootCanvas = WidgetTree->ConstructWidget<UCanvasPanel>(UCanvasPanel::StaticClass(), TEXT("BuildToolbarRoot"));
-	RootCanvas->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
-	WidgetTree->RootWidget = RootCanvas;
-
-	UVerticalBox* ToolbarStack = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("BuildToolbarStack"));
-	UCanvasPanelSlot* ToolbarSlot = RootCanvas->AddChildToCanvas(ToolbarStack);
-	ToolbarSlot->SetAnchors(FAnchors(0.5f, 1.0f));
-	ToolbarSlot->SetAlignment(FVector2D(0.5f, 1.0f));
-	ToolbarSlot->SetPosition(FVector2D(0.0f, -24.0f));
-	ToolbarSlot->SetAutoSize(true);
+	UVerticalBox* ToolbarStack = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass());
+	if (DesignedHost)
+	{
+		// Keep the WBP anchor, sizing and authored button contents.
+		for (const auto& Entry : ToolWidgets) if (Entry.Value) Entry.Value->RemoveFromParent();
+		DesignedHost->ClearChildren();
+		DesignedHost->AddChildToHorizontalBox(ToolbarStack);
+	}
+	else
+	{
+		UCanvasPanel* RootCanvas = WidgetTree->ConstructWidget<UCanvasPanel>(UCanvasPanel::StaticClass());
+		RootCanvas->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+		WidgetTree->RootWidget = RootCanvas;
+		UCanvasPanelSlot* ToolbarSlot = RootCanvas->AddChildToCanvas(ToolbarStack);
+		ToolbarSlot->SetAnchors(FAnchors(0.5f, 1.0f));
+		ToolbarSlot->SetAlignment(FVector2D(0.5f, 1.0f));
+		ToolbarSlot->SetPosition(FVector2D(0.0f, -24.0f));
+		ToolbarSlot->SetAutoSize(true);
+	}
 
 	TMap<ESTPBuildCategory,UHorizontalBox*> Rows;
 	for (ESTPBuildCategory Category : {ESTPBuildCategory::Energy, ESTPBuildCategory::Industry, ESTPBuildCategory::Logistics, ESTPBuildCategory::Infrastructure})
@@ -206,8 +231,11 @@ void UBuildToolbarWidget::RebuildToolbar()
 	}
 	for (int32 Index = 0; Index < Buttons.Num(); ++Index)
 	{
+		if (!IsToolAvailable(Buttons[Index].Tool)) continue;
 		UHorizontalBox* ToolBox=Rows.FindRef(GetCategoryForTool(Buttons[Index].Tool)); if(!ToolBox)continue;
-		UWidget* ToolWidget=BuildButton(Buttons[Index]); ToolWidgets.Add(Buttons[Index].Tool,ToolWidget);
+		UWidget* ToolWidget = ToolWidgets.FindRef(Buttons[Index].Tool);
+		if (!ToolWidget) ToolWidget = BuildButton(Buttons[Index]);
+		ToolWidgets.Add(Buttons[Index].Tool, ToolWidget);
 		UHorizontalBoxSlot* ButtonSlot = ToolBox->AddChildToHorizontalBox(ToolWidget);
 		ButtonSlot->SetPadding(FMargin(0,0,8,0));
 		ButtonSlot->SetVerticalAlignment(VAlign_Bottom);
@@ -280,51 +308,11 @@ UWidget* UBuildToolbarWidget::BuildButton(const FBuildToolButtonConfig& Config)
 	IconSlot->SetVerticalAlignment(VAlign_Fill);
 	IconSlot->SetPadding(FMargin(0.0f));
 
-	if (Config.Tool == ESTPBuildTool::EnergyCable)
-	{
-		Button->OnClicked.AddDynamic(this, &UBuildToolbarWidget::HandleEnergyCableClicked);
-	}
-	else if (Config.Tool == ESTPBuildTool::EnergyModule)
-	{
-		Button->OnClicked.AddDynamic(this, &UBuildToolbarWidget::HandleEnergyModuleClicked);
-	}
-	else if (Config.Tool == ESTPBuildTool::EnergyStorage)
-	{
-		Button->OnClicked.AddDynamic(this, &UBuildToolbarWidget::HandleEnergyStorageClicked);
-	}
-	else if (Config.Tool == ESTPBuildTool::MiningMachine)
-	{
-		Button->OnClicked.AddDynamic(this, &UBuildToolbarWidget::HandleMiningMachineClicked);
-	}
-	else if (Config.Tool == ESTPBuildTool::WaterCollector)
-	{
-		Button->OnClicked.AddDynamic(this, &UBuildToolbarWidget::HandleWaterCollectorClicked);
-	}
-	else if (Config.Tool == ESTPBuildTool::ConcretePlant)
-	{
-		Button->OnClicked.AddDynamic(this, &UBuildToolbarWidget::HandleConcretePlantClicked);
-	}
-	else if (Config.Tool == ESTPBuildTool::Steelworks)
-	{
-		Button->OnClicked.AddDynamic(this, &UBuildToolbarWidget::HandleSteelworksClicked);
-	}
-	else if (Config.Tool == ESTPBuildTool::CommunicationModule)
-	{
-		Button->OnClicked.AddDynamic(this, &UBuildToolbarWidget::HandleCommunicationModuleClicked);
-	}
-	else if (Config.Tool == ESTPBuildTool::CargoBay)
-	{
-		Button->OnClicked.AddDynamic(this, &UBuildToolbarWidget::HandleCargoBayClicked);
-	}
-	else if (Config.Tool == ESTPBuildTool::CommandHub) Button->OnClicked.AddDynamic(this, &UBuildToolbarWidget::HandleCommandHubClicked);
-	else if (Config.Tool == ESTPBuildTool::SolarArray) Button->OnClicked.AddDynamic(this, &UBuildToolbarWidget::HandleSolarArrayClicked);
-	else if (Config.Tool == ESTPBuildTool::WindGenerator) Button->OnClicked.AddDynamic(this, &UBuildToolbarWidget::HandleWindGeneratorClicked);
-	else if (Config.Tool == ESTPBuildTool::GeothermalPlant) Button->OnClicked.AddDynamic(this, &UBuildToolbarWidget::HandleGeothermalPlantClicked);
-	else if (Config.Tool == ESTPBuildTool::NuclearReactor) Button->OnClicked.AddDynamic(this, &UBuildToolbarWidget::HandleNuclearReactorClicked);
-	else if (Config.Tool == ESTPBuildTool::MiningStation) Button->OnClicked.AddDynamic(this, &UBuildToolbarWidget::HandleMiningStationClicked);
-	else if (Config.Tool == ESTPBuildTool::ResourceStorage) Button->OnClicked.AddDynamic(this, &UBuildToolbarWidget::HandleResourceStorageClicked);
-	else if (Config.Tool == ESTPBuildTool::DroneFactory) Button->OnClicked.AddDynamic(this, &UBuildToolbarWidget::HandleDroneFactoryClicked);
-	else if (Config.Tool == ESTPBuildTool::CommunicationsTower) Button->OnClicked.AddDynamic(this, &UBuildToolbarWidget::HandleCommunicationsTowerClicked);
+	UBuildToolbarClickBinding* Binding = NewObject<UBuildToolbarClickBinding>(this);
+	Binding->Toolbar = this;
+	Binding->Tool = Config.Tool;
+	ClickBindings.Add(Binding);
+	Button->OnClicked.AddDynamic(Binding, &UBuildToolbarClickBinding::Click);
 
 	ButtonBorders.Add(Config.Tool, Border);
 	ToolButtons.Add(Config.Tool, Button);
@@ -340,8 +328,10 @@ bool UBuildToolbarWidget::HasDesignedToolbar() const
 
 void UBuildToolbarWidget::BindDesignedToolbar()
 {
+	if (DesignedHost) return;
 	ButtonBorders.Reset();
 	ToolButtons.Reset();
+	ToolWidgets.Reset();
 
 	if (EnergyCableButton)
 	{
@@ -471,6 +461,24 @@ void UBuildToolbarWidget::BindDesignedToolbar()
 	if (ConcretePlantButton) ToolButtons.Add(ESTPBuildTool::ConcretePlant, ConcretePlantButton);
 	if (CommunicationModuleButton) ToolButtons.Add(ESTPBuildTool::CommunicationModule, CommunicationModuleButton);
 	if (CargoBayButton) ToolButtons.Add(ESTPBuildTool::CargoBay, CargoBayButton);
+	for (const auto& Entry : ToolButtons)
+	{
+		UWidget* Container = Entry.Value;
+		while (Container->GetParent() && !Cast<UHorizontalBox>(Container->GetParent()))
+		{
+			Container = Container->GetParent();
+		}
+		UHorizontalBox* Row = Cast<UHorizontalBox>(Container->GetParent());
+		if (!Row || (DesignedHost && DesignedHost != Row))
+		{
+			UE_LOG(LogSurviveThePlanet, Error, TEXT("Designed build buttons must share a horizontal row"));
+			DesignedHost = nullptr;
+			return;
+		}
+		DesignedHost = Row;
+		ToolWidgets.Add(Entry.Key, Container);
+	}
+
 }
 
 const FBuildToolButtonConfig* UBuildToolbarWidget::FindButtonConfig(ESTPBuildTool Tool) const
@@ -585,6 +593,11 @@ void UBuildToolbarWidget::RefreshButtonStates()
 	if (!ResourceManager)
 	{
 		ResourceManager = ResolveResourceManager();
+		if (ResourceManager)
+		{
+			ResourceManager->OnResourceAmountChanged.AddUniqueDynamic(this, &UBuildToolbarWidget::HandleResourceAmountChanged);
+			if (GetWorld()) GetWorld()->GetTimerManager().ClearTimer(ResourceRetryTimer);
+		}
 	}
 
 	for (const TPair<ESTPBuildTool, TObjectPtr<UButton>>& Entry : ToolButtons)
@@ -597,7 +610,7 @@ void UBuildToolbarWidget::RefreshButtonStates()
 		TArray<FResourceCost> Costs;
 		const bool bOwned = IsToolOwned(Entry.Key);
 		const bool bAffordable = CanAffordTool(Entry.Key, &Costs);
-		Entry.Value->SetIsEnabled(bOwned && bAffordable);
+		Entry.Value->SetIsEnabled(IsToolAvailable(Entry.Key) && bOwned && bAffordable);
 		const FText Tooltip = BuildToolTooltip(Entry.Key, bAffordable, Costs);
 		Entry.Value->SetToolTipText(Tooltip);
 		if (const TObjectPtr<UBorder>* Border = ButtonBorders.Find(Entry.Key); Border && *Border)
@@ -646,6 +659,10 @@ FText UBuildToolbarWidget::BuildToolTooltip(ESTPBuildTool Tool, bool bAffordable
 	const FText BaseTooltip = Tool == ESTPBuildTool::MiningMachine
 		? NSLOCTEXT("SurviveThePlanet", "BuildMineTooltip", "Build Mine\nPlace on an available resource deposit.")
 		: (Config ? Config->Tooltip : FText::GetEmpty());
+	if (!IsToolOwned(Tool))
+	{
+		return FText::Format(NSLOCTEXT("STPBuild", "BlueprintRequired", "{0}\n\nBlueprint required"), BaseTooltip);
+	}
 	if (bAffordable || Costs.IsEmpty())
 	{
 		return BaseTooltip;
@@ -826,7 +843,12 @@ void UBuildToolbarWidget::HandleIndustryCategoryClicked(){ActiveCategory=ESTPBui
 void UBuildToolbarWidget::HandleLogisticsCategoryClicked(){ActiveCategory=ESTPBuildCategory::Logistics;RefreshToolbarVisibility();}
 void UBuildToolbarWidget::HandleInfrastructureCategoryClicked(){ActiveCategory=ESTPBuildCategory::Infrastructure;RefreshToolbarVisibility();}
 void UBuildToolbarWidget::HandleCommandHubClicked(){HandleToolClicked(ESTPBuildTool::CommandHub);} void UBuildToolbarWidget::HandleSolarArrayClicked(){HandleToolClicked(ESTPBuildTool::SolarArray);} void UBuildToolbarWidget::HandleWindGeneratorClicked(){HandleToolClicked(ESTPBuildTool::WindGenerator);} void UBuildToolbarWidget::HandleGeothermalPlantClicked(){HandleToolClicked(ESTPBuildTool::GeothermalPlant);} void UBuildToolbarWidget::HandleNuclearReactorClicked(){HandleToolClicked(ESTPBuildTool::NuclearReactor);} void UBuildToolbarWidget::HandleMiningStationClicked(){HandleToolClicked(ESTPBuildTool::MiningStation);} void UBuildToolbarWidget::HandleResourceStorageClicked(){HandleToolClicked(ESTPBuildTool::ResourceStorage);} void UBuildToolbarWidget::HandleDroneFactoryClicked(){HandleToolClicked(ESTPBuildTool::DroneFactory);} void UBuildToolbarWidget::HandleCommunicationsTowerClicked(){HandleToolClicked(ESTPBuildTool::CommunicationsTower);}
-void UBuildToolbarWidget::HandleBlueprintInventoryChanged(ESTPBuildTool ChangedTool){RefreshToolbarVisibility();}
+void UBuildToolbarWidget::HandleBlueprintInventoryChanged(ESTPBuildTool ChangedTool)
+{
+	if (IsToolOwned(ChangedTool) && IsToolAvailable(ChangedTool)) ActiveCategory = GetCategoryForTool(ChangedTool);
+	RefreshToolbarVisibility();
+	RefreshButtonStates();
+}
 
 void UBuildToolbarWidget::HandleResourceAmountChanged(EResourceType ResourceType, int32 NewAmount)
 {
@@ -836,7 +858,7 @@ void UBuildToolbarWidget::HandleResourceAmountChanged(EResourceType ResourceType
 void UBuildToolbarWidget::RefreshToolbarVisibility()
 {
 	for(const TPair<ESTPBuildCategory,TObjectPtr<UWidget>>& Pair:CategoryRows) if(Pair.Value) Pair.Value->SetVisibility(Pair.Key==ActiveCategory?ESlateVisibility::SelfHitTestInvisible:ESlateVisibility::Collapsed);
-	for(const TPair<ESTPBuildTool,TObjectPtr<UWidget>>& Pair:ToolWidgets) if(Pair.Value) Pair.Value->SetVisibility(IsToolOwned(Pair.Key)?ESlateVisibility::Visible:ESlateVisibility::Collapsed);
+	for(const TPair<ESTPBuildTool,TObjectPtr<UWidget>>& Pair:ToolWidgets) if(Pair.Value) Pair.Value->SetVisibility(IsToolAvailable(Pair.Key) && IsToolOwned(Pair.Key)?ESlateVisibility::Visible:ESlateVisibility::Collapsed);
 	for (const TPair<ESTPBuildCategory, TObjectPtr<UBorder>>& Pair : CategoryBorders)
 	{
 		if (Pair.Value)
@@ -844,4 +866,18 @@ void UBuildToolbarWidget::RefreshToolbarVisibility()
 			Pair.Value->SetBrushColor(Pair.Key == ActiveCategory ? CategorySelectedColor : CategoryNormalColor);
 		}
 	}
+}
+
+void UBuildToolbarClickBinding::Click()
+{
+	if (Toolbar) Toolbar->HandleToolClicked(Tool);
+}
+
+bool UBuildToolbarWidget::IsToolAvailable(ESTPBuildTool Tool) const
+{
+	if (Tool == ESTPBuildTool::EnergyCable) return true;
+	const UWorld* World = GetWorld();
+	const UBuildingManagerSubsystem* Manager = World ? World->GetSubsystem<UBuildingManagerSubsystem>() : nullptr;
+	const UBuildingDataAsset* Definition = Manager ? Manager->GetDefinition(Tool) : nullptr;
+	return Definition && Definition->bShowInBuildToolbar && Manager->GetBuildingClass(Tool) != nullptr;
 }

@@ -1,6 +1,7 @@
 #include "Gameplay/Objectives/ObjectiveSubsystem.h"
 
 #include "Dom/JsonObject.h"
+#include "Engine/GameInstance.h"
 #include "EngineUtils.h"
 #include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerController.h"
@@ -8,6 +9,7 @@
 #include "Misc/Paths.h"
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
+#include "Gameplay/Buildings/BuildingBlueprintSubsystem.h"
 #include "Gameplay/Planet/MissionConfidenceSubsystem.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogObjectives, Log, All);
@@ -299,6 +301,14 @@ bool UObjectiveSubsystem::LoadFromJson(const FString& FilePath)
 						&& STPObjectives::ReadPositiveInt(RewardObject, TEXT("amount"), Reward.Amount);
 					Reward.DroneClass = FSoftClassPath(DroneClassPath);
 				}
+				else if (Type == TEXT("give_building_blueprint"))
+				{
+					FString BlueprintId;
+					Reward.Type = ESTPObjectiveRewardType::GiveBuildingBlueprint;
+					bDefinitionValid = RewardObject->TryGetStringField(TEXT("blueprintId"), BlueprintId)
+						&& !BlueprintId.IsEmpty();
+					Reward.BlueprintId = FName(*BlueprintId);
+				}
 				else
 				{
 					bDefinitionValid = false;
@@ -570,6 +580,17 @@ void UObjectiveSubsystem::GrantRewards(const FSTPObjectiveDefinition& Definition
 				{
 					break;
 				}
+			}
+		}
+		else if (Reward.Type == ESTPObjectiveRewardType::GiveBuildingBlueprint)
+		{
+			UGameInstance* GameInstance = GetWorld() ? GetWorld()->GetGameInstance() : nullptr;
+			UBuildingBlueprintSubsystem* BlueprintInventory = GameInstance
+				? GameInstance->GetSubsystem<UBuildingBlueprintSubsystem>() : nullptr;
+			if (!BlueprintInventory || !BlueprintInventory->GrantBlueprintById(Reward.BlueprintId))
+			{
+				UE_LOG(LogObjectives, Warning, TEXT("Objective '%s' could not grant building blueprint '%s' (missing or already owned)."),
+					*Definition.Id.ToString(), *Reward.BlueprintId.ToString());
 			}
 		}
 	}

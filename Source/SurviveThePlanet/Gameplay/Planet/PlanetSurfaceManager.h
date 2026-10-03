@@ -87,16 +87,25 @@ public:
 	FSTPGridPlacement GetBuildingPlacementForWorldLocation(const FVector& WorldLocation, FIntPoint Footprint) const;
 
 	UFUNCTION(BlueprintPure, Category = "Planet Surface|Grid")
-	bool HasBuildingClearance(FSTPGridCell OriginCell, FIntPoint Footprint, ABaseBuilding* IgnoredBuilding = nullptr) const;
+	bool HasBuildingClearance(FSTPGridCell OriginCell, FIntPoint Footprint, ABaseBuilding* IgnoredBuilding = nullptr, bool bLogDiagnostics = false) const;
 
 	UFUNCTION(BlueprintPure, Category = "Planet Surface|Grid")
 	int32 GetBuildingClearanceCells() const;
+
+	/** Shared final building reservation rules; the replaced deposit is the only static occupancy exception. */
+	bool CanReserveBuildingCells(ABaseBuilding* Building, FSTPGridCell OriginCell, FIntPoint Footprint, const AActor* ReplacedActor = nullptr) const;
+
+	UFUNCTION(BlueprintPure, Category = "Planet Surface|Grid")
+	bool HasTerrainClearance(FSTPGridCell OriginCell, FIntPoint Footprint, int32 MarginCells = 0, bool bLogDiagnostics = false) const;
 
 	UFUNCTION(BlueprintCallable, Category = "Planet Surface|Grid")
 	bool ReserveCells(AActor* Occupier, FSTPGridCell OriginCell, FIntPoint Footprint);
 
 	UFUNCTION(BlueprintCallable, Category = "Planet Surface|Grid")
 	void ReleaseCells(AActor* Occupier);
+
+	/** Read-only snapshot used at mining placement stages, never during preview ticks. */
+	void LogPlacementDiagnostics(AActor* Occupier, FSTPGridCell OriginCell, FIntPoint Footprint, const TCHAR* Stage) const;
 
 	UFUNCTION(BlueprintCallable, Category = "Planet Surface|Grid")
 	bool FindNearestFreeCellAdjacentToActor(AActor* Actor, FIntPoint Footprint, FSTPGridCell& OutCell, FVector& OutWorldLocation) const;
@@ -162,6 +171,10 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Planet Surface|Grid", meta = (ClampMin = "200.0", Units = "cm"))
 	float MinimumBuildingClearance = 200.0f;
 
+	/** Lifts placed buildings above the grid plane so their mesh bases sit on the visible terrain. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Planet Surface|Grid", meta = (Units = "cm"))
+	float BuildingPlacementHeightOffset = 56.55f;
+
 	UPROPERTY(EditAnywhere, Category = "Planet Surface|Grid")
 	bool bCenterGridOnActor = true;
 
@@ -187,6 +200,7 @@ protected:
 	TMap<int32, TObjectPtr<AActor>> OccupiedCells;
 
 private:
+	bool OverlapsTerrainCluster(FSTPGridCell OriginCell, FIntPoint Footprint, bool bLogDiagnostics = false) const;
 	void SpawnSurface();
 	void SpawnChunks();
 	void ClearChunkComponents();

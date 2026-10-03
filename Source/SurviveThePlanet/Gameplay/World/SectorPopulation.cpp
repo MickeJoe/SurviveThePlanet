@@ -1,5 +1,6 @@
 #include "Gameplay/World/SectorPopulation.h"
 #include "Gameplay/Resources/BaseResourceSource.h"
+#include "Gameplay/Buildings/MiningMachine.h"
 #include "Gameplay/Planet/PlanetSurfaceManager.h"
 #include "Components/InstancedStaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
@@ -12,6 +13,7 @@
 #include "Engine/GameViewportClient.h"
 #include "GameFramework/PlayerController.h"
 #include "SceneView.h"
+#include "Misc/Crc.h"
 
 ASectorPopulation::ASectorPopulation()
 {
@@ -56,16 +58,29 @@ void ASectorPopulation::InitializePopulation()
 	if (!Grid) for (TActorIterator<AHexSectorGrid> It(GetWorld()); It; ++It) { Grid = *It; break; }
 	if (!Grid || Grid->Sectors.IsEmpty()) { Diagnostics.Add(TEXT("No generated sector grid found.")); return; }
 	UPlanetResourceDistribution* Input = NewObject<UPlanetResourceDistribution>(this);
-	const EResourceType Types[] = {EResourceType::Iron, EResourceType::Copper, EResourceType::Stone};
+	const EResourceType Types[] = {EResourceType::Stone, EResourceType::Copper, EResourceType::Iron};
 	for (const FHexSector& Sector : Grid->Sectors)
 	{
-		FPlanetResourceRule Rule;
-		Rule.Id = FName(*FString::Printf(TEXT("Sector_%d"), Sector.Id));
-		Rule.ResourceType = Types[Sector.Id % 3]; Rule.SlotType = TEXT("Any");
-		Rule.MinCount = Rule.MaxCount = 1;
-		Rule.MinQuantity = 3000; Rule.MaxQuantity = 5000; Rule.Radius = 200;
-		Rule.AllowedSectorIds.Add(Sector.Id);
-		Input->Rules.Add(Rule);
+		FRandomStream SectorRandom(Seed ^ (Sector.Id * 7919) ^ 0x524553);
+		const int32 DepositCount = Sector.Id == Grid->StartingSectorId ? 2 : SectorRandom.RandRange(1, 3);
+		TArray<EResourceType> SectorTypes = {Types[0], Types[1], Types[2]};
+		if (Sector.Id != Grid->StartingSectorId)
+		{
+			for (int32 Index = SectorTypes.Num() - 1; Index > 0; --Index)
+			{
+				SectorTypes.Swap(Index, SectorRandom.RandRange(0, Index));
+			}
+		}
+		for (int32 DepositIndex = 0; DepositIndex < DepositCount; ++DepositIndex)
+		{
+			FPlanetResourceRule Rule;
+			Rule.Id = FName(*FString::Printf(TEXT("Sector_%d_Deposit_%d"), Sector.Id, DepositIndex));
+			Rule.ResourceType = SectorTypes[DepositIndex]; Rule.SlotType = TEXT("Any");
+			Rule.MinCount = Rule.MaxCount = 1;
+			Rule.MinQuantity = 3000; Rule.MaxQuantity = 5000; Rule.Radius = 200;
+			Rule.AllowedSectorIds.Add(Sector.Id);
+			Input->Rules.Add(Rule);
+		}
 	}
 	Resources = UPlanetResourcePlacementComponent::PlaceResources(Grid, Input, Seed);
 	if (!Resources.bSuccess) { Diagnostics.Append(Resources.Errors); UE_LOG(LogTemp, Error, TEXT("SECTOR_POPULATION: %s"), *FString::Join(Diagnostics,TEXT("; "))); return; }
@@ -84,6 +99,11 @@ void ASectorPopulation::InitializePopulation()
 	if (AuthoredSectorTemplate || !AuthoredSectorTemplates.IsEmpty() || ClusterVariantLibrary)
 	{
 		if (!GenerateAuthoredClusters())
+		{
+			UE_LOG(LogTemp, Error, TEXT("SECTOR_POPULATION: %s"), *FString::Join(Diagnostics, TEXT("; ")));
+			return;
+		}
+		if (!EnsureMineableDepositLocations())
 		{
 			UE_LOG(LogTemp, Error, TEXT("SECTOR_POPULATION: %s"), *FString::Join(Diagnostics, TEXT("; ")));
 			return;
@@ -114,6 +134,149 @@ TArray<UPlanetSectorTemplate*> ASectorPopulation::GetAuthoredTemplateCatalog() c
 		for (UPlanetSectorTemplate* Template : AuthoredSectorTemplates) if (Template) Result.AddUnique(Template);
 	}
 	return Result;
+}
+
+bool ASectorPopulation::EnsureMineableDepositLocations()
+{
+	APlanetSurfaceManager* Surface = nullptr;
+	for (TActorIterator<APlanetSurfaceManager> It(GetWorld()); It; ++It) { Surface = *It; break; }
+	if (!Surface || !Grid)
+	{
+		Diagnostics.Add(TEXT("Cannot validate mine locations without a planet surface and sector grid."));
+		return false;
+	}
+
+	struct FMineCandidate
+	{
+		FVector SourceLocation;
+		FSTPGridPlacement Placement;
+		FIntPoint Footprint;
+	};
+	TArray<FMineCandidate> Accepted;
+	const int32 Clearance = Surface->GetBuildingClearanceCells();
+	auto IsSeparated = [Clearance](const FMineCandidate& A, const FMineCandidate& B, float MinimumDistance)
+	{
+		if (FVector::Dist2D(A.SourceLocation, B.SourceLocation) < MinimumDistance) return false;
+		const FSTPGridCell OriginA = A.Placement.OriginCell;
+		const FSTPGridCell OriginB = B.Placement.OriginCell;
+		return OriginA.X + A.Footprint.X - 1 + Clearance < OriginB.X
+			|| OriginB.X + B.Footprint.X - 1 + Clearance < OriginA.X
+			|| OriginA.Y + A.Footprint.Y - 1 + Clearance < OriginB.Y
+			|| OriginB.Y + B.Footprint.Y - 1 + Clearance < OriginA.Y;
+	};
+	for (const FHexSector& Sector : Grid->Sectors)
+	{
+		TArray<int32> DepositIndices;
+		for (int32 Index = 0; Index < Resources.Deposits.Num(); ++Index)
+			if (Resources.Deposits[Index].SectorId == Sector.Id) DepositIndices.Add(Index);
+		const bool bStartingSector = Sector.Id == Grid->StartingSectorId;
+		// Search outside-in; ordinary sectors may use inner open ground when rocks fill the rim.
+		const float MinimumRadius = bStartingSector ? 2200.0f : 800.0f;
+		const float MaximumRadius = Grid->ExplorationSectorRadius - 650.0f;
+		const float Separation = bStartingSector ? 1800.0f : 1200.0f;
+		struct FDepositSearch
+		{
+			const ABaseResourceSource* SourceDefaults = nullptr;
+			const AMiningMachine* MineDefaults = nullptr;
+			TArray<FVector> Positions;
+			TArray<FMineCandidate> Options;
+			TSet<FIntPoint> VisitedOrigins;
+			int32 NextPosition = 0;
+		};
+		TArray<FDepositSearch> Searches;
+		for (int32 DepositIndex : DepositIndices)
+		{
+			const FPlanetPlacedDeposit& Deposit = Resources.Deposits[DepositIndex];
+			FDepositSearch& Search = Searches.AddDefaulted_GetRef();
+			const TSubclassOf<ABaseResourceSource> SourceClass = DepositClasses.FindRef(Deposit.ResourceType);
+			Search.SourceDefaults = SourceClass ? SourceClass->GetDefaultObject<ABaseResourceSource>() : nullptr;
+			const TSubclassOf<AMiningMachine> MineClass = Search.SourceDefaults ? Search.SourceDefaults->GetMineBlueprint() : nullptr;
+			Search.MineDefaults = MineClass ? MineClass->GetDefaultObject<AMiningMachine>() : nullptr;
+			if (!Search.MineDefaults)
+			{
+				Diagnostics.Add(FString::Printf(TEXT("Sector %d: deposit %s has no configured MineBlueprint."), Sector.Id, *Deposit.RuleId.ToString()));
+				return false;
+			}
+			FRandomStream Random(Seed ^ (Sector.Id * 7919) ^ FCrc::StrCrc32(*Deposit.RuleId.ToString()));
+			const float StartAngle = Random.FRandRange(0.0f, 360.0f);
+			for (float Radius = MaximumRadius; Radius >= MinimumRadius; Radius -= 100.0f)
+			{
+				const int32 Samples = FMath::Max(12, FMath::CeilToInt(2.0f * PI * Radius / 150.0f));
+				for (int32 Sample = 0; Sample < Samples; ++Sample)
+				{
+					const float Angle = FMath::DegreesToRadians(StartAngle + 360.0f * Sample / Samples);
+					Search.Positions.Add(Sector.WorldCenter + Grid->GetActorTransform().TransformVectorNoScale(
+						FVector(FMath::Cos(Angle) * Radius, FMath::Sin(Angle) * Radius, 0)));
+				}
+			}
+		}
+		// Validate lazily and cache alternatives. Most sectors need only a few
+		// candidates; backtracking can still search the entire annulus when needed.
+		auto FindNextOption = [&](FDepositSearch& Search)
+		{
+			while (Search.NextPosition < Search.Positions.Num())
+			{
+				FMineCandidate Candidate;
+				const FVector Position = Search.Positions[Search.NextPosition++];
+				if (!GroundPosition(Position, Candidate.SourceLocation)) continue;
+				Candidate.Footprint = Search.MineDefaults->GetGridFootprint();
+				const bool bBuildable = Search.MineDefaults->CanBuildAtSourceTransform(Search.SourceDefaults,
+					FTransform(Candidate.SourceLocation), Surface, Candidate.Placement, ResourceTerrainMarginCells);
+				if (bLogResourcePlacement)
+				{
+					UE_LOG(LogTemp, Display, TEXT("STP_RESOURCE_CANDIDATE sector=%d mine=%s sourceLocation=%s origin=(%d,%d) footprint=%s extraMargin=%d valid=%d"),
+						Sector.Id, *Search.MineDefaults->GetClass()->GetName(), *Candidate.SourceLocation.ToString(),
+						Candidate.Placement.OriginCell.X, Candidate.Placement.OriginCell.Y, *Candidate.Footprint.ToString(), ResourceTerrainMarginCells, bBuildable);
+					if (!bBuildable) Surface->HasTerrainClearance(Candidate.Placement.OriginCell, Candidate.Footprint,
+						Clearance + ResourceTerrainMarginCells, true);
+				}
+				const float Radius = FVector::Dist2D(Sector.WorldCenter, Candidate.Placement.WorldLocation);
+				if (!bBuildable || Radius < MinimumRadius || Radius > MaximumRadius
+					|| Grid->GetSectorAtWorldLocation(Candidate.Placement.WorldLocation) != Sector.Id
+					|| Search.VisitedOrigins.Contains(Candidate.Placement.OriginCell.ToIntPoint())) continue;
+				bool bSeparated = true;
+				for (const FMineCandidate& Existing : Accepted)
+					if (!IsSeparated(Candidate, Existing, Separation)) { bSeparated = false; break; }
+				if (!bSeparated) continue;
+				Search.VisitedOrigins.Add(Candidate.Placement.OriginCell.ToIntPoint());
+				Search.Options.Add(Candidate);
+				return true;
+			}
+			return false;
+		};
+		TArray<FMineCandidate> Selected;
+		TFunction<bool(int32)> Select = [&](int32 Index)
+		{
+			if (Index == Searches.Num()) return true;
+			FDepositSearch& Search = Searches[Index];
+			for (int32 OptionIndex = 0; ; ++OptionIndex)
+			{
+				if (OptionIndex == Search.Options.Num() && !FindNextOption(Search)) break;
+				const FMineCandidate Candidate = Search.Options[OptionIndex];
+				bool bSeparated = true;
+				for (const FMineCandidate& Other : Selected)
+					if (!IsSeparated(Candidate, Other, Separation)) { bSeparated = false; break; }
+				if (!bSeparated) continue;
+				Selected.Add(Candidate);
+				if (Select(Index + 1)) return true;
+				Selected.Pop();
+			}
+			return false;
+		};
+		if (!Select(0))
+		{
+			Diagnostics.Add(FString::Printf(TEXT("Sector %d has no safe layout for all %d mines; generation aborted without unsafe deposits."),
+				Sector.Id, DepositIndices.Num()));
+			Resources.bSuccess = false;
+			return false;
+		}
+		for (int32 Index = 0; Index < Selected.Num(); ++Index)
+		{
+			Resources.Deposits[DepositIndices[Index]].Location = Selected[Index].SourceLocation;
+			Accepted.Add(Selected[Index]);
+		}
+	}
+	return true;
 }
 
 UPlanetSectorTemplate* ASectorPopulation::SelectTemplateForSector(int32 SectorId) const

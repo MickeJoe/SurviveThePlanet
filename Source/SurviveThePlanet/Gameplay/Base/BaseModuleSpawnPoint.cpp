@@ -92,7 +92,7 @@ AActor* ABaseModuleSpawnPoint::SpawnBaseModule()
 	if (SurfaceManager)
 	{
 		const FIntPoint Footprint = GetEffectiveBaseModuleFootprint();
-		Placement = SurfaceManager->GetPlacementForWorldLocation(SpawnTransform.GetLocation(), Footprint);
+		Placement = SurfaceManager->GetBuildingPlacementForWorldLocation(SpawnTransform.GetLocation(), Footprint);
 		if (!Placement.bValid)
 		{
 			UE_LOG(LogBaseModuleSpawnPoint, Warning, TEXT("%s cannot spawn base module because grid placement is invalid or occupied. OriginCell=(%d,%d) Footprint=(%d,%d)"),

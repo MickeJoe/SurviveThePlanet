@@ -73,6 +73,9 @@ public:
 	/** Optional per-slot material overrides, parallel to DecorationMeshes. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Population") TArray<FSectorMeshMaterialSet> DecorationMaterialSets;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Population") TMap<EResourceType, TSubclassOf<ABaseResourceSource>> DepositClasses;
+	/** Extra cells beyond the normal building/terrain clearance for generated deposits. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Population|Resources", meta=(ClampMin="0")) int32 ResourceTerrainMarginCells = 1;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Population|Resources") bool bLogResourcePlacement = false;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Population") FPlanetResourcePlacementResult Resources;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, SaveGame, Category="Population") TArray<FSectorDecoration> Decorations;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Population") TArray<FString> Diagnostics;
@@ -82,6 +85,7 @@ public:
 private:
 	UFUNCTION() void OnSectorChanged(int32 SectorId, ESectorState State);
 	bool GroundPosition(FVector Position, FVector& Ground) const;
+	bool EnsureMineableDepositLocations();
 	bool GenerateAuthoredClusters();
 	TArray<UPlanetSectorTemplate*> GetAuthoredTemplateCatalog() const;
 	bool GenerateLegacyDecorations();

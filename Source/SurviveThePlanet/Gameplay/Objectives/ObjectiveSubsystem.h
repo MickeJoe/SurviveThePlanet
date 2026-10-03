@@ -29,7 +29,8 @@ enum class ESTPObjectiveRewardType : uint8
 	GiveResource,
 	UnlockObjective,
 	GiveMissionConfidence,
-	GiveDrone
+	GiveDrone,
+	GiveBuildingBlueprint
 };
 
 USTRUCT(BlueprintType)
@@ -69,6 +70,10 @@ struct FSTPObjectiveRewardDefinition
 
 	UPROPERTY(BlueprintReadOnly, Category = "Objectives")
 	FName ObjectiveId;
+
+	/** Stable UBuildingDataAsset::BlueprintId used by give_building_blueprint rewards. */
+	UPROPERTY(BlueprintReadOnly, Category = "Objectives")
+	FName BlueprintId;
 
 	/** Blueprint class path used by give_drone rewards. */
 	UPROPERTY(BlueprintReadOnly, Category = "Objectives")

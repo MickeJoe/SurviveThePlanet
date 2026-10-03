@@ -6,6 +6,19 @@
 #include "Gameplay/Resources/ResourceManager.h"
 #include "BuildToolbarWidget.generated.h"
 
+class UBuildToolbarWidget;
+class UHorizontalBox;
+
+UCLASS()
+class UBuildToolbarClickBinding : public UObject
+{
+	GENERATED_BODY()
+public:
+	UPROPERTY() TObjectPtr<UBuildToolbarWidget> Toolbar;
+	ESTPBuildTool Tool = ESTPBuildTool::None;
+	UFUNCTION() void Click();
+};
+
 class UBorder;
 class UButton;
 class UImage;
@@ -149,6 +162,12 @@ protected:
 	void BP_ActiveToolChanged(ESTPBuildTool NewTool);
 
 private:
+	friend class UBuildToolbarClickBinding;
+	friend class FSTPBlueprintToolbarTest;
+	UPROPERTY(Transient) TArray<TObjectPtr<UBuildToolbarClickBinding>> ClickBindings;
+	UPROPERTY(Transient) TObjectPtr<UHorizontalBox> DesignedHost;
+	FTimerHandle ResourceRetryTimer;
+	bool IsToolAvailable(ESTPBuildTool Tool) const;
 	ESTPBuildCategory ActiveCategory = ESTPBuildCategory::Energy;
 	UPROPERTY(Transient)
 	TMap<ESTPBuildTool, TObjectPtr<UBorder>> ButtonBorders;

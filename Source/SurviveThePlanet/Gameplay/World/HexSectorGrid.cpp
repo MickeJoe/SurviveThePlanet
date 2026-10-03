@@ -112,6 +112,10 @@ void AHexSectorGrid::EnsureDefaultTemplates()
 		// Slots sit between radial corridors and outside the protected building pockets.
 		Template.ResourceSlots.Add({TEXT("Any"), FVector2D(2400.0f, 0.0f), 300.0f});
 		Template.ResourceSlots.Add({Index % 2 == 0 ? TEXT("Mineral") : TEXT("Water"), FVector2D(1200.0f, 2078.0f), 250.0f});
+		Template.ResourceSlots.Add({TEXT("Any"), FVector2D(-1200.0f, 2078.0f), 250.0f});
+		Template.ResourceSlots.Add({TEXT("Any"), FVector2D(-2400.0f, 0.0f), 300.0f});
+		Template.ResourceSlots.Add({TEXT("Any"), FVector2D(-1200.0f, -2078.0f), 250.0f});
+		Template.ResourceSlots.Add({TEXT("Any"), FVector2D(1200.0f, -2078.0f), 250.0f});
 		Template.LandmarkSlots.Add(FVector2D(0.0f, 1250.0f));
 		Template.SubBaseSlots.Add(FVector2D(600.0f, 250.0f));
 		for (int32 Side = 0; Side < 6; ++Side)

@@ -46,6 +46,26 @@ navigation rules. Full gameplay balancing of all building pockets remains separa
 The same ISM batching, Nanite rock assets, detail culling and camera residency
 remain in use. More template variety does not keep all sector meshes resident.
 
+## Building exclusion
+
+Every cluster footprint is a no-building polygon. The shared surface building
+validation checks the complete grid-aligned building footprint against the
+selected sector template's actual contours, including slot/sector transforms.
+Touching an edge is rejected. Concave openings remain usable; a whole cluster
+bounding rectangle is not blocked. This applies to placement previews, final
+cell reservations and mining-machine eligibility through the same validation.
+
+The rule reads persistent sector/template data, not visible mesh collision.
+It therefore remains active when meshes are culled, hidden or unloaded, without
+enabling costly per-rock collision. Drone pathing and resource cell reservations
+are unchanged; this rule only restricts buildings. A resource beneath a cluster
+does not grant a mining-machine exception.
+
+Regression tests: `SurviveThePlanet.Placement.ClusterFootprints` and the existing
+`SurviveThePlanet.Placement.BuildingClearance`. Run
+`Scripts/test_cluster_building_placement.py` in the default map for the actual
+37-sector PIE check; results are in `Saved/ClusterBuildingPlacement.json`.
+
 ## Reproducibility and checks
 
 - `Scripts/build_sector_catalog.py`: one-time asset recipe; refuses to overwrite

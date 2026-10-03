@@ -1,4 +1,5 @@
 #include "Gameplay/Buildings/MiningMachine.h"
+#include "SurviveThePlanet.h"
 
 #include "Components/StaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
@@ -16,6 +17,7 @@ AMiningMachine::AMiningMachine()
 	EnergyConsumptionPerMinute = 10.0f;
 	SupportedResourceTypes.Add(EResourceType::Iron);
 	SupportedResourceTypes.Add(EResourceType::Copper);
+	SupportedResourceTypes.Add(EResourceType::Stone);
 	FSTPResourceOutputRate IronOutput;
 	IronOutput.Resource = EResourceType::Iron;
 	IronOutput.AmountPerMinutePerDroneAt100Percent = 10.0f;
@@ -25,6 +27,11 @@ AMiningMachine::AMiningMachine()
 	CopperOutput.Resource = EResourceType::Copper;
 	CopperOutput.AmountPerMinutePerDroneAt100Percent = 10.0f;
 	OutputPerDroneAt100Percent.Add(CopperOutput);
+
+	FSTPResourceOutputRate StoneOutput;
+	StoneOutput.Resource = EResourceType::Stone;
+	StoneOutput.AmountPerMinutePerDroneAt100Percent = 10.0f;
+	OutputPerDroneAt100Percent.Add(StoneOutput);
 
 }
 
@@ -123,8 +130,22 @@ void AMiningMachine::EndPlay(const EEndPlayReason::Type EndPlayReason)
 
 bool AMiningMachine::AttachToResourceSource(ABaseResourceSource* NewResourceSource)
 {
-	if (bPlacementPreview || !CanMineResourceSource(NewResourceSource))
+	UE_LOG(LogSurviveThePlanet, Display, TEXT("STP_MINING_DIAG attach actor=%s source=%s actorTransform=%s intendedTransform=%s footprint=%s preview=%d"),
+		*GetName(), *GetNameSafe(NewResourceSource), *GetActorTransform().ToString(), *GetPlacementTransformForSource(NewResourceSource).ToString(), *GetGridFootprint().ToString(), bPlacementPreview);
+	if (IsValid(NewResourceSource))
 	{
+		for (TActorIterator<APlanetSurfaceManager> It(GetWorld()); It; ++It)
+		{
+			const FSTPGridPlacement Intended = It->GetPlacementForWorldLocation(GetPlacementTransformForSource(NewResourceSource).GetLocation(), GetGridFootprint());
+			const bool bClearance = It->HasBuildingClearance(Intended.OriginCell, GetGridFootprint(), this, true);
+			UE_LOG(LogSurviveThePlanet, Display, TEXT("STP_MINING_DIAG attach_precheck origin=(%d,%d) HasBuildingClearance=%d reservedMachine=%s"), Intended.OriginCell.X, Intended.OriginCell.Y, bClearance, *GetNameSafe(NewResourceSource->GetReservedMiningMachine()));
+			break;
+		}
+	}
+	const bool bCanMine = !bPlacementPreview && CanMineResourceSource(NewResourceSource);
+	if (!bCanMine)
+	{
+		UE_LOG(LogSurviveThePlanet, Display, TEXT("STP_MINING_DIAG attach rejected stage=CanMineResourceSource TryReserveMiningMachine=NOT_REACHED ReleaseCells=NOT_REACHED ReserveCells=NOT_REACHED rollback=NOT_NEEDED"));
 		return false;
 	}
 
@@ -133,7 +154,9 @@ bool AMiningMachine::AttachToResourceSource(ABaseResourceSource* NewResourceSour
 		return true;
 	}
 
-	if (!NewResourceSource->TryReserveMiningMachine(this))
+	const bool bReservedSource = NewResourceSource->TryReserveMiningMachine(this);
+	UE_LOG(LogSurviveThePlanet, Display, TEXT("STP_MINING_DIAG TryReserveMiningMachine=%d source=%s owner=%s"), bReservedSource, *NewResourceSource->GetName(), *GetNameSafe(NewResourceSource->GetReservedMiningMachine()));
+	if (!bReservedSource)
 	{
 		return false;
 	}
@@ -146,13 +169,20 @@ bool AMiningMachine::AttachToResourceSource(ABaseResourceSource* NewResourceSour
 		for (TActorIterator<APlanetSurfaceManager> It(World); It; ++It)
 		{
 			const FSTPGridCell ResourceOrigin = NewResourceSource->GetGridCell();
+			It->LogPlacementDiagnostics(NewResourceSource, ResourceOrigin, NewResourceSource->GetGridFootprint(), TEXT("source before ReleaseCells"));
 			It->ReleaseCells(NewResourceSource);
+			FSTPGridCell RemainingOrigin;
+			const bool bCellsRemain = It->TryGetActorOriginCell(NewResourceSource, RemainingOrigin);
+			UE_LOG(LogSurviveThePlanet, Display, TEXT("STP_MINING_DIAG source after ReleaseCells remaining=%d oldOrigin=(%d,%d) oldFootprint=%s"), bCellsRemain, ResourceOrigin.X, ResourceOrigin.Y, *NewResourceSource->GetGridFootprint().ToString());
 			const FSTPGridPlacement MachinePlacement = It->GetPlacementForWorldLocation(
 				GetActorLocation(), GetGridFootprint());
+			It->LogPlacementDiagnostics(this, MachinePlacement.OriginCell, GetGridFootprint(), TEXT("attach before ReserveCells"));
 			if (!It->ReserveCells(this, MachinePlacement.OriginCell, GetGridFootprint()))
 			{
-				It->ReserveCells(NewResourceSource, ResourceOrigin, NewResourceSource->GetGridFootprint());
+				const bool bRollback = It->ReserveCells(NewResourceSource, ResourceOrigin, NewResourceSource->GetGridFootprint());
+				UE_LOG(LogSurviveThePlanet, Display, TEXT("STP_MINING_DIAG rollback cellsRestored=%d"), bRollback);
 				NewResourceSource->ReleaseMiningMachine(this);
+				UE_LOG(LogSurviveThePlanet, Display, TEXT("STP_MINING_DIAG rollback sourceReleased=%d"), NewResourceSource->GetReservedMiningMachine() == nullptr);
 				return false;
 			}
 			break;
@@ -184,14 +214,33 @@ bool AMiningMachine::CanMineResourceSource(const ABaseResourceSource* CandidateS
 	}
 	for (TActorIterator<APlanetSurfaceManager> It(CandidateSource->GetWorld()); It; ++It)
 	{
-		const FSTPGridPlacement Placement = It->GetPlacementForWorldLocation(
-			GetPlacementTransformForSource(CandidateSource).GetLocation(), GetGridFootprint());
-		return It->HasBuildingClearance(Placement.OriginCell, GetGridFootprint());
+		FSTPGridPlacement Placement;
+		return CanBuildAtSourceTransform(CandidateSource, CandidateSource->GetActorTransform(), *It, Placement);
 	}
 	return false;
 }
 
+bool AMiningMachine::CanBuildAtSourceTransform(const ABaseResourceSource* CandidateSource, const FTransform& SourceTransform,
+	APlanetSurfaceManager* Surface, FSTPGridPlacement& OutPlacement, int32 ExtraTerrainMarginCells) const
+{
+	if (!IsValid(CandidateSource) || !Surface || !GetSupportedResourceTypes().Contains(CandidateSource->GetResourceType())) return false;
+	const FIntPoint Footprint = GetGridFootprint();
+	OutPlacement = Surface->GetPlacementForWorldLocation(
+		GetPlacementTransformForSourceAtTransform(CandidateSource, SourceTransform).GetLocation(), Footprint);
+	OutPlacement.bValid = Surface->CanReserveBuildingCells(const_cast<AMiningMachine*>(this),
+		OutPlacement.OriginCell, Footprint, CandidateSource)
+		&& (ExtraTerrainMarginCells <= 0 || Surface->HasTerrainClearance(OutPlacement.OriginCell, Footprint,
+			Surface->GetBuildingClearanceCells() + ExtraTerrainMarginCells));
+	return OutPlacement.bValid;
+}
+
 FTransform AMiningMachine::GetPlacementTransformForSource(const ABaseResourceSource* CandidateSource) const
+{
+	return GetPlacementTransformForSourceAtTransform(CandidateSource,
+		IsValid(CandidateSource) ? CandidateSource->GetActorTransform() : GetActorTransform());
+}
+
+FTransform AMiningMachine::GetPlacementTransformForSourceAtTransform(const ABaseResourceSource* CandidateSource, const FTransform& SourceTransform) const
 {
 	if (!IsValid(CandidateSource))
 	{
@@ -205,19 +254,20 @@ FTransform AMiningMachine::GetPlacementTransformForSource(const ABaseResourceSou
 	if (!SourceMeshComponent || !SourceMeshComponent->GetStaticMesh()
 		|| !BuildingMesh || !BuildingMesh->GetStaticMesh())
 	{
-		return GetSourceTransformOffset() * CandidateSource->GetActorTransform();
+		return GetSourceTransformOffset() * SourceTransform;
 	}
 
 	const FBox SourceBounds = SourceMeshComponent->GetStaticMesh()->GetBoundingBox();
 	const FBox MachineBounds = BuildingMesh->GetStaticMesh()->GetBoundingBox();
 	const FVector SourceAnchorLocal(SourceBounds.GetCenter().X, SourceBounds.GetCenter().Y, SourceBounds.Min.Z);
 	const FVector MachineAnchorMeshLocal(MachineBounds.GetCenter().X, MachineBounds.GetCenter().Y, MachineBounds.Min.Z);
-	const FVector SourceAnchorWorld = SourceMeshComponent->GetComponentTransform().TransformPosition(SourceAnchorLocal);
+	const FTransform SourceMeshToActor = SourceMeshComponent->GetComponentTransform().GetRelativeTransform(CandidateSource->GetActorTransform());
+	const FVector SourceAnchorWorld = (SourceMeshToActor * SourceTransform).TransformPosition(SourceAnchorLocal);
 	const FVector MachineAnchorActorLocal = BuildingMesh->GetRelativeTransform().TransformPosition(MachineAnchorMeshLocal);
 
 	FTransform AlignedTransform(
-		CandidateSource->GetActorQuat(),
-		CandidateSource->GetActorLocation(),
+		SourceTransform.GetRotation(),
+		SourceTransform.GetLocation(),
 		GetActorScale3D());
 	const FVector MachineAnchorWorld = AlignedTransform.TransformPosition(MachineAnchorActorLocal);
 	AlignedTransform.AddToTranslation(SourceAnchorWorld - MachineAnchorWorld);

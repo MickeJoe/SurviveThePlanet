@@ -369,7 +369,6 @@ void ABaseBuilding::SetPlacementPreview(bool bPreview)
 	{
 		PlacementPreviewMeshLocation = BuildingMesh->GetRelativeLocation();
 		bPlacementPreviewMeshLocationSaved = true;
-		BuildingMesh->SetRelativeLocation(PlacementPreviewMeshLocation + FVector(0.0f, 0.0f, 15.0f));
 	}
 	else if (BuildingMesh && !bPreview && bPlacementPreviewMeshLocationSaved)
 	{

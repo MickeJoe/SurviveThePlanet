@@ -32,6 +32,8 @@ APlanetGeneratedSector::APlanetGeneratedSector()
 void APlanetGeneratedSector::OnConstruction(const FTransform& Transform)
 {
 	Super::OnConstruction(Transform);
+	bPlacementBoundsReady = false;
+	GetPlacementMeshBounds();
 	if (!bDeferRuntimeGeneration) Generate();
 }
 
@@ -88,6 +90,47 @@ void APlanetGeneratedSector::AddComposition(const UPlanetTerrainClusterVariant* 
 	}
 }
 
+TArray<UPlanetTerrainClusterVariant*> APlanetGeneratedSector::ResolveVariants() const
+{
+	TArray<UPlanetTerrainClusterVariant*> Result;
+	if (!SectorTemplate || !VariantLibrary) return Result;
+	FRandomStream Random(Seed);
+	for (const FPlanetSectorClusterSlot& Slot : SectorTemplate->ClusterSlots)
+	{
+		const TArray<UPlanetTerrainClusterVariant*> Compatible = VariantLibrary->FindCompatible(Slot.Shape);
+		Result.Add(Compatible.IsEmpty() ? nullptr : Compatible[Random.RandRange(0, Compatible.Num() - 1)]);
+	}
+	return Result;
+}
+
+const TArray<FBox>& APlanetGeneratedSector::GetPlacementMeshBounds() const
+{
+	if (bPlacementBoundsReady && BoundsSeed == Seed && BoundsTemplate == SectorTemplate && BoundsLibrary == VariantLibrary)
+		return PlacementMeshBounds;
+	PlacementMeshBounds.Reset();
+	CombinedPlacementBounds = FBox(ForceInit);
+	BoundsSeed = Seed;
+	BoundsTemplate = SectorTemplate;
+	BoundsLibrary = VariantLibrary;
+	bPlacementBoundsReady = true;
+	const TArray<UPlanetTerrainClusterVariant*> Variants = ResolveVariants();
+	for (int32 Index = 0; Index < Variants.Num(); ++Index)
+	{
+		if (!Variants[Index]) continue;
+		for (const FPlanetClusterElement& Element : Variants[Index]->Elements)
+		{
+			if (Element.Mesh)
+			{
+				// Match AddComposition, including pivot, slot rotation and nonuniform scale.
+				PlacementMeshBounds.Add(Element.Mesh->GetBoundingBox().TransformBy(
+					Element.Transform * SectorTemplate->ClusterSlots[Index].Transform));
+				CombinedPlacementBounds += PlacementMeshBounds.Last();
+			}
+		}
+	}
+	return PlacementMeshBounds;
+}
+
 void APlanetGeneratedSector::Generate()
 {
 	ClearGenerated();
@@ -96,18 +139,19 @@ void APlanetGeneratedSector::Generate()
 		Diagnostics.Add(TEXT("Assign SectorTemplate and VariantLibrary."));
 		return;
 	}
-	FRandomStream Random(Seed);
-	for (const FPlanetSectorClusterSlot& Slot : SectorTemplate->ClusterSlots)
+	bPlacementBoundsReady = false;
+	GetPlacementMeshBounds();
+	const TArray<UPlanetTerrainClusterVariant*> Variants = ResolveVariants();
+	for (int32 Index = 0; Index < SectorTemplate->ClusterSlots.Num(); ++Index)
 	{
-		const TArray<UPlanetTerrainClusterVariant*> Compatible = VariantLibrary->FindCompatible(Slot.Shape);
-		if (Compatible.IsEmpty())
+		const FPlanetSectorClusterSlot& Slot = SectorTemplate->ClusterSlots[Index];
+		const UPlanetTerrainClusterVariant* Variant = Variants[Index];
+		SelectedVariantIds.Add(Variant ? Variant->VariantId : NAME_None);
+		if (!Variant)
 		{
-			SelectedVariantIds.Add(NAME_None);
 			Diagnostics.Add(FString::Printf(TEXT("Slot %s: no compatible variants; footprint left empty."), *Slot.SlotId.ToString()));
 			continue;
 		}
-		const UPlanetTerrainClusterVariant* Variant = Compatible[Random.RandRange(0, Compatible.Num() - 1)];
-		SelectedVariantIds.Add(Variant->VariantId);
 		AddComposition(Variant, Slot.Transform);
 	}
 	// Upload completed batches once, not one render-state update per instance.

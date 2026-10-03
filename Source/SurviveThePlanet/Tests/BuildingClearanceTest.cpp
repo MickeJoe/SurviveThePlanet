@@ -41,8 +41,8 @@ bool FSTPBuildingClearanceTest::RunTest(const FString& Parameters)
 		const FVector OriginalMeshLocation = PreviewMesh->GetRelativeLocation();
 		First->SetPlacementPreview(true);
 		First->SetPlacementPreviewValid(true);
-		TestEqual(TEXT("Placement ghost is lifted 15 cm"), PreviewMesh->GetRelativeLocation(),
-			OriginalMeshLocation + FVector(0.0f, 0.0f, 15.0f));
+		TestEqual(TEXT("Preview preserves authored mesh position; surface placement supplies height"), PreviewMesh->GetRelativeLocation(),
+			OriginalMeshLocation);
 		TestEqual(TEXT("Valid preview uses cyan stencil"), PreviewMesh->CustomDepthStencilValue, 2);
 		TestEqual(TEXT("Preview collision is disabled"), PreviewMesh->GetCollisionEnabled(), ECollisionEnabled::NoCollision);
 		First->SetPlacementPreviewValid(false);

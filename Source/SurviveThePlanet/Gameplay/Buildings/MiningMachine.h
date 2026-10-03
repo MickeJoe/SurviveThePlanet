@@ -5,6 +5,8 @@
 #include "MiningMachine.generated.h"
 
 class ABaseResourceSource;
+class APlanetSurfaceManager;
+struct FSTPGridPlacement;
 
 /**
  * Constructible mining installation that replaces a resource deposit visually.
@@ -42,6 +44,13 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Mining Machine|Placement")
 	FTransform GetPlacementTransformForSource(const ABaseResourceSource* CandidateSource) const;
 
+	/** Evaluates a future source transform without spawning or reserving a deposit. */
+	UFUNCTION(BlueprintPure, Category = "Mining Machine|Placement")
+	FTransform GetPlacementTransformForSourceAtTransform(const ABaseResourceSource* CandidateSource, const FTransform& SourceTransform) const;
+
+	bool CanBuildAtSourceTransform(const ABaseResourceSource* CandidateSource, const FTransform& SourceTransform,
+		APlanetSurfaceManager* Surface, FSTPGridPlacement& OutPlacement, int32 ExtraTerrainMarginCells = 0) const;
+
 	UFUNCTION(BlueprintCallable, Category = "Mining Machine|Placement")
 	void SetPlacementPreview(bool bPreview);
 
@@ -50,6 +59,8 @@ public:
 
 	/** Changes which source mesh is temporarily replaced by this preview. */
 	void SetPreviewResourceSource(ABaseResourceSource* NewPreviewSource);
+	ABaseResourceSource* GetPreviewResourceSource() const { return PreviewResourceSource; }
+	bool IsMiningPlacementPreviewValid() const { return bPlacementPreviewValid; }
 
 protected:
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;

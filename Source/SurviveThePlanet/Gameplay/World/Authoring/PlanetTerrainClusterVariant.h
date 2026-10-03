@@ -63,11 +63,21 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Generation") TArray<FString> Diagnostics;
 	UFUNCTION(BlueprintCallable, CallInEditor, Category="Generation") void Generate();
 	UFUNCTION(BlueprintCallable, CallInEditor, Category="Generation") void ClearGenerated();
+	/** Mesh bounds survive visual residency changes; the same seeded variants drive rendering. */
+	const TArray<FBox>& GetPlacementMeshBounds() const;
+	const FBox& GetCombinedPlacementBounds() const { GetPlacementMeshBounds(); return CombinedPlacementBounds; }
 protected:
 	virtual void OnConstruction(const FTransform& Transform) override;
 private:
 	UPROPERTY(Transient) TArray<TObjectPtr<UInstancedStaticMeshComponent>> InstanceGroups;
 	void AddComposition(const UPlanetTerrainClusterVariant* Variant, const FTransform& SlotTransform);
+	TArray<UPlanetTerrainClusterVariant*> ResolveVariants() const;
+	mutable TArray<FBox> PlacementMeshBounds;
+	mutable FBox CombinedPlacementBounds = FBox(ForceInit);
+	mutable TWeakObjectPtr<UPlanetSectorTemplate> BoundsTemplate;
+	mutable TWeakObjectPtr<UPlanetTerrainClusterLibrary> BoundsLibrary;
+	mutable int32 BoundsSeed = 0;
+	mutable bool bPlacementBoundsReady = false;
 };
 
 /** Reuses the shape actor's footprint. MeshActors is the explicit authoring membership. */

@@ -19,13 +19,25 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Building Blueprints")
 	bool GrantBlueprint(ESTPBuildTool BuildTool);
 
+	/** Grants a catalog blueprint by its stable BlueprintId. Intended for rewards, trade and discoveries. */
+	UFUNCTION(BlueprintCallable, Category="Building Blueprints")
+	bool GrantBlueprintById(FName BlueprintId);
+
+	UFUNCTION(BlueprintPure, Category="Building Blueprints")
+	bool OwnsBlueprintById(FName BlueprintId) const;
+
 	UFUNCTION(BlueprintCallable, Category="Building Blueprints")
 	void RevokeBlueprint(ESTPBuildTool BuildTool);
+
+	UFUNCTION(BlueprintPure, Category="Building Blueprints")
+	TArray<ESTPBuildTool> GetOwnedBlueprints() const;
 
 	UPROPERTY(BlueprintAssignable, Category="Building Blueprints")
 	FBuildingBlueprintInventoryChanged OnInventoryChanged;
 
 private:
+	const class UBuildingDataAsset* FindDefinitionByBlueprintId(FName BlueprintId) const;
+
 	UPROPERTY(SaveGame)
 	TSet<ESTPBuildTool> ExplicitlyOwnedBlueprints;
 };

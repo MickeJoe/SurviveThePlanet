@@ -39,6 +39,9 @@ public:
 	static UPlanetSectorTemplate* SelectForSector(const TArray<UPlanetSectorTemplate*>& Templates,
 		int32 WorldSeed, int32 SectorId, bool bStartingSector);
 
+	/** Tests the complete ground footprint against authored contours, independent of mesh residency. */
+	bool OverlapsBuildingFootprint(TConstArrayView<FVector> WorldFootprint, const FTransform& SectorTransform) const;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sector Template", meta = (ClampMin = "1.0"))
 	FVector2D SectorSize = FVector2D(6928.203, 8000.0);
 
