@@ -59,6 +59,8 @@ struct FSTPGridPlacement
 	FRotator WorldRotation = FRotator::ZeroRotator;
 };
 
+DECLARE_MULTICAST_DELEGATE(FBuildingOccupancyChanged);
+
 UCLASS()
 class SURVIVETHEPLANET_API APlanetSurfaceManager : public AActor
 {
@@ -66,6 +68,12 @@ class SURVIVETHEPLANET_API APlanetSurfaceManager : public AActor
 
 public:
 	APlanetSurfaceManager();
+
+	FBuildingOccupancyChanged OnBuildingOccupancyChanged;
+	void GetBuildingRoutingBounds(TMap<AActor*, FBox>& OutBounds) const;
+	const TArray<FBox>& GetTerrainRoutingBounds() const;
+	const TArray<FBox>& GetTerrainMeshRoutingBounds() const { GetTerrainRoutingBounds(); return TerrainMeshRoutingBounds; }
+	void InvalidateRoutingObstacles();
 
 	virtual void OnConstruction(const FTransform& Transform) override;
 	virtual void Destroyed() override;
@@ -198,6 +206,11 @@ protected:
 
 	UPROPERTY(VisibleInstanceOnly, Category = "Planet Surface|Grid")
 	TMap<int32, TObjectPtr<AActor>> OccupiedCells;
+	mutable TMap<AActor*, FBox> BuildingRoutingBounds;
+	mutable TArray<FBox> TerrainRoutingBounds;
+	mutable TArray<FBox> TerrainMeshRoutingBounds;
+	bool bRoutingRefreshPending = false;
+	mutable bool bBuildingRoutingBoundsDirty = true;
 
 private:
 	bool OverlapsTerrainCluster(FSTPGridCell OriginCell, FIntPoint Footprint, bool bLogDiagnostics = false) const;

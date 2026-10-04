@@ -34,19 +34,7 @@ public:
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaSeconds) override;
 
-	UFUNCTION(BlueprintCallable, Category = "Cable")
-	bool BeginCableDrag(const FVector& WorldLocation);
-
-	UFUNCTION(BlueprintCallable, Category = "Cable")
-	bool UpdateCableDrag(const FVector& WorldLocation);
-
-	UFUNCTION(BlueprintCallable, Category = "Cable")
-	void EndCableDrag();
-
-	UFUNCTION(BlueprintPure, Category = "Cable")
-	bool IsDraggingCable() const { return bIsDragging; }
-
-	/** True when the building's connector component reaches a completed Headquarters. */
+	/** Coverage from a completed Base Camp or a connected chain of extenders. */
 	UFUNCTION(BlueprintPure, Category = "Cable|Power")
 	bool IsBuildingConnectedToPowerGrid(const ABaseBuilding* Building) const;
 
@@ -120,6 +108,7 @@ protected:
 	float CableHeightOffset = 5.0f;
 
 private:
+	TSet<TWeakObjectPtr<ABaseBuilding>> ConnectedBuildings;
 	enum : uint8
 	{
 		North = 1 << 0,
@@ -135,10 +124,6 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<APlanetSurfaceManager> SurfaceManager;
 
-	bool bIsDragging = false;
-	FIntPoint DragStartCell = FIntPoint::ZeroValue;
-	FIntPoint LastDragCell = FIntPoint::ZeroValue;
-	TMap<FIntPoint, uint8> ConnectionsBeforeDrag;
 	float GridRefreshAccumulator = 0.0f;
 	float PendingEnergyDelta = 0.0f;
 
@@ -155,11 +140,6 @@ private:
 	bool bCanSupplyAllConsumers = true;
 
 	APlanetSurfaceManager* ResolveSurfaceManager();
-	bool TryGetCell(const FVector& WorldLocation, FIntPoint& OutCell);
-	void RestoreNetworkBeforeDrag();
-	void AddPathBetweenCells(const FIntPoint& From, const FIntPoint& To);
-	void ConnectAdjacentCells(const FIntPoint& From, const FIntPoint& To);
-	void AddConnection(const FIntPoint& Cell, uint8 Direction);
 	void RefreshCableCell(const FIntPoint& Cell);
 	FSTPCableCell& FindOrAddCableCell(const FIntPoint& Cell);
 	void GetTouchingCableCells(const ABaseBuilding* Building, TArray<FIntPoint>& OutCells) const;

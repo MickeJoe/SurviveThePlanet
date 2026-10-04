@@ -143,7 +143,8 @@ population.set_editor_property('decoration_material_sets', material_sets)
 population.set_editor_property('deposit_classes', {
     unreal.ResourceType.IRON: unreal.load_class(None, '/Game/BluePrints/Resources/BP_IronSource.BP_IronSource_C'),
     unreal.ResourceType.COPPER: unreal.load_class(None, '/Game/BluePrints/Resources/BP_CopparSource.BP_CopparSource_C'),
-    unreal.ResourceType.STONE: unreal.load_class(None, '/Game/BluePrints/Resources/BP_StoneSource.BP_StoneSource_C')})
+    unreal.ResourceType.STONE: unreal.load_class(None, '/Game/BluePrints/Resources/BP_StoneSource.BP_StoneSource_C'),
+    unreal.ResourceType.COAL: unreal.load_class(None, '/Game/BluePrints/Resources/BP_CoalSource.BP_CoalSource_C')})
 assert all(population.get_editor_property('decoration_meshes'))
 assert len(population.get_editor_property('decoration_material_sets')) == len(decoration_paths)
 assert all(population.get_editor_property('deposit_classes').values())

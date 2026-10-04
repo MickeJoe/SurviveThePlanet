@@ -127,6 +127,15 @@ protected:
 	TObjectPtr<UImage> SteelIcon;
 
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Resource Display")
+	TObjectPtr<UImage> CoalIcon;
+
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Resource Display")
+	TObjectPtr<UTextBlock> CoalAmountText;
+
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Resource Display")
+	TObjectPtr<UTextBlock> CoalRateText;
+
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Resource Display")
 	TObjectPtr<UTextBlock> SteelAmountText;
 
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Resource Display")

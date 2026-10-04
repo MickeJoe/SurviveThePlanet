@@ -5,6 +5,8 @@
 #include "Components/StaticMeshComponent.h"
 #include "Engine/StaticMeshActor.h"
 #include "Engine/StaticMesh.h"
+#include "EngineUtils.h"
+#include "Gameplay/Planet/PlanetSurfaceManager.h"
 
 TArray<UPlanetTerrainClusterVariant*> UPlanetTerrainClusterLibrary::FindCompatible(const UPlanetTerrainClusterShape* Shape) const
 {
@@ -35,6 +37,14 @@ void APlanetGeneratedSector::OnConstruction(const FTransform& Transform)
 	bPlacementBoundsReady = false;
 	GetPlacementMeshBounds();
 	if (!bDeferRuntimeGeneration) Generate();
+	for (TActorIterator<APlanetSurfaceManager> It(GetWorld()); It; ++It) It->InvalidateRoutingObstacles();
+}
+
+void APlanetGeneratedSector::Destroyed()
+{
+	Super::Destroyed();
+	if (GetWorld()->bIsTearingDown) return;
+	for (TActorIterator<APlanetSurfaceManager> It(GetWorld()); It; ++It) It->InvalidateRoutingObstacles();
 }
 
 void APlanetGeneratedSector::ClearGenerated()
@@ -108,6 +118,7 @@ const TArray<FBox>& APlanetGeneratedSector::GetPlacementMeshBounds() const
 	if (bPlacementBoundsReady && BoundsSeed == Seed && BoundsTemplate == SectorTemplate && BoundsLibrary == VariantLibrary)
 		return PlacementMeshBounds;
 	PlacementMeshBounds.Reset();
+	PlacementClusterBounds.Reset();
 	CombinedPlacementBounds = FBox(ForceInit);
 	BoundsSeed = Seed;
 	BoundsTemplate = SectorTemplate;
@@ -117,6 +128,7 @@ const TArray<FBox>& APlanetGeneratedSector::GetPlacementMeshBounds() const
 	for (int32 Index = 0; Index < Variants.Num(); ++Index)
 	{
 		if (!Variants[Index]) continue;
+		FBox ClusterBounds(ForceInit);
 		for (const FPlanetClusterElement& Element : Variants[Index]->Elements)
 		{
 			if (Element.Mesh)
@@ -125,8 +137,10 @@ const TArray<FBox>& APlanetGeneratedSector::GetPlacementMeshBounds() const
 				PlacementMeshBounds.Add(Element.Mesh->GetBoundingBox().TransformBy(
 					Element.Transform * SectorTemplate->ClusterSlots[Index].Transform));
 				CombinedPlacementBounds += PlacementMeshBounds.Last();
+				ClusterBounds += PlacementMeshBounds.Last();
 			}
 		}
+		if (ClusterBounds.IsValid) PlacementClusterBounds.Add(ClusterBounds);
 	}
 	return PlacementMeshBounds;
 }

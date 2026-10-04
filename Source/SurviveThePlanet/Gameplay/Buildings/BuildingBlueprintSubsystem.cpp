@@ -4,7 +4,7 @@
 
 bool UBuildingBlueprintSubsystem::OwnsBlueprint(ESTPBuildTool BuildTool) const
 {
-	if (BuildTool == ESTPBuildTool::EnergyCable) return true;
+	if (BuildTool == ESTPBuildTool::EnergyCable) return false;
 	if (ExplicitlyOwnedBlueprints.Contains(BuildTool)) return true;
 	const UWorld* World = GetGameInstance() ? GetGameInstance()->GetWorld() : nullptr;
 	const UBuildingManagerSubsystem* Manager = World ? World->GetSubsystem<UBuildingManagerSubsystem>() : nullptr;
@@ -14,7 +14,7 @@ bool UBuildingBlueprintSubsystem::OwnsBlueprint(ESTPBuildTool BuildTool) const
 
 bool UBuildingBlueprintSubsystem::GrantBlueprint(ESTPBuildTool BuildTool)
 {
-	if (BuildTool == ESTPBuildTool::None || OwnsBlueprint(BuildTool)) return false;
+	if (BuildTool == ESTPBuildTool::None || BuildTool == ESTPBuildTool::EnergyCable || OwnsBlueprint(BuildTool)) return false;
 	ExplicitlyOwnedBlueprints.Add(BuildTool);
 	OnInventoryChanged.Broadcast(BuildTool);
 	return true;
@@ -49,7 +49,6 @@ TArray<ESTPBuildTool> UBuildingBlueprintSubsystem::GetOwnedBlueprints() const
 			if (Definition && OwnsBlueprint(Definition->BuildTool)) Result.AddUnique(Definition->BuildTool);
 		}
 	}
-	if (OwnsBlueprint(ESTPBuildTool::EnergyCable)) Result.AddUnique(ESTPBuildTool::EnergyCable);
 	return Result;
 }
 

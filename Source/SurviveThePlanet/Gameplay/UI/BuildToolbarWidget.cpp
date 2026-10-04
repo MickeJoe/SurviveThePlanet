@@ -32,7 +32,6 @@ UBuildToolbarWidget::UBuildToolbarWidget(const FObjectInitializer& ObjectInitial
 {
 	ButtonSize = FVector2D(72.0f, 72.0f);
 	Buttons = {
-		{ ESTPBuildTool::EnergyCable, NSLOCTEXT("SurviveThePlanet", "BuildToolEnergyCableTooltip", "Energy Cable"), nullptr },
 		{ ESTPBuildTool::EnergyModule, NSLOCTEXT("SurviveThePlanet", "BuildToolEnergyModuleTooltip", "Energy Module"), nullptr },
 		{ ESTPBuildTool::EnergyStorage, NSLOCTEXT("SurviveThePlanet", "BuildToolEnergyStorageTooltip", "Build Battery Storage\nIncreases the connected grid's maximum energy capacity."), nullptr },
 		{ ESTPBuildTool::MiningMachine, NSLOCTEXT("SurviveThePlanet", "BuildToolMiningMachineTooltip", "Build Mining Machine\nPlace on an available resource deposit."), nullptr },
@@ -99,9 +98,14 @@ void UBuildToolbarWidget::NativeConstruct()
 
 void UBuildToolbarWidget::EnsureRequiredButtonConfigs()
 {
+	// Older Widget Blueprints may still serialize the removed tool configuration.
+	Buttons.RemoveAll([](const FBuildToolButtonConfig& Config)
+	{
+		return Config.Tool == ESTPBuildTool::EnergyCable;
+	});
+
 	const FBuildToolButtonConfig Required[] =
 	{
-		{ ESTPBuildTool::EnergyCable, NSLOCTEXT("SurviveThePlanet", "BuildToolEnergyCableTooltip", "Energy Cable"), LoadObject<UTexture2D>(nullptr, TEXT("/Game/UI/Images/ConstructCableConnectionIcon.ConstructCableConnectionIcon")) },
 		{ ESTPBuildTool::EnergyModule, NSLOCTEXT("SurviveThePlanet", "BuildToolEnergyModuleTooltip", "Energy Module"), LoadObject<UTexture2D>(nullptr, TEXT("/Game/UI/Images/ConstructEnergryBuildingIcon.ConstructEnergryBuildingIcon")) },
 		{ ESTPBuildTool::EnergyStorage, NSLOCTEXT("SurviveThePlanet", "BuildToolEnergyStorageTooltip", "Build Battery Storage"), nullptr },
 		{ ESTPBuildTool::MiningMachine, NSLOCTEXT("SurviveThePlanet", "BuildToolMiningMachineTooltip", "Build Mining Machine"), LoadObject<UTexture2D>(nullptr, TEXT("/Game/UI/Images/ConstructMiningBuildingIcon.ConstructMiningBuildingIcon")) },
@@ -321,9 +325,9 @@ UWidget* UBuildToolbarWidget::BuildButton(const FBuildToolButtonConfig& Config)
 
 bool UBuildToolbarWidget::HasDesignedToolbar() const
 {
-	return EnergyCableButton || EnergyModuleButton || EnergyStorageButton || MiningBuildingButton || WaterCollectorButton || ConcretePlantButton || CommunicationModuleButton || CargoBayButton
-		|| EnergyCableIcon || EnergyModuleIcon || EnergyStorageIcon || MiningBuildingIcon || WaterCollectorIcon || ConcretePlantIcon
-		|| EnergyCableBorder || EnergyModuleBorder || EnergyStorageBorder || MiningBorder || WaterCollectorBorder || ConcretePlantBorder;
+	return EnergyModuleButton || EnergyStorageButton || MiningBuildingButton || WaterCollectorButton || ConcretePlantButton || CommunicationModuleButton || CargoBayButton
+		|| EnergyModuleIcon || EnergyStorageIcon || MiningBuildingIcon || WaterCollectorIcon || ConcretePlantIcon
+		|| EnergyModuleBorder || EnergyStorageBorder || MiningBorder || WaterCollectorBorder || ConcretePlantBorder;
 }
 
 void UBuildToolbarWidget::BindDesignedToolbar()
@@ -332,16 +336,6 @@ void UBuildToolbarWidget::BindDesignedToolbar()
 	ButtonBorders.Reset();
 	ToolButtons.Reset();
 	ToolWidgets.Reset();
-
-	if (EnergyCableButton)
-	{
-		EnergyCableButton->OnClicked.RemoveDynamic(this, &UBuildToolbarWidget::HandleEnergyCableClicked);
-		EnergyCableButton->OnClicked.AddDynamic(this, &UBuildToolbarWidget::HandleEnergyCableClicked);
-		if (const FBuildToolButtonConfig* Config = FindButtonConfig(ESTPBuildTool::EnergyCable))
-		{
-			EnergyCableButton->SetToolTipText(Config->Tooltip);
-		}
-	}
 
 	if (EnergyModuleButton)
 	{
@@ -404,7 +398,6 @@ void UBuildToolbarWidget::BindDesignedToolbar()
 		if (const FBuildToolButtonConfig* Config = FindButtonConfig(ESTPBuildTool::CargoBay)) CargoBayButton->SetToolTipText(Config->Tooltip);
 	}
 
-	ApplyIcon(EnergyCableIcon, ESTPBuildTool::EnergyCable);
 	ApplyIcon(EnergyModuleIcon, ESTPBuildTool::EnergyModule);
 	ApplyIcon(EnergyStorageIcon, ESTPBuildTool::EnergyStorage);
 	ApplyIcon(MiningBuildingIcon, ESTPBuildTool::MiningMachine);
@@ -413,11 +406,6 @@ void UBuildToolbarWidget::BindDesignedToolbar()
 	ApplyIcon(CargoBayIcon, ESTPBuildTool::CargoBay);
 	// The Communication Module artwork is authored directly in WBP_BuildToolbar.
 	// Preserve that brush instead of replacing it during NativeConstruct.
-
-	if (EnergyCableBorder)
-	{
-		ButtonBorders.Add(ESTPBuildTool::EnergyCable, EnergyCableBorder);
-	}
 
 	if (EnergyModuleBorder)
 	{
@@ -453,7 +441,6 @@ void UBuildToolbarWidget::BindDesignedToolbar()
 		ButtonBorders.Add(ESTPBuildTool::CargoBay, CargoBayBorder);
 	}
 
-	if (EnergyCableButton) ToolButtons.Add(ESTPBuildTool::EnergyCable, EnergyCableButton);
 	if (EnergyModuleButton) ToolButtons.Add(ESTPBuildTool::EnergyModule, EnergyModuleButton);
 	if (EnergyStorageButton) ToolButtons.Add(ESTPBuildTool::EnergyStorage, EnergyStorageButton);
 	if (MiningBuildingButton) ToolButtons.Add(ESTPBuildTool::MiningMachine, MiningBuildingButton);
@@ -516,11 +503,6 @@ void UBuildToolbarWidget::ApplyIcon(UImage* Icon, ESTPBuildTool Tool) const
 	IconBrush.ImageSize = FVector2D(FMath::Max(ButtonSize.X - 10.0f, 1.0f), FMath::Max(ButtonSize.Y - 10.0f, 1.0f));
 	Icon->SetColorAndOpacity(EmptyIconTint);
 	Icon->SetBrush(IconBrush);
-}
-
-void UBuildToolbarWidget::HandleEnergyCableClicked()
-{
-	HandleToolClicked(ESTPBuildTool::EnergyCable);
 }
 
 void UBuildToolbarWidget::HandleEnergyModuleClicked()
@@ -718,7 +700,6 @@ ESTPBuildCategory UBuildToolbarWidget::GetCategoryForTool(ESTPBuildTool Tool) co
 {
 	switch (Tool)
 	{
-	case ESTPBuildTool::EnergyCable:
 	case ESTPBuildTool::EnergyModule:
 	case ESTPBuildTool::EnergyStorage:
 	case ESTPBuildTool::SolarArray:
@@ -875,7 +856,7 @@ void UBuildToolbarClickBinding::Click()
 
 bool UBuildToolbarWidget::IsToolAvailable(ESTPBuildTool Tool) const
 {
-	if (Tool == ESTPBuildTool::EnergyCable) return true;
+	if (Tool == ESTPBuildTool::EnergyCable) return false;
 	const UWorld* World = GetWorld();
 	const UBuildingManagerSubsystem* Manager = World ? World->GetSubsystem<UBuildingManagerSubsystem>() : nullptr;
 	const UBuildingDataAsset* Definition = Manager ? Manager->GetDefinition(Tool) : nullptr;

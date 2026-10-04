@@ -7,7 +7,8 @@ UENUM(BlueprintType)
 enum class ESTPBuildTool : uint8
 {
 	None UMETA(DisplayName = "None"),
-	EnergyCable UMETA(DisplayName = "Energy Cable"),
+	// Reserved for serialized assets; manual cable construction has been removed.
+	EnergyCable UMETA(Hidden),
 	EnergyModule UMETA(DisplayName = "Energy Module"),
 	EnergyStorage UMETA(DisplayName = "Energy Storage"),
 	MiningMachine UMETA(DisplayName = "Mining Machine"),
@@ -24,7 +25,8 @@ enum class ESTPBuildTool : uint8
 	ResourceStorage UMETA(DisplayName = "Resource Storage"),
 	DroneFactory UMETA(DisplayName = "Drone Factory"),
 	CommunicationsTower UMETA(DisplayName = "Communications Tower"),
-	Steelworks UMETA(DisplayName = "Steelworks")
+	Steelworks UMETA(DisplayName = "Steelworks"),
+	EnergyExtender UMETA(DisplayName = "Energy Extender")
 };
 
 UENUM(BlueprintType)

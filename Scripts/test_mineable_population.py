@@ -48,7 +48,7 @@ def run_validation():
         counts = Counter(d.sector_id for d in deposits)
         start_id = grid.get_editor_property("starting_sector_id")
         start_types = Counter(d.resource_type for d in deposits if d.sector_id == start_id)
-        assert start_types == Counter({unreal.ResourceType.STONE: 1, unreal.ResourceType.COPPER: 1}), str(start_types)
+        assert start_types == Counter({unreal.ResourceType.STONE: 1, unreal.ResourceType.COPPER: 1, unreal.ResourceType.COAL: 1}), str(start_types)
         assert all(1 <= counts[s.id] <= 3 for s in sectors)
         for sector in sectors:
             population.reveal_sector(sector.id)

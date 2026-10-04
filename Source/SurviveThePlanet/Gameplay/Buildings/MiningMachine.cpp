@@ -18,6 +18,7 @@ AMiningMachine::AMiningMachine()
 	SupportedResourceTypes.Add(EResourceType::Iron);
 	SupportedResourceTypes.Add(EResourceType::Copper);
 	SupportedResourceTypes.Add(EResourceType::Stone);
+	SupportedResourceTypes.Add(EResourceType::Coal);
 	FSTPResourceOutputRate IronOutput;
 	IronOutput.Resource = EResourceType::Iron;
 	IronOutput.AmountPerMinutePerDroneAt100Percent = 10.0f;
@@ -33,13 +34,17 @@ AMiningMachine::AMiningMachine()
 	StoneOutput.AmountPerMinutePerDroneAt100Percent = 10.0f;
 	OutputPerDroneAt100Percent.Add(StoneOutput);
 
+	FSTPResourceOutputRate CoalOutput;
+	CoalOutput.Resource = EResourceType::Coal;
+	CoalOutput.AmountPerMinutePerDroneAt100Percent = 10.0f;
+	OutputPerDroneAt100Percent.Add(CoalOutput);
+
 }
 
 void AMiningMachine::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
-	if (bPlacementPreview || GetConstructionProgress() < 1.0f || !IsOperational()
-		|| !IsValid(ResourceSource) || ResourceSource->GetRemainingAmount() <= 0)
+	if (!IsProducingResource())
 	{
 		return;
 	}
@@ -90,9 +95,17 @@ float AMiningMachine::GetOutputPerMinuteAt100Percent(EResourceType ResourceType)
 
 float AMiningMachine::GetCurrentOutputPerMinute() const
 {
-	return IsValid(ResourceSource) && IsOperational()
+	return IsProducingResource()
 		? GetOutputPerMinuteAt100Percent(ResourceSource->GetResourceType()) * GetCombinedDroneEfficiency()
 		: 0.0f;
+}
+
+bool AMiningMachine::IsProducingResource() const
+{
+	return !bPlacementPreview && GetConstructionProgress() >= 1.0f && IsOperational()
+		&& IsValid(ResourceSource) && ResourceSource->GetRemainingAmount() > 0
+		&& GetOutputPerMinuteAt100Percent(ResourceSource->GetResourceType()) > 0.0f
+		&& GetCombinedDroneEfficiency() > 0.0f;
 }
 
 float AMiningMachine::GetEnergyConsumptionPerMinute() const

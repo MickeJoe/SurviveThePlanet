@@ -5,6 +5,7 @@
 #include "Engine/StaticMesh.h"
 #include "EngineUtils.h"
 #include "Gameplay/Base/BaseBuilding.h"
+#include "Gameplay/Energy/EnergyCoverageSubsystem.h"
 #include "Gameplay/Resources/ResourceManager.h"
 
 ACableNetworkManager::ACableNetworkManager()
@@ -43,7 +44,8 @@ void ACableNetworkManager::BeginPlay()
 		CableCell.Connections = SavedConnections;
 		RefreshCableCell(Cell);
 	}
-	RefreshEnergyGrid();
+	// Wait until all actors have initialized their resources and spawned Base Camp.
+	GridRefreshAccumulator = 0.25f;
 }
 
 void ACableNetworkManager::Tick(float DeltaSeconds)
@@ -71,60 +73,6 @@ void ACableNetworkManager::Tick(float DeltaSeconds)
 				break;
 			}
 		}
-	}
-}
-
-bool ACableNetworkManager::BeginCableDrag(const FVector& WorldLocation)
-{
-	FIntPoint Cell;
-	if (!TryGetCell(WorldLocation, Cell))
-	{
-		return false;
-	}
-
-	bIsDragging = true;
-	DragStartCell = Cell;
-	LastDragCell = Cell;
-	ConnectionsBeforeDrag.Reset();
-	for (const TPair<FIntPoint, FSTPCableCell>& Pair : CableCells)
-	{
-		ConnectionsBeforeDrag.Add(Pair.Key, Pair.Value.Connections);
-	}
-	return true;
-}
-
-bool ACableNetworkManager::UpdateCableDrag(const FVector& WorldLocation)
-{
-	if (!bIsDragging)
-	{
-		return false;
-	}
-
-	FIntPoint Cell;
-	if (!TryGetCell(WorldLocation, Cell))
-	{
-		return false;
-	}
-
-	if (Cell != LastDragCell)
-	{
-		RestoreNetworkBeforeDrag();
-		AddPathBetweenCells(DragStartCell, Cell);
-		LastDragCell = Cell;
-	}
-
-	return true;
-}
-
-void ACableNetworkManager::EndCableDrag()
-{
-	const bool bNetworkChanged = bIsDragging;
-	bIsDragging = false;
-	ConnectionsBeforeDrag.Reset();
-	if (bNetworkChanged)
-	{
-		RefreshEnergyGrid();
-		OnCableNetworkChanged.Broadcast();
 	}
 }
 
@@ -185,32 +133,11 @@ void ACableNetworkManager::GetTouchingCableCells(const ABaseBuilding* Building, 
 
 bool ACableNetworkManager::IsBuildingConnectedToPowerGrid(const ABaseBuilding* Building) const
 {
-	if (!IsValid(Building))
-	{
-		return false;
-	}
-	if (Building->GetBuildingType() == ESTPBuildingType::BaseModule)
-	{
-		return Building->GetConstructionProgress() >= 1.0f;
-	}
-
-	TArray<FIntPoint> StartCells;
-	GetTouchingCableCells(Building, StartCells);
-	if (StartCells.IsEmpty())
-	{
-		return false;
-	}
-
-	TSet<FIntPoint> HeadquartersNetwork;
-	GetHeadquartersNetworkCells(HeadquartersNetwork);
-	for (const FIntPoint& Cell : StartCells)
-	{
-		if (HeadquartersNetwork.Contains(Cell))
-		{
-			return true;
-		}
-	}
-	return false;
+ if (!IsValid(Building) || Building->IsActorBeingDestroyed() || Building->IsPlacementPreview()
+  || Building->GetConstructionProgress() < 1.0f) return false;
+ if (Building->GetBuildingType() == ESTPBuildingType::BaseModule) return true;
+ const auto* Coverage = GetWorld()->GetSubsystem<UEnergyCoverageSubsystem>();
+ return Coverage && Coverage->IsLocationConnectedToPowerGrid(Building->GetActorLocation());
 }
 
 void ACableNetworkManager::GetHeadquartersNetworkCells(TSet<FIntPoint>& OutCells) const
@@ -255,7 +182,7 @@ void ACableNetworkManager::GetHeadquartersNetworkCells(TSet<FIntPoint>& OutCells
 
 bool ACableNetworkManager::IsBuildingOperational(const ABaseBuilding* Building) const
 {
-	if (!IsValid(Building) || Building->GetConstructionProgress() < 1.0f)
+	if (!IsValid(Building) || Building->IsActorBeingDestroyed() || Building->IsPlacementPreview() || Building->GetConstructionProgress() < 1.0f)
 	{
 		return false;
 	}
@@ -269,6 +196,8 @@ bool ACableNetworkManager::IsBuildingOperational(const ABaseBuilding* Building) 
 
 void ACableNetworkManager::RefreshEnergyGrid()
 {
+	const bool bPreviouslySupplied = bCanSupplyAllConsumers;
+	TSet<TWeakObjectPtr<ABaseBuilding>> CurrentConnections;
 	GridProductionPerMinute = 0.0f;
 	GridConsumptionPerMinute = 0.0f;
 	GridStorageCapacity = 0.0f;
@@ -285,7 +214,7 @@ void ACableNetworkManager::RefreshEnergyGrid()
 		for (TActorIterator<ABaseBuilding> It(World); It; ++It)
 		{
 			const ABaseBuilding* Building = *It;
-			if (!IsValid(Building) || Building->GetConstructionProgress() < 1.0f)
+			if (!IsValid(Building) || Building->IsActorBeingDestroyed() || Building->IsPlacementPreview() || Building->GetConstructionProgress() < 1.0f)
 			{
 				continue;
 			}
@@ -297,6 +226,7 @@ void ACableNetworkManager::RefreshEnergyGrid()
 				continue;
 			}
 
+			CurrentConnections.Add(const_cast<ABaseBuilding*>(Building));
 			GridProductionPerMinute += Building->GetEnergyProductionPerMinute();
 			GridConsumptionPerMinute += Building->GetEnergyConsumptionPerMinute();
 			GridStorageCapacity += Building->GetEnergyStorageCapacity();
@@ -313,6 +243,13 @@ void ACableNetworkManager::RefreshEnergyGrid()
 	{
 		bCanSupplyAllConsumers = GridConsumptionPerMinute <= GridProductionPerMinute + KINDA_SMALL_NUMBER;
 	}
+
+ bool bConnectionsChanged = CurrentConnections.Num() != ConnectedBuildings.Num();
+ for (const auto& Building : CurrentConnections)
+  bConnectionsChanged |= !ConnectedBuildings.Contains(Building);
+ ConnectedBuildings = MoveTemp(CurrentConnections);
+ if (bConnectionsChanged || bPreviouslySupplied != bCanSupplyAllConsumers)
+  OnCableNetworkChanged.Broadcast();
 }
 
 APlanetSurfaceManager* ACableNetworkManager::ResolveSurfaceManager()
@@ -335,112 +272,6 @@ APlanetSurfaceManager* ACableNetworkManager::ResolveSurfaceManager()
 	}
 
 	return SurfaceManager;
-}
-
-bool ACableNetworkManager::TryGetCell(const FVector& WorldLocation, FIntPoint& OutCell)
-{
-	APlanetSurfaceManager* Manager = ResolveSurfaceManager();
-	if (!Manager)
-	{
-		return false;
-	}
-
-	FSTPGridCell GridCell;
-	if (!Manager->GetCellForWorldLocation(WorldLocation, GridCell))
-	{
-		return false;
-	}
-
-	OutCell = GridCell.ToIntPoint();
-	return true;
-}
-
-void ACableNetworkManager::RestoreNetworkBeforeDrag()
-{
-	TArray<FIntPoint> CellsToRemove;
-	for (TPair<FIntPoint, FSTPCableCell>& Pair : CableCells)
-	{
-		if (const uint8* PreviousConnections = ConnectionsBeforeDrag.Find(Pair.Key))
-		{
-			Pair.Value.Connections = *PreviousConnections;
-			RefreshCableCell(Pair.Key);
-		}
-		else
-		{
-			if (Pair.Value.MeshComponent)
-			{
-				Pair.Value.MeshComponent->DestroyComponent();
-			}
-			CellsToRemove.Add(Pair.Key);
-		}
-	}
-
-	for (const FIntPoint& Cell : CellsToRemove)
-	{
-		CableCells.Remove(Cell);
-	}
-}
-
-void ACableNetworkManager::AddPathBetweenCells(const FIntPoint& From, const FIntPoint& To)
-{
-	FIntPoint Current = From;
-
-	while (Current.X != To.X)
-	{
-		const FIntPoint Next(Current.X + FMath::Sign(To.X - Current.X), Current.Y);
-		ConnectAdjacentCells(Current, Next);
-		Current = Next;
-	}
-
-	while (Current.Y != To.Y)
-	{
-		const FIntPoint Next(Current.X, Current.Y + FMath::Sign(To.Y - Current.Y));
-		ConnectAdjacentCells(Current, Next);
-		Current = Next;
-	}
-}
-
-void ACableNetworkManager::ConnectAdjacentCells(const FIntPoint& From, const FIntPoint& To)
-{
-	const FIntPoint Delta = To - From;
-	uint8 FromDirection = 0;
-	uint8 ToDirection = 0;
-
-	if (Delta == FIntPoint(1, 0))
-	{
-		FromDirection = East;
-		ToDirection = West;
-	}
-	else if (Delta == FIntPoint(-1, 0))
-	{
-		FromDirection = West;
-		ToDirection = East;
-	}
-	else if (Delta == FIntPoint(0, 1))
-	{
-		FromDirection = North;
-		ToDirection = South;
-	}
-	else if (Delta == FIntPoint(0, -1))
-	{
-		FromDirection = South;
-		ToDirection = North;
-	}
-	else
-	{
-		return;
-	}
-
-	AddConnection(From, FromDirection);
-	AddConnection(To, ToDirection);
-	RefreshCableCell(From);
-	RefreshCableCell(To);
-}
-
-void ACableNetworkManager::AddConnection(const FIntPoint& Cell, uint8 Direction)
-{
-	FSTPCableCell& CableCell = FindOrAddCableCell(Cell);
-	CableCell.Connections |= Direction;
 }
 
 FSTPCableCell& ACableNetworkManager::FindOrAddCableCell(const FIntPoint& Cell)

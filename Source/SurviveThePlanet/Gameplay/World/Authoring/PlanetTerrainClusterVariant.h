@@ -65,6 +65,8 @@ public:
 	UFUNCTION(BlueprintCallable, CallInEditor, Category="Generation") void ClearGenerated();
 	/** Mesh bounds survive visual residency changes; the same seeded variants drive rendering. */
 	const TArray<FBox>& GetPlacementMeshBounds() const;
+	const TArray<FBox>& GetPlacementClusterBounds() const { GetPlacementMeshBounds(); return PlacementClusterBounds; }
+	virtual void Destroyed() override;
 	const FBox& GetCombinedPlacementBounds() const { GetPlacementMeshBounds(); return CombinedPlacementBounds; }
 protected:
 	virtual void OnConstruction(const FTransform& Transform) override;
@@ -73,6 +75,7 @@ private:
 	void AddComposition(const UPlanetTerrainClusterVariant* Variant, const FTransform& SlotTransform);
 	TArray<UPlanetTerrainClusterVariant*> ResolveVariants() const;
 	mutable TArray<FBox> PlacementMeshBounds;
+	mutable TArray<FBox> PlacementClusterBounds;
 	mutable FBox CombinedPlacementBounds = FBox(ForceInit);
 	mutable TWeakObjectPtr<UPlanetSectorTemplate> BoundsTemplate;
 	mutable TWeakObjectPtr<UPlanetTerrainClusterLibrary> BoundsLibrary;

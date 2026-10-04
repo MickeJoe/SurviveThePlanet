@@ -14,7 +14,8 @@ enum class EResourceType : uint8
 	Stone UMETA(DisplayName = "Stone"),
 	Water UMETA(DisplayName = "Water"),
 	Concrete UMETA(DisplayName = "Concrete"),
-	Steel UMETA(DisplayName = "Steel")
+	Steel UMETA(DisplayName = "Steel"),
+	Coal UMETA(DisplayName = "Coal")
 };
 
 /** A resource and the amount required for a purchase or construction. */

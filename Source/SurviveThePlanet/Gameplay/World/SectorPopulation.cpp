@@ -58,12 +58,12 @@ void ASectorPopulation::InitializePopulation()
 	if (!Grid) for (TActorIterator<AHexSectorGrid> It(GetWorld()); It; ++It) { Grid = *It; break; }
 	if (!Grid || Grid->Sectors.IsEmpty()) { Diagnostics.Add(TEXT("No generated sector grid found.")); return; }
 	UPlanetResourceDistribution* Input = NewObject<UPlanetResourceDistribution>(this);
-	const EResourceType Types[] = {EResourceType::Stone, EResourceType::Copper, EResourceType::Iron};
+	const EResourceType Types[] = {EResourceType::Stone, EResourceType::Copper, EResourceType::Coal, EResourceType::Iron};
 	for (const FHexSector& Sector : Grid->Sectors)
 	{
 		FRandomStream SectorRandom(Seed ^ (Sector.Id * 7919) ^ 0x524553);
-		const int32 DepositCount = Sector.Id == Grid->StartingSectorId ? 2 : SectorRandom.RandRange(1, 3);
-		TArray<EResourceType> SectorTypes = {Types[0], Types[1], Types[2]};
+		const int32 DepositCount = Sector.Id == Grid->StartingSectorId ? 3 : SectorRandom.RandRange(1, 3);
+		TArray<EResourceType> SectorTypes = {Types[0], Types[1], Types[2], Types[3]};
 		if (Sector.Id != Grid->StartingSectorId)
 		{
 			for (int32 Index = SectorTypes.Num() - 1; Index > 0; --Index)

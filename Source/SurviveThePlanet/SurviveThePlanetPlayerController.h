@@ -25,7 +25,6 @@ class ACargoBay;
 class ABaseResourceSource;
 class AResourceManager;
 class APlanetSurfaceManager;
-class ACableNetworkManager;
 class UBuildingInfoWidget;
 class UCheatMenuWidget;
 class ABaseBuilding;
@@ -155,6 +154,7 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 	/** Initialize input bindings */
 	virtual void SetupInputComponent() override;
@@ -210,9 +210,6 @@ private:
 	FString LastMiningPlacementDiagnostic;
 
 	UPROPERTY(Transient)
-	TObjectPtr<ACableNetworkManager> CableNetworkManager;
-
-	UPROPERTY(Transient)
 	TObjectPtr<UBuildingInfoWidget> BuildingInfoWidget;
 
 	UPROPERTY(Transient)
@@ -225,10 +222,6 @@ private:
 	TSubclassOf<UExplorerDroneActivationWidget> ExplorerDroneActivationWidgetClass;
 
 	APlanetSurfaceManager* FindPlanetSurfaceManager() const;
-	ACableNetworkManager* FindOrCreateCableNetworkManager();
-	bool BeginCableDragAtCursor();
-	bool UpdateCableDragAtCursor();
-	void EndCableDrag();
 
 	ASurviveThePlanetCharacter* GetControlledSurviveCharacter() const;
 	USpringArmComponent* GetControlledCameraBoom() const;

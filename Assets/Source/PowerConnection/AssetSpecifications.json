@@ -1,0 +1,46 @@
+{
+  "assets": [
+    {
+      "name": "SM_PowerPole",
+      "dimensions_m": [
+        0.7400000095367432,
+        1.159999966621399,
+        3.305000066757202
+      ],
+      "triangles": 3176
+    },
+    {
+      "name": "SM_PowerCableSpan",
+      "dimensions_m": [
+        1.0,
+        0.9700000286102295,
+        0.054000020027160645
+      ],
+      "triangles": 388
+    },
+    {
+      "name": "SM_PowerCableTerminal",
+      "dimensions_m": [
+        0.36000001430511475,
+        0.3799999952316284,
+        0.5300000309944153
+      ],
+      "triangles": 1076
+    }
+  ],
+  "pole_cable_attachment_cm": [
+    [
+      0,
+      -46,
+      327
+    ],
+    [
+      0,
+      46,
+      327
+    ]
+  ],
+  "cable_forward_axis": "X",
+  "cable_span_length_cm": 100,
+  "recommended_pole_spacing_cm": 600
+}

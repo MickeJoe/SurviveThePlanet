@@ -82,6 +82,10 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Base Module")
 	TObjectPtr<UStaticMesh> BaseModulePreviewMesh;
 
+	/** Coverage for the initial Base Camp; zero disables the source. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Base Module|Energy Coverage", meta=(ClampMin="0", Units="cm"))
+	float EnergyCoverageRadius = 4000.0f;
+
 	/** Spawn the base module when play starts. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Base Module")
 	bool bSpawnOnBeginPlay = true;

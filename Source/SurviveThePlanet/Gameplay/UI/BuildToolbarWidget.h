@@ -87,9 +87,6 @@ protected:
 	FLinearColor CategoryButtonBackground = FLinearColor(0.018f, 0.038f, 0.052f, 0.98f);
 
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Build Toolbar|Designed Widgets")
-	TObjectPtr<UButton> EnergyCableButton;
-
-	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Build Toolbar|Designed Widgets")
 	TObjectPtr<UButton> EnergyModuleButton;
 
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Build Toolbar|Designed Widgets")
@@ -111,9 +108,6 @@ protected:
 	TObjectPtr<UButton> CargoBayButton;
 
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Build Toolbar|Designed Widgets")
-	TObjectPtr<UImage> EnergyCableIcon;
-
-	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Build Toolbar|Designed Widgets")
 	TObjectPtr<UImage> EnergyModuleIcon;
 
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Build Toolbar|Designed Widgets")
@@ -133,9 +127,6 @@ protected:
 
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Build Toolbar|Designed Widgets")
 	TObjectPtr<UImage> CargoBayIcon;
-
-	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Build Toolbar|Designed Widgets")
-	TObjectPtr<UBorder> EnergyCableBorder;
 
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Build Toolbar|Designed Widgets")
 	TObjectPtr<UBorder> EnergyModuleBorder;
@@ -198,9 +189,6 @@ private:
 	void BindDesignedToolbar();
 	const FBuildToolButtonConfig* FindButtonConfig(ESTPBuildTool Tool) const;
 	void ApplyIcon(UImage* Icon, ESTPBuildTool Tool) const;
-
-	UFUNCTION()
-	void HandleEnergyCableClicked();
 
 	UFUNCTION()
 	void HandleEnergyModuleClicked();

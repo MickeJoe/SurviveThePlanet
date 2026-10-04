@@ -1,4 +1,5 @@
 #include "PlanetSurfaceManager.h"
+#include "TimerManager.h"
 #include "SurviveThePlanet.h"
 
 #include "Components/StaticMeshComponent.h"
@@ -312,6 +313,11 @@ bool APlanetSurfaceManager::ReserveCells(AActor* Occupier, FSTPGridCell OriginCe
 		}
 	}
 
+	if (BuildingOccupier)
+	{
+		bBuildingRoutingBoundsDirty = true;
+		OnBuildingOccupancyChanged.Broadcast();
+	}
 	return true;
 }
 
@@ -345,16 +351,96 @@ void APlanetSurfaceManager::ReleaseCells(AActor* Occupier)
 		return;
 	}
 
+	const ABaseBuilding* RemovedBuilding = Cast<ABaseBuilding>(Occupier);
+	bool bBuildingRemoved = RemovedBuilding && !RemovedBuilding->IsPlacementPreview();
 	for (auto It = OccupiedCells.CreateIterator(); It; ++It)
 	{
 		if (!IsValid(It.Value().Get()) || It.Value().Get() == Occupier)
 		{
+			bBuildingRemoved |= It.Value().Get() && It.Value()->IsA<ABaseBuilding>();
 			It.RemoveCurrent();
 		}
 	}
+	if (bBuildingRemoved)
+	{
+		bBuildingRoutingBoundsDirty = true;
+		OnBuildingOccupancyChanged.Broadcast();
+	}
+}
+
+void APlanetSurfaceManager::GetBuildingRoutingBounds(TMap<AActor*, FBox>& OutBounds) const
+{
+ // Share one snapshot across all links; moving previews never scan world actors.
+ if (!bBuildingRoutingBoundsDirty)
+ {
+  OutBounds = BuildingRoutingBounds;
+  return;
+ }
+ BuildingRoutingBounds.Reset();
+ TerrainRoutingBounds.Reset();
+ TerrainMeshRoutingBounds.Reset();
+ const float HalfCell = TileSpacing * 0.5f;
+ for (const auto& Entry : OccupiedCells)
+ {
+  ABaseBuilding* Building = Cast<ABaseBuilding>(Entry.Value.Get());
+  if (!IsValid(Building) || Building->IsActorBeingDestroyed() || Building->IsPlacementPreview()) continue;
+  FBox* Bounds = BuildingRoutingBounds.Find(Building);
+  if (!Bounds) Bounds = &BuildingRoutingBounds.Add(Building, FBox(ForceInit));
+  const FVector Center = GetWorldLocationForCell(FSTPGridCell(Entry.Key % GridWidth, Entry.Key / GridWidth));
+  for (float X : {-HalfCell, HalfCell})
+   for (float Y : {-HalfCell, HalfCell})
+    *Bounds += Center + GetActorTransform().TransformVector(FVector(X, Y, 0));
+ }
+ // Placement already treats map-authored buildings as obstacles even without reservations.
+ for (TActorIterator<ABaseBuilding> It(GetWorld()); It; ++It)
+ {
+  ABaseBuilding* Building = *It;
+  if (!IsValid(Building) || Building->IsActorBeingDestroyed() || Building->IsPlacementPreview()
+   || BuildingRoutingBounds.Contains(Building)) continue;
+  const FIntPoint Footprint = SanitizeFootprint(Building->GetGridFootprint());
+  const FSTPGridPlacement Placement = GetPlacementForWorldLocation(Building->GetActorLocation(), Footprint);
+  const FVector Center = GetWorldLocationForOriginCell(Placement.OriginCell, Footprint);
+  FBox Bounds(ForceInit);
+  for (float X : {-Footprint.X * HalfCell, Footprint.X * HalfCell})
+   for (float Y : {-Footprint.Y * HalfCell, Footprint.Y * HalfCell})
+    Bounds += Center + GetActorTransform().TransformVector(FVector(X, Y, 0));
+  BuildingRoutingBounds.Add(Building, Bounds);
+ }
+ for (TActorIterator<APlanetGeneratedSector> It(GetWorld()); It; ++It)
+ {
+  if (It->IsActorBeingDestroyed()) continue;
+  for (const FBox& MeshBounds : It->GetPlacementMeshBounds())
+   TerrainMeshRoutingBounds.Add(MeshBounds.TransformBy(It->GetActorTransform()));
+  for (const FBox& Cluster : It->GetPlacementClusterBounds())
+   TerrainRoutingBounds.Add(Cluster.TransformBy(It->GetActorTransform()));
+ }
+ bBuildingRoutingBoundsDirty = false;
+ OutBounds = BuildingRoutingBounds;
 }
 
 
+const TArray<FBox>& APlanetSurfaceManager::GetTerrainRoutingBounds() const
+{
+ if (bBuildingRoutingBoundsDirty)
+ {
+  TMap<AActor*, FBox> Unused;
+  GetBuildingRoutingBounds(Unused);
+ }
+ return TerrainRoutingBounds;
+}
+
+void APlanetSurfaceManager::InvalidateRoutingObstacles()
+{
+ bBuildingRoutingBoundsDirty = true;
+ // Procedural population can create many sector shells in one frame. Refresh links once.
+ if (bRoutingRefreshPending || !GetWorld()->IsGameWorld() || GetWorld()->bIsTearingDown) return;
+ bRoutingRefreshPending = true;
+ GetWorldTimerManager().SetTimerForNextTick(FTimerDelegate::CreateWeakLambda(this, [this]()
+ {
+  bRoutingRefreshPending = false;
+  OnBuildingOccupancyChanged.Broadcast();
+ }));
+}
 
 bool APlanetSurfaceManager::TryGetActorOriginCell(AActor* Actor, FSTPGridCell& OutOriginCell) const
 {

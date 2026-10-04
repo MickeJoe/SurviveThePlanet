@@ -1,0 +1,47 @@
+{
+  "assets": {
+    "Deposit": {
+      "triangles": 936,
+      "dimensions_m": [
+        2.210257053375244,
+        2.15773606300354,
+        0.7874823808670044
+      ]
+    },
+    "Main": {
+      "triangles": 13732,
+      "dimensions_m": [
+        2.9499998092651367,
+        2.119999885559082,
+        1.253786325454712
+      ]
+    },
+    "Cutter": {
+      "triangles": 5828,
+      "dimensions_m": [
+        1.2349998950958252,
+        0.8049522638320923,
+        0.805535078048706
+      ]
+    },
+    "Payload": {
+      "triangles": 144,
+      "dimensions_m": [
+        1.0000932216644287,
+        0.1545109748840332,
+        0.15802597999572754
+      ]
+    },
+    "Chip": {
+      "triangles": 24,
+      "dimensions_m": [
+        0.05630715191364288,
+        0.04278045520186424,
+        0.06449078768491745
+      ]
+    }
+  },
+  "blend": "C:\\UE5\\SurviveThePlanet 5.8\\ContentSource\\Coal\\Coal.blend",
+  "ue_visual_scale": 1.25,
+  "palette": "Shared EnergyExtender materials"
+}

@@ -97,6 +97,26 @@ bool FSTPBlueprintToolbarTest::RunTest(const FString& Parameters)
             }
             Definition->bBlueprintInitiallyOwned = InitiallyOwned;
         }
+        UButton* ExtenderButton = Toolbar->ToolButtons.FindRef(ESTPBuildTool::EnergyExtender);
+        UWidget* ExtenderWidget = Toolbar->ToolWidgets.FindRef(ESTPBuildTool::EnergyExtender);
+        if (TestNotNull(TEXT("Energy Extender button supplied by catalog"), ExtenderButton) &&
+            TestNotNull(TEXT("Energy Extender widget"), ExtenderWidget))
+        {
+            Toolbar->ActiveCategory = ESTPBuildCategory::Energy;
+            Toolbar->RefreshToolbarVisibility();
+            TestTrue(TEXT("Extender visible under ENERGY"), ExtenderWidget->GetVisibility() == ESlateVisibility::Visible);
+            UBuildingDataAsset* ExtenderDefinition = Manager->GetDefinition(ESTPBuildTool::EnergyExtender);
+            if (ExtenderDefinition && TestNotNull(TEXT("Toolbar resource manager"), Toolbar->ResourceManager.Get()))
+            {
+                for (const FResourceCost& Cost : ExtenderDefinition->ConstructionCosts)
+                    Toolbar->ResourceManager->AddResource(Cost.Resource, Cost.Cost);
+            }
+            Toolbar->RefreshButtonStates();
+            TestTrue(TEXT("Affordable extender button enabled"), ExtenderButton->GetIsEnabled());
+            ExtenderButton->OnClicked.Broadcast();
+            TestEqual(TEXT("Extender button selects its placement tool"), Controller->GetActiveBuildTool(), ESTPBuildTool::EnergyExtender);
+            Controller->SetActiveBuildTool(ESTPBuildTool::None);
+        }
         for (UBuildingDataAsset* Entry : Manager->GetToolbarDefinitions())
         {
             AddInfo(FString::Printf(TEXT("Catalog %s: class=%s icon=%s"), *Entry->GetName(),

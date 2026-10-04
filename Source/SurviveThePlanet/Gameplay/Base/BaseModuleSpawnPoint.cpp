@@ -1,4 +1,5 @@
 #include "Gameplay/Base/BaseModuleSpawnPoint.h"
+#include "Gameplay/Energy/EnergyCoverageComponent.h"
 
 #include "Components/ArrowComponent.h"
 #include "Components/BoxComponent.h"
@@ -128,6 +129,14 @@ AActor* ABaseModuleSpawnPoint::SpawnBaseModule()
 		}
 
 		SpawnedBaseModule = NewBaseModule;
+		if (EnergyCoverageRadius > 0.0f && !NewBaseModule->FindComponentByClass<UEnergyCoverageComponent>())
+		{
+			UEnergyCoverageComponent* Coverage = NewObject<UEnergyCoverageComponent>(NewBaseModule);
+			Coverage->CoverageRadius = EnergyCoverageRadius;
+			Coverage->SetupAttachment(NewBaseModule->GetRootComponent());
+			NewBaseModule->AddInstanceComponent(Coverage);
+			Coverage->RegisterComponent();
+		}
 		if (SurfaceManager && Placement.bValid)
 		{
 			if (ABaseBuilding* BaseBuilding = Cast<ABaseBuilding>(NewBaseModule))

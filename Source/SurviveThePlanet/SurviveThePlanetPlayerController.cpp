@@ -1,6 +1,8 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "SurviveThePlanetPlayerController.h"
+#include "Gameplay/Energy/EnergyConnectionComponent.h"
+#include "Gameplay/Energy/EnergyCoverageSubsystem.h"
 #include "GameFramework/Pawn.h"
 #include "Components/PrimitiveComponent.h"
 #include "NiagaraSystem.h"
@@ -30,7 +32,6 @@
 #include "Gameplay/Buildings/CargoBay.h"
 #include "Gameplay/Buildings/BuildingManagerSubsystem.h"
 #include "Gameplay/Buildings/BuildingBlueprintSubsystem.h"
-#include "Gameplay/Cables/CableNetworkManager.h"
 #include "Gameplay/Planet/PlanetSurfaceManager.h"
 #include "Gameplay/Resources/ResourceManager.h"
 #include "Gameplay/Resources/BaseResourceSource.h"
@@ -82,6 +83,11 @@ ASurviveThePlanetPlayerController::ASurviveThePlanetPlayerController()
 
 void ASurviveThePlanetPlayerController::SetActiveBuildTool(ESTPBuildTool NewBuildTool)
 {
+	if (NewBuildTool == ESTPBuildTool::EnergyCable)
+	{
+		return;
+	}
+
 	if (NewBuildTool != ESTPBuildTool::None)
 	{
 		UGameInstance* GI = GetGameInstance(); UBuildingBlueprintSubsystem* Inventory = GI ? GI->GetSubsystem<UBuildingBlueprintSubsystem>() : nullptr;
@@ -96,13 +102,12 @@ void ASurviveThePlanetPlayerController::SetActiveBuildTool(ESTPBuildTool NewBuil
 		return;
 	}
 
-	if (ActiveBuildTool == ESTPBuildTool::EnergyCable)
-	{
-		EndCableDrag();
-	}
-
 	DestroyBuildPlacementPreview();
 	ActiveBuildTool = NewBuildTool;
+	if (UEnergyCoverageSubsystem* Coverage = GetWorld()->GetSubsystem<UEnergyCoverageSubsystem>())
+	{
+		Coverage->SetCoverageVisualizationVisible(ActiveBuildTool != ESTPBuildTool::None);
+	}
 
 	OnBuildToolChanged.Broadcast(ActiveBuildTool);
 	UE_LOG(LogSurviveThePlanet, Warning, TEXT("STP_BUILD Active build tool changed to %d"), static_cast<int32>(ActiveBuildTool));
@@ -338,12 +343,6 @@ void ASurviveThePlanetPlayerController::OnInputStarted()
 	// Update the move destination to wherever the cursor is pointing at
 	UpdateCachedDestination();
 
-	if (!bIsTouch && ActiveBuildTool == ESTPBuildTool::EnergyCable)
-	{
-		BeginCableDragAtCursor();
-		return;
-	}
-
 	if (!bIsTouch)
 	{
 		if (ActiveBuildTool != ESTPBuildTool::None)
@@ -363,11 +362,6 @@ void ASurviveThePlanetPlayerController::OnSetDestinationTriggered()
 	// Update the move destination to wherever the cursor is pointing at
 	UpdateCachedDestination();
 
-	if (!bIsTouch && ActiveBuildTool == ESTPBuildTool::EnergyCable)
-	{
-		UpdateCableDragAtCursor();
-		return;
-	}
 	
 	// Only a real gameplay character should move toward click/touch destinations.
 	ASurviveThePlanetCharacter* ControlledCharacter = GetControlledSurviveCharacter();
@@ -385,13 +379,6 @@ void ASurviveThePlanetPlayerController::OnSetDestinationTriggered()
 void ASurviveThePlanetPlayerController::OnSetDestinationReleased()
 {
 	UE_LOG(LogSurviveThePlanet, Warning, TEXT("STP_SELECT OnSetDestinationReleased: FollowTime=%.3f ShortPressThreshold=%.3f"), FollowTime, ShortPressThreshold);
-
-	if (!bIsTouch && ActiveBuildTool == ESTPBuildTool::EnergyCable)
-	{
-		EndCableDrag();
-		FollowTime = 0.0f;
-		return;
-	}
 
 	if (ActiveBuildTool != ESTPBuildTool::None || FollowTime <= ShortPressThreshold)
 	{
@@ -458,10 +445,9 @@ bool ASurviveThePlanetPlayerController::TryHandleActiveBuildToolClick()
 	case ESTPBuildTool::CommandHub: case ESTPBuildTool::SolarArray: case ESTPBuildTool::WindGenerator:
 	case ESTPBuildTool::GeothermalPlant: case ESTPBuildTool::NuclearReactor: case ESTPBuildTool::MiningStation:
 	case ESTPBuildTool::ResourceStorage: case ESTPBuildTool::DroneFactory: case ESTPBuildTool::CommunicationsTower:
+	case ESTPBuildTool::EnergyExtender:
 	case ESTPBuildTool::Steelworks:
 		return TryPlaceGenericBuildingAtCursor();
-	case ESTPBuildTool::EnergyCable:
-		return true;
 	case ESTPBuildTool::None:
 	default:
 		return false;
@@ -801,6 +787,7 @@ bool ASurviveThePlanetPlayerController::TryPlaceMiningMachineAtCursor()
 		ConstructionJobQueue->EnqueueConstructionJob(SpawnedMachine);
 	}
 
+	SetActiveBuildTool(ESTPBuildTool::None);
 	SetSelectedActor(SpawnedMachine);
 	UE_LOG(LogSurviveThePlanet, Warning, TEXT("STP_BUILD Placed mining machine %s on source %s ResourceType=%d Location=%s"),
 		*GetNameSafe(SpawnedMachine),
@@ -953,6 +940,7 @@ void ASurviveThePlanetPlayerController::UpdateBuildPlacementPreview()
 	case ESTPBuildTool::CommandHub: case ESTPBuildTool::SolarArray: case ESTPBuildTool::WindGenerator:
 	case ESTPBuildTool::GeothermalPlant: case ESTPBuildTool::NuclearReactor: case ESTPBuildTool::MiningStation:
 	case ESTPBuildTool::ResourceStorage: case ESTPBuildTool::DroneFactory: case ESTPBuildTool::CommunicationsTower:
+	case ESTPBuildTool::EnergyExtender:
 	case ESTPBuildTool::Steelworks:
 		UpdateGenericBuildingPlacementPreview(); break;
 	default:
@@ -1342,7 +1330,19 @@ void ASurviveThePlanetPlayerController::EnsureGenericBuildingPlacementPreview()
 	UClass* ClassToSpawn=GetManagedBuildingClass(ActiveBuildTool, ABaseBuilding::StaticClass()); if(!ClassToSpawn)return;
 	FActorSpawnParameters Params; Params.Owner=this; Params.SpawnCollisionHandlingOverride=ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 	GenericBuildingPlacementPreview=GetWorld()->SpawnActor<ABaseBuilding>(ClassToSpawn,FVector::ZeroVector,FRotator::ZeroRotator,Params);
-	if(GenericBuildingPlacementPreview){GenericBuildingPlacementPreview->SetPlacementPreview(true);GenericBuildingPlacementPreview->SetActorTickEnabled(false);GenericBuildingPlacementPreview->SetActorHiddenInGame(true);}
+	if (GenericBuildingPlacementPreview)
+ {
+  GenericBuildingPlacementPreview->SetPlacementPreview(true);
+  GenericBuildingPlacementPreview->SetActorTickEnabled(false);
+  GenericBuildingPlacementPreview->SetActorHiddenInGame(true);
+  if (ActiveBuildTool == ESTPBuildTool::EnergyExtender)
+  {
+   auto* Connection = NewObject<UEnergyConnectionComponent>(GenericBuildingPlacementPreview);
+   Connection->SetupAttachment(GenericBuildingPlacementPreview->GetRootComponent());
+   GenericBuildingPlacementPreview->AddInstanceComponent(Connection);
+   Connection->RegisterComponent();
+  }
+ }
 }
 
 void ASurviveThePlanetPlayerController::UpdateGenericBuildingPlacementPreview()
@@ -1352,7 +1352,11 @@ void ASurviveThePlanetPlayerController::UpdateGenericBuildingPlacementPreview()
 	APlanetSurfaceManager* Surface=FindPlanetSurfaceManager(); const FSTPGridPlacement Placement=Surface?Surface->GetBuildingPlacementForWorldLocation(Hit.Location,GenericBuildingPlacementPreview->GetGridFootprint()):FSTPGridPlacement();
 	GenericBuildingPlacementPreview->SetActorLocation(Surface?Placement.WorldLocation:Hit.Location,false); if(Surface)GenericBuildingPlacementPreview->SetActorRotation(Placement.WorldRotation);
 	AResourceManager* Resources=FindResourceManager(); const TArray<FResourceCost>& Costs=GenericBuildingPlacementPreview->GetConstructionCosts(); const bool bAffordable=Costs.Num()==0||(Resources&&Resources->CanAffordCosts(Costs));
-	GenericBuildingPlacementPreview->SetPlacementPreviewValid(Surface&&Placement.bValid&&bAffordable); GenericBuildingPlacementPreview->SetActorHiddenInGame(false);
+	const bool bValidPlacement = Surface && Placement.bValid && bAffordable;
+ GenericBuildingPlacementPreview->SetPlacementPreviewValid(bValidPlacement);
+ GenericBuildingPlacementPreview->SetActorHiddenInGame(false);
+ if (auto* Connection = GenericBuildingPlacementPreview->FindComponentByClass<UEnergyConnectionComponent>())
+  Connection->UpdateRoute(true, bValidPlacement);
 }
 
 bool ASurviveThePlanetPlayerController::TryPlaceGenericBuildingAtCursor()
@@ -1365,7 +1369,19 @@ bool ASurviveThePlanetPlayerController::TryPlaceGenericBuildingAtCursor()
 	if((Costs.Num()>0&&!Resources)||(Resources&&!Resources->CanAffordCosts(Costs)))return true; const FSTPGridPlacement Placement=Surface->GetBuildingPlacementForWorldLocation(Target,Footprint); if(!Placement.bValid)return true;
 	FActorSpawnParameters Params; Params.Owner=this; Params.SpawnCollisionHandlingOverride=ESpawnActorCollisionHandlingMethod::AlwaysSpawn; ABaseBuilding* Building=World->SpawnActor<ABaseBuilding>(ClassToSpawn,Placement.WorldLocation,Placement.WorldRotation,Params); if(!Building)return true;
 	Building->SetPlacementPreview(false); if(!Surface->ReserveCells(Building,Placement.OriginCell,Building->GetGridFootprint())||(Resources&&!Resources->TrySpendCosts(Costs))){Building->Destroy();return true;}
-	Building->SetConstructionProgress(0); Building->ShowConstructionProgress(); if(UConstructionJobQueueSubsystem* Queue=World->GetSubsystem<UConstructionJobQueueSubsystem>())Queue->EnqueueConstructionJob(Building); SetSelectedActor(Building); return true;
+	if (ActiveBuildTool == ESTPBuildTool::EnergyExtender)
+ {
+  // Refresh at the actual clicked cell, then preserve the preview's selected parent.
+  auto* PreviewConnection = GenericBuildingPlacementPreview->FindComponentByClass<UEnergyConnectionComponent>();
+  GenericBuildingPlacementPreview->SetActorLocation(Placement.WorldLocation);
+  if (PreviewConnection) PreviewConnection->UpdateRoute(true, true);
+  auto* Connection = NewObject<UEnergyConnectionComponent>(Building);
+  Connection->SetupAttachment(Building->GetRootComponent());
+  Building->AddInstanceComponent(Connection);
+  Connection->RegisterComponent();
+  Connection->CopyPlacedRoute(PreviewConnection);
+ }
+ Building->SetConstructionProgress(0); Building->ShowConstructionProgress(); if(UConstructionJobQueueSubsystem* Queue=World->GetSubsystem<UConstructionJobQueueSubsystem>())Queue->EnqueueConstructionJob(Building); SetActiveBuildTool(ESTPBuildTool::None); SetSelectedActor(Building); return true;
 }
 
 void ASurviveThePlanetPlayerController::EnsureConcretePlantPlacementPreview()
@@ -1930,62 +1946,6 @@ APlanetSurfaceManager* ASurviveThePlanetPlayerController::FindPlanetSurfaceManag
 
 	return nullptr;
 }
-ACableNetworkManager* ASurviveThePlanetPlayerController::FindOrCreateCableNetworkManager()
-{
-	if (IsValid(CableNetworkManager))
-	{
-		return CableNetworkManager;
-	}
-
-	UWorld* World = GetWorld();
-	if (!World)
-	{
-		return nullptr;
-	}
-
-	for (TActorIterator<ACableNetworkManager> It(World); It; ++It)
-	{
-		CableNetworkManager = *It;
-		return CableNetworkManager;
-	}
-
-	FActorSpawnParameters SpawnParameters;
-	SpawnParameters.Owner = this;
-	SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-	CableNetworkManager = World->SpawnActor<ACableNetworkManager>(
-		ACableNetworkManager::StaticClass(),
-		FVector::ZeroVector,
-		FRotator::ZeroRotator,
-		SpawnParameters);
-
-	return CableNetworkManager;
-}
-
-bool ASurviveThePlanetPlayerController::BeginCableDragAtCursor()
-{
-	FVector WorldLocation;
-	ACableNetworkManager* Manager = FindOrCreateCableNetworkManager();
-	return Manager
-		&& TryGetCursorWorldLocation(WorldLocation)
-		&& Manager->BeginCableDrag(WorldLocation);
-}
-
-bool ASurviveThePlanetPlayerController::UpdateCableDragAtCursor()
-{
-	FVector WorldLocation;
-	return IsValid(CableNetworkManager)
-		&& TryGetCursorWorldLocation(WorldLocation)
-		&& CableNetworkManager->UpdateCableDrag(WorldLocation);
-}
-
-void ASurviveThePlanetPlayerController::EndCableDrag()
-{
-	if (IsValid(CableNetworkManager))
-	{
-		CableNetworkManager->EndCableDrag();
-	}
-}
-
 ASurviveThePlanetCharacter* ASurviveThePlanetPlayerController::GetControlledSurviveCharacter() const
 {
 	return Cast<ASurviveThePlanetCharacter>(GetPawn());
@@ -2122,4 +2082,17 @@ void ASurviveThePlanetPlayerController::RotateCamera(float CameraRotationInput, 
 		CameraRotation.Yaw += CameraRotationInput * CameraRotationSpeed * DeltaTime;
 		CameraBoom->SetRelativeRotation(CameraRotation);
 	}
+}
+
+void ASurviveThePlanetPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	if (GetWorld())
+	{
+		if (UEnergyCoverageSubsystem* Coverage = GetWorld()->GetSubsystem<UEnergyCoverageSubsystem>())
+		{
+			Coverage->SetCoverageVisualizationVisible(false);
+		}
+	}
+	DestroyBuildPlacementPreview();
+	Super::EndPlay(EndPlayReason);
 }

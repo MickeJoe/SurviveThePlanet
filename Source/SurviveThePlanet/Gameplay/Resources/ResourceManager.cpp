@@ -9,6 +9,7 @@ AResourceManager::AResourceManager()
 	InitialResourceAmounts.Add(EResourceType::ControlChip, 0);
 	InitialResourceAmounts.Add(EResourceType::Copper, 0);
 	InitialResourceAmounts.Add(EResourceType::Stone, 0);
+	InitialResourceAmounts.Add(EResourceType::Coal, 0);
 	InitialResourceAmounts.Add(EResourceType::Water, 0);
 	InitialResourceAmounts.Add(EResourceType::Concrete, 0);
 	InitialResourceAmounts.Add(EResourceType::Steel, 0);

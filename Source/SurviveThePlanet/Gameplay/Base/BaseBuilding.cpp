@@ -1,4 +1,6 @@
 #include "Gameplay/Base/BaseBuilding.h"
+#include "Gameplay/Energy/EnergyCoverageComponent.h"
+#include "Gameplay/Energy/EnergyCoverageSubsystem.h"
 
 #include "Components/WidgetComponent.h"
 #include "Components/SceneComponent.h"
@@ -102,22 +104,15 @@ void ABaseBuilding::BeginPlay()
 
 bool ABaseBuilding::IsConnectedToPowerGrid() const
 {
-	if (GetBuildingType() == ESTPBuildingType::BaseModule)
-	{
-		return GetConstructionProgress() >= 1.0f;
-	}
-	if (UWorld* World = GetWorld())
-	{
-		for (TActorIterator<ACableNetworkManager> It(World); It; ++It)
-		{
-			return It->IsBuildingConnectedToPowerGrid(this);
-		}
-	}
-	return false;
+ if (IsActorBeingDestroyed() || IsPlacementPreview() || GetConstructionProgress() < 1.0f) return false;
+ if (GetBuildingType() == ESTPBuildingType::BaseModule) return true;
+ const auto* Coverage = GetWorld() ? GetWorld()->GetSubsystem<UEnergyCoverageSubsystem>() : nullptr;
+ return Coverage && Coverage->IsLocationConnectedToPowerGrid(GetActorLocation());
 }
 
 bool ABaseBuilding::IsOperational() const
 {
+ if (IsActorBeingDestroyed() || IsPlacementPreview() || GetConstructionProgress() < 1.0f) return false;
 	if (GetBuildingType() == ESTPBuildingType::BaseModule)
 	{
 		return true;
@@ -306,8 +301,18 @@ void ABaseBuilding::ConfigureMesh()
 
 void ABaseBuilding::SetConstructionProgress(float NewProgress)
 {
+	const bool bWasComplete = ConstructionProgress >= 1.0f;
 	ConstructionProgress = FMath::Clamp(NewProgress, 0.0f, 1.0f);
 	RefreshConstructionProgressBar();
+	if (bWasComplete != (ConstructionProgress >= 1.0f))
+	{
+		TArray<UEnergyCoverageComponent*> CoverageSources;
+		GetComponents(CoverageSources);
+		for (UEnergyCoverageComponent* Coverage : CoverageSources)
+		{
+			Coverage->RefreshCoverageEligibility();
+		}
+	}
 }
 
 void ABaseBuilding::ShowConstructionProgress()
@@ -377,6 +382,15 @@ void ABaseBuilding::SetPlacementPreview(bool bPreview)
 	}
 
 	bPlacementPreview = bPreview;
+	if (bPreview)
+	{
+		TArray<UEnergyCoverageComponent*> CoverageSources;
+		GetComponents(CoverageSources);
+		for (UEnergyCoverageComponent* Coverage : CoverageSources)
+		{
+			Coverage->SetCoverageVisualizationVisible(false);
+		}
+	}
 	bIsSelectable = !bPreview;
 	SetActorEnableCollision(!bPreview);
 	SetConstructionProgress(bPreview ? 1.0f : 0.0f);

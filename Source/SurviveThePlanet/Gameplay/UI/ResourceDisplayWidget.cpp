@@ -38,7 +38,8 @@ UResourceDisplayWidget::UResourceDisplayWidget(const FObjectInitializer& ObjectI
 		{ EResourceType::Stone, NSLOCTEXT("SurviveThePlanet", "StoneResourceTooltip", "Stone"), nullptr },
 		{ EResourceType::Water, NSLOCTEXT("SurviveThePlanet", "WaterResourceTooltip", "Water"), nullptr },
 		{ EResourceType::Concrete, NSLOCTEXT("SurviveThePlanet", "ConcreteResourceTooltip", "Concrete"), nullptr },
-		{ EResourceType::Steel, NSLOCTEXT("SurviveThePlanet", "SteelResourceTooltip", "Steel"), nullptr }
+		{ EResourceType::Steel, NSLOCTEXT("SurviveThePlanet", "SteelResourceTooltip", "Steel"), nullptr },
+		{ EResourceType::Coal, NSLOCTEXT("SurviveThePlanet", "CoalResourceTooltip", "Coal"), nullptr }
 	};
 }
 
@@ -319,7 +320,8 @@ void UResourceDisplayWidget::RefreshAllResources()
 		EResourceType::Stone,
 		EResourceType::Water,
 		EResourceType::Concrete,
-		EResourceType::Steel
+		EResourceType::Steel,
+		EResourceType::Coal
 	};
 
 	for (const EResourceType ResourceType : DisplayedResourceTypes)
@@ -337,6 +339,7 @@ void UResourceDisplayWidget::RefreshResourceRates()
 	float IronRatePerMinute = 0.0f;
 	float CopperRatePerMinute = 0.0f;
 	float StoneRatePerMinute = 0.0f;
+	float CoalRatePerMinute = 0.0f;
 	float WaterRatePerMinute = 0.0f;
 	float ConcreteRatePerMinute = 0.0f;
 	float SteelRatePerMinute = 0.0f;
@@ -363,6 +366,9 @@ void UResourceDisplayWidget::RefreshResourceRates()
 					break;
 				case EResourceType::Copper:
 					CopperRatePerMinute += It->GetCurrentOutputPerMinute();
+					break;
+				case EResourceType::Coal:
+					CoalRatePerMinute += It->GetCurrentOutputPerMinute();
 					break;
 				case EResourceType::Stone:
 					StoneRatePerMinute += It->GetCurrentOutputPerMinute();
@@ -410,6 +416,10 @@ void UResourceDisplayWidget::RefreshResourceRates()
 	if (CopperRateText)
 	{
 		CopperRateText->SetText(FormatRate(CopperRatePerMinute));
+	}
+	if (CoalRateText)
+	{
+		CoalRateText->SetText(FormatRate(CoalRatePerMinute));
 	}
 	if (StoneRateText)
 	{
@@ -462,6 +472,8 @@ UImage* UResourceDisplayWidget::GetResourceImage(EResourceType ResourceType) con
 		return WaterIcon;
 	case EResourceType::Concrete:
 		return ConcreteIcon;
+	case EResourceType::Coal:
+		return CoalIcon;
 	case EResourceType::Steel:
 		return SteelIcon;
 	default:
@@ -487,6 +499,8 @@ UTextBlock* UResourceDisplayWidget::GetResourceAmountText(EResourceType Resource
 		return WaterAmountText;
 	case EResourceType::Concrete:
 		return ConcreteAmountText;
+	case EResourceType::Coal:
+		return CoalAmountText;
 	case EResourceType::Steel:
 		return SteelAmountText;
 	default:

@@ -37,6 +37,10 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Mining Machine|Output")
 	float GetCurrentOutputPerMinute() const;
 
+	/** Shared production gate for extraction, displayed output and operating visuals. */
+	UFUNCTION(BlueprintPure, Category = "Mining Machine|Output")
+	bool IsProducingResource() const;
+
 	/** Mining machines only draw power while they have a valid source and productive drones. */
 	virtual float GetEnergyConsumptionPerMinute() const override;
 
