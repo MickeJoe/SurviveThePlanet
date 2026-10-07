@@ -5,6 +5,7 @@
 #include "GameFramework/SaveGame.h"
 #include "Gameplay/Resources/ResourceManager.h"
 #include "Gameplay/Planet/PlanetWeatherManager.h"
+#include "Gameplay/Resources/ResourceCatalog.h"
 #include "ResourceDisplayWidget.generated.h"
 
 class AResourceManager;
@@ -13,6 +14,7 @@ class UImage;
 class UButton;
 class UTextBlock;
 class UTexture2D;
+class UUniformGridPanel;
 
 UCLASS()
 class SURVIVETHEPLANET_API UGameTimeSaveGame : public USaveGame
@@ -52,6 +54,19 @@ class SURVIVETHEPLANET_API UResourceDisplayWidget : public UUserWidget
 
 public:
 	UResourceDisplayWidget(const FObjectInitializer& ObjectInitializer);
+
+public:
+    UFUNCTION(BlueprintCallable, Category = "Resource Display")
+    void SelectResourceCategory(EResourceCategory Category);
+
+    UFUNCTION(BlueprintCallable, Category = "Resource Display")
+    void SetResourceCardsVisible(bool bVisible);
+
+    UFUNCTION(BlueprintPure, Category = "Resource Display")
+    bool AreResourceCardsVisible() const { return bResourceCardsVisible; }
+
+    UFUNCTION(BlueprintPure, Category = "Resource Display")
+    EResourceCategory GetSelectedResourceCategory() const { return SelectedResourceCategory; }
 
 protected:
 	virtual void NativePreConstruct() override;
@@ -141,7 +156,39 @@ protected:
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Resource Display")
 	TObjectPtr<UTextBlock> SteelRateText;
 
+UPROPERTY(BlueprintReadOnly, meta=(BindWidgetOptional), Category="Resource Display")
+	TObjectPtr<UImage> PolymerIcon;
+	UPROPERTY(BlueprintReadOnly, meta=(BindWidgetOptional), Category="Resource Display")
+	TObjectPtr<UTextBlock> PolymerAmountText;
+	UPROPERTY(BlueprintReadOnly, meta=(BindWidgetOptional), Category="Resource Display")
+	TObjectPtr<UTextBlock> PolymerRateText;
+
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Resource Display")
+	TObjectPtr<UImage> ConnectorIcon;
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Resource Display")
+	TObjectPtr<UTextBlock> ConnectorAmountText;
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Resource Display")
+	TObjectPtr<UTextBlock> ConnectorRateText;
+
 private:
+    EResourceCategory SelectedResourceCategory = EResourceCategory::RawMaterials;
+    bool bResourceCardsVisible = true;
+
+    void ResolveCategoryWidgets();
+    void RefreshCategoryDisplay();
+    UTextBlock* GetResourceRateText(EResourceType ResourceType) const;
+
+    UFUNCTION()
+    void HandleRawMaterialsClicked();
+    UFUNCTION()
+    void HandleMaterialsClicked();
+    UFUNCTION()
+    void HandleComponentsClicked();
+    UFUNCTION()
+    void HandleAdvancedGoodsClicked();
+    UFUNCTION()
+    void HandleToggleResourceCardsClicked();
+
 	UPROPERTY(Transient)
 	TObjectPtr<AResourceManager> ResourceManager;
 

@@ -1,4 +1,5 @@
 #include "Gameplay/UI/TraderPanelWidget.h"
+#include "Gameplay/Resources/ResourceCatalog.h"
 
 #include "Blueprint/WidgetTree.h"
 #include "Components/Border.h"
@@ -46,19 +47,7 @@ namespace STPTraderUI
 
 	UTexture2D* GetResourceIcon(EResourceType Resource)
 	{
-		const TCHAR* Path = nullptr;
-		switch (Resource)
-		{
-		case EResourceType::Energy: Path = TEXT("/Game/UI/EnergyResourceIcon.EnergyResourceIcon"); break;
-		case EResourceType::Iron: Path = TEXT("/Game/UI/IronResourceIcon.IronResourceIcon"); break;
-		case EResourceType::ControlChip: Path = TEXT("/Game/UI/ControlChipResourceIcon.ControlChipResourceIcon"); break;
-		case EResourceType::Copper: Path = TEXT("/Game/UI/CopperResourceIcon.CopperResourceIcon"); break;
-		case EResourceType::Stone: Path = TEXT("/Game/UI/StoneResourceIcon.StoneResourceIcon"); break;
-		case EResourceType::Concrete: Path = TEXT("/Game/UI/ConcreteResourceIcon.ConcreteResourceIcon"); break;
-		case EResourceType::Water: Path = TEXT("/Game/UI/Images/WaterCollectorBuildIcon.WaterCollectorBuildIcon"); break;
-		default: break;
-		}
-		return Path ? LoadObject<UTexture2D>(nullptr, Path) : nullptr;
+		return UResourceCatalog::GetResourceIcon(Resource);
 	}
 
 	FLinearColor TraderAccent(int32 Index)

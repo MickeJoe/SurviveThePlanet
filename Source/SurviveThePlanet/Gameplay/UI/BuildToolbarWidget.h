@@ -6,6 +6,7 @@
 #include "Gameplay/Resources/ResourceManager.h"
 #include "BuildToolbarWidget.generated.h"
 
+class UBuildCostWidget;
 class UBuildToolbarWidget;
 class UHorizontalBox;
 
@@ -158,6 +159,8 @@ private:
 	UPROPERTY(Transient) TArray<TObjectPtr<UBuildToolbarClickBinding>> ClickBindings;
 	UPROPERTY(Transient) TObjectPtr<UHorizontalBox> DesignedHost;
 	FTimerHandle ResourceRetryTimer;
+	UPROPERTY(Transient) TObjectPtr<UBuildCostWidget> PlacementCosts;
+	UPROPERTY(Transient) TMap<ESTPBuildTool, TObjectPtr<UBuildCostWidget>> CostTooltips;
 	bool IsToolAvailable(ESTPBuildTool Tool) const;
 	ESTPBuildCategory ActiveCategory = ESTPBuildCategory::Energy;
 	UPROPERTY(Transient)

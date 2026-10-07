@@ -3,6 +3,8 @@
 #include "Components/SceneComponent.h"
 #include "DrawDebugHelpers.h"
 #include "Engine/World.h"
+#include "EngineUtils.h"
+#include "Gameplay/Base/BaseBuilding.h"
 
 namespace HexSector
 {
@@ -373,4 +375,49 @@ void AHexSectorGrid::DrawGrid() const
 			}
 		}
 	}
+}
+
+bool AHexSectorGrid::HasSectorBase(int32 SectorId, const ABaseBuilding* IgnoredBuilding) const
+{
+	for (TActorIterator<AActor> It(GetWorld()); It; ++It)
+	{
+		const AActor* Actor = *It;
+		const ABaseBuilding* Building = Cast<ABaseBuilding>(Actor);
+		if (Actor == IgnoredBuilding || Actor->IsActorBeingDestroyed()
+			|| (Building && Building->IsPlacementPreview())) continue;
+		const bool bIsBase = Building
+			? Building->GetBuildingType() == ESTPBuildingType::BaseModule
+				|| Building->GetBuildingType() == ESTPBuildingType::RemoteBase
+			: Actor->ActorHasTag(TEXT("BaseModule"));
+		if (bIsBase && GetSectorAtWorldLocation(Actor->GetActorLocation()) == SectorId) return true;
+	}
+	return false;
+}
+
+bool AHexSectorGrid::CanPlaceBuilding(const ABaseBuilding* Building, const FVector& Location,
+	const FVector& FootprintX, const FVector& FootprintY) const
+{
+	if (!Building) return false;
+	const int32 SectorId = GetSectorAtWorldLocation(Location);
+	FHexSector Sector;
+	if (!GetSectorById(SectorId, Sector) || Sector.State == ESectorState::Undiscovered) return false;
+	const ESTPBuildingType Type = Building->GetBuildingType();
+	const bool bIsBase = Type == ESTPBuildingType::BaseModule || Type == ESTPBuildingType::RemoteBase;
+	const UBuildingDataAsset* Data = Building->GetBuildingData();
+	const bool bIsExtender = Data && Data->BuildTool == ESTPBuildTool::EnergyExtender;
+	if (bIsBase && HasSectorBase(SectorId, Building)) return false;
+	// Relays can bridge a discovered sector before its Remote Base is established.
+	if (!bIsBase && !bIsExtender && Sector.State != ESectorState::Established) return false;
+	for (const float X : {-1.0f, 1.0f})
+	{
+		for (const float Y : {-1.0f, 1.0f})
+		{
+			const int32 CornerId = GetSectorAtWorldLocation(Location + X * FootprintX + Y * FootprintY);
+			FHexSector Corner;
+			if (!GetSectorById(CornerId, Corner) || Corner.State == ESectorState::Undiscovered) return false;
+			if (bIsBase && CornerId != SectorId) return false;
+			if (!bIsBase && !bIsExtender && Corner.State != ESectorState::Established) return false;
+		}
+	}
+	return true;
 }

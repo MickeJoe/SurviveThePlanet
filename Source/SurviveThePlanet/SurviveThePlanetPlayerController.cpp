@@ -45,6 +45,24 @@
 #include "Blueprint/UserWidget.h"
 #include "SurviveThePlanet.h"
 
+namespace
+{
+	bool RequiresDistanceConnection(ESTPBuildTool Tool)
+	{
+		return Tool == ESTPBuildTool::EnergyExtender || Tool == ESTPBuildTool::RemoteBase;
+	}
+
+	bool HasRequiredPowerConnection(ESTPBuildTool Tool, const UEnergyConnectionComponent* Connection, UWorld* World)
+	{
+		if (!RequiresDistanceConnection(Tool)) return true;
+		if (!Connection || !Connection->GetSourceActor()) return false;
+		if (Tool != ESTPBuildTool::RemoteBase) return true;
+		const UEnergyCoverageSubsystem* Coverage = World ? World->GetSubsystem<UEnergyCoverageSubsystem>() : nullptr;
+		return Connection->HasRoutableConnection() && Coverage
+			&& Coverage->IsSourceConnectedToPowerGrid(Connection->GetSourceCoverage());
+	}
+}
+
 ASurviveThePlanetPlayerController::ASurviveThePlanetPlayerController()
 {
 	bIsTouch = false;
@@ -446,6 +464,9 @@ bool ASurviveThePlanetPlayerController::TryHandleActiveBuildToolClick()
 	case ESTPBuildTool::GeothermalPlant: case ESTPBuildTool::NuclearReactor: case ESTPBuildTool::MiningStation:
 	case ESTPBuildTool::ResourceStorage: case ESTPBuildTool::DroneFactory: case ESTPBuildTool::CommunicationsTower:
 	case ESTPBuildTool::EnergyExtender:
+	case ESTPBuildTool::RemoteBase:
+	case ESTPBuildTool::ConnectorPlant:
+	case ESTPBuildTool::PolymerPlant:
 	case ESTPBuildTool::Steelworks:
 		return TryPlaceGenericBuildingAtCursor();
 	case ESTPBuildTool::None:
@@ -734,6 +755,8 @@ bool ASurviveThePlanetPlayerController::TryPlaceMiningMachineAtCursor()
 	SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
 	const FTransform PlacementTransform = DefaultMachine->GetPlacementTransformForSource(ResourceSource);
+	APlanetSurfaceManager* SectorSurface = FindPlanetSurfaceManager();
+	if (!SectorSurface || !SectorSurface->CanBuildInSector(DefaultMachine, PlacementTransform.GetLocation())) return true;
 	if (APlanetSurfaceManager* Surface = FindPlanetSurfaceManager())
 	{
 		auto LogTransform = [Surface](const TCHAR* Stage, const AMiningMachine* Machine, const FTransform& Transform)
@@ -941,6 +964,9 @@ void ASurviveThePlanetPlayerController::UpdateBuildPlacementPreview()
 	case ESTPBuildTool::GeothermalPlant: case ESTPBuildTool::NuclearReactor: case ESTPBuildTool::MiningStation:
 	case ESTPBuildTool::ResourceStorage: case ESTPBuildTool::DroneFactory: case ESTPBuildTool::CommunicationsTower:
 	case ESTPBuildTool::EnergyExtender:
+	case ESTPBuildTool::RemoteBase:
+	case ESTPBuildTool::ConnectorPlant:
+	case ESTPBuildTool::PolymerPlant:
 	case ESTPBuildTool::Steelworks:
 		UpdateGenericBuildingPlacementPreview(); break;
 	default:
@@ -1108,7 +1134,9 @@ void ASurviveThePlanetPlayerController::UpdateMiningMachinePlacementPreview()
 	MiningMachinePlacementPreview->SetActorTransform(PlacementTransform, false);
 	MiningMachinePlacementPreview->SetPreviewResourceSource(ResourceSource);
 	const bool bCanMineSource = MiningMachinePlacementPreview->CanMineResourceSource(ResourceSource);
-	const bool bValidPlacement = bCanMineSource && bCanAfford;
+	APlanetSurfaceManager* SectorSurface = FindPlanetSurfaceManager();
+	const bool bValidPlacement = bCanMineSource && bCanAfford && SectorSurface
+		&& SectorSurface->CanBuildInSector(MiningMachinePlacementPreview, PlacementTransform.GetLocation());
 	MiningMachinePlacementPreview->SetPlacementPreviewValid(bValidPlacement);
 	MiningMachinePlacementPreview->SetActorHiddenInGame(false);
 
@@ -1328,21 +1356,73 @@ void ASurviveThePlanetPlayerController::EnsureGenericBuildingPlacementPreview()
 {
 	if (IsValid(GenericBuildingPlacementPreview) || !GetWorld()) return;
 	UClass* ClassToSpawn=GetManagedBuildingClass(ActiveBuildTool, ABaseBuilding::StaticClass()); if(!ClassToSpawn)return;
-	FActorSpawnParameters Params; Params.Owner=this; Params.SpawnCollisionHandlingOverride=ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-	GenericBuildingPlacementPreview=GetWorld()->SpawnActor<ABaseBuilding>(ClassToSpawn,FVector::ZeroVector,FRotator::ZeroRotator,Params);
+	const FTransform PreviewTransform = FTransform::Identity;
+	GenericBuildingPlacementPreview = GetWorld()->SpawnActorDeferred<ABaseBuilding>(
+		ClassToSpawn, PreviewTransform, this, nullptr, ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
 	if (GenericBuildingPlacementPreview)
  {
+  // Native power components start routing in BeginPlay. Mark the ghost first so
+  // the shared obstacle snapshot cannot cache it as a real building at the origin.
   GenericBuildingPlacementPreview->SetPlacementPreview(true);
   GenericBuildingPlacementPreview->SetActorTickEnabled(false);
   GenericBuildingPlacementPreview->SetActorHiddenInGame(true);
-  if (ActiveBuildTool == ESTPBuildTool::EnergyExtender)
+  UGameplayStatics::FinishSpawningActor(GenericBuildingPlacementPreview, PreviewTransform);
+  if (RequiresDistanceConnection(ActiveBuildTool))
   {
-   auto* Connection = NewObject<UEnergyConnectionComponent>(GenericBuildingPlacementPreview);
-   Connection->SetupAttachment(GenericBuildingPlacementPreview->GetRootComponent());
-   GenericBuildingPlacementPreview->AddInstanceComponent(Connection);
-   Connection->RegisterComponent();
+   if (!GenericBuildingPlacementPreview->FindComponentByClass<UEnergyConnectionComponent>())
+   {
+    auto* Connection = NewObject<UEnergyConnectionComponent>(GenericBuildingPlacementPreview);
+    Connection->SetupAttachment(GenericBuildingPlacementPreview->GetRootComponent());
+    GenericBuildingPlacementPreview->AddInstanceComponent(Connection);
+    Connection->RegisterComponent();
+   }
   }
  }
+}
+
+ABaseBuilding* ASurviveThePlanetPlayerController::GetActivePlacementPreview() const
+{
+ if (ActiveBuildTool == ESTPBuildTool::None) return nullptr;
+ if (ActiveBuildTool == ESTPBuildTool::MiningMachine) return MiningMachinePlacementPreview;
+ return GenericBuildingPlacementPreview;
+}
+
+TArray<FResourceCost> ASurviveThePlanetPlayerController::GetBuildCosts(ESTPBuildTool Tool, bool bIncludePlacement) const
+{
+ TArray<FResourceCost> Costs;
+ const UBuildingManagerSubsystem* Manager = GetWorld() ? GetWorld()->GetSubsystem<UBuildingManagerSubsystem>() : nullptr;
+ const UBuildingDataAsset* Definition = Manager ? Manager->GetDefinition(Tool) : nullptr;
+ const ABaseBuilding* Preview = bIncludePlacement && Tool == ActiveBuildTool ? GetActivePlacementPreview() : nullptr;
+ if (Preview) Costs = Preview->GetConstructionCosts();
+ else if (Definition) Costs = Definition->ConstructionCosts;
+ else if (Manager)
+ {
+  const TSubclassOf<ABaseBuilding> BuildingClass = Manager->GetBuildingClass(Tool);
+  if (BuildingClass) Costs = BuildingClass->GetDefaultObject<ABaseBuilding>()->GetConstructionCosts();
+ }
+ if (RequiresDistanceConnection(Tool) && Preview)
+ {
+  const UEnergyConnectionComponent* Connection = Preview->FindComponentByClass<UEnergyConnectionComponent>();
+  const UBuildingDataAsset* Data = Preview->GetBuildingData();
+  const float Rate = Data ? Data->ConnectorsPerMeter : 1.0f;
+  const int32 Connectors = Connection ? FMath::CeilToInt(Connection->GetConnectionDistanceMeters() * FMath::Max(Rate, 0.0f)) : 0;
+  if (Connectors > 0)
+  {
+   FResourceCost Cost;
+   Cost.Resource = EResourceType::Connector;
+   Cost.Cost = Connectors;
+   Costs.Add(Cost);
+  }
+ }
+ TArray<FResourceCost> Totals;
+ for (const FResourceCost& Cost : Costs)
+ {
+  if (Cost.Cost <= 0) continue;
+  FResourceCost* Existing = Totals.FindByPredicate([&Cost](const FResourceCost& Entry) { return Entry.Resource == Cost.Resource; });
+  if (Existing) Existing->Cost += Cost.Cost;
+  else Totals.Add(Cost);
+ }
+ return Totals;
 }
 
 void ASurviveThePlanetPlayerController::UpdateGenericBuildingPlacementPreview()
@@ -1351,8 +1431,13 @@ void ASurviveThePlanetPlayerController::UpdateGenericBuildingPlacementPreview()
 	if(!GetHitResultUnderCursor(ECC_Visibility,true,Hit)){GenericBuildingPlacementPreview->SetActorHiddenInGame(true);return;}
 	APlanetSurfaceManager* Surface=FindPlanetSurfaceManager(); const FSTPGridPlacement Placement=Surface?Surface->GetBuildingPlacementForWorldLocation(Hit.Location,GenericBuildingPlacementPreview->GetGridFootprint()):FSTPGridPlacement();
 	GenericBuildingPlacementPreview->SetActorLocation(Surface?Placement.WorldLocation:Hit.Location,false); if(Surface)GenericBuildingPlacementPreview->SetActorRotation(Placement.WorldRotation);
-	AResourceManager* Resources=FindResourceManager(); const TArray<FResourceCost>& Costs=GenericBuildingPlacementPreview->GetConstructionCosts(); const bool bAffordable=Costs.Num()==0||(Resources&&Resources->CanAffordCosts(Costs));
-	const bool bValidPlacement = Surface && Placement.bValid && bAffordable;
+	if (auto* Connection = GenericBuildingPlacementPreview->FindComponentByClass<UEnergyConnectionComponent>())
+  Connection->UpdateRoute(true, true);
+ AResourceManager* Resources=FindResourceManager(); const TArray<FResourceCost> Costs=GetBuildCosts(ActiveBuildTool, true); const bool bAffordable=Costs.Num()==0||(Resources&&Resources->CanAffordCosts(Costs));
+	const UEnergyConnectionComponent* PreviewConnection = GenericBuildingPlacementPreview->FindComponentByClass<UEnergyConnectionComponent>();
+ const bool bConnected = HasRequiredPowerConnection(ActiveBuildTool, PreviewConnection, GetWorld());
+ const bool bValidPlacement = Surface && Placement.bValid && bAffordable && bConnected
+  && Surface->CanBuildInSector(GenericBuildingPlacementPreview, Placement.WorldLocation);
  GenericBuildingPlacementPreview->SetPlacementPreviewValid(bValidPlacement);
  GenericBuildingPlacementPreview->SetActorHiddenInGame(false);
  if (auto* Connection = GenericBuildingPlacementPreview->FindComponentByClass<UEnergyConnectionComponent>())
@@ -1365,20 +1450,35 @@ bool ASurviveThePlanetPlayerController::TryPlaceGenericBuildingAtCursor()
 	UClass* ClassToSpawn=GetManagedBuildingClass(ActiveBuildTool,ABaseBuilding::StaticClass()); if(!ClassToSpawn)return true; const ABaseBuilding* Defaults=ClassToSpawn->GetDefaultObject<ABaseBuilding>();
 	EnsureGenericBuildingPlacementPreview();
 	if (!IsValid(GenericBuildingPlacementPreview)) return true;
-	const FIntPoint Footprint=GenericBuildingPlacementPreview->GetGridFootprint(); const TArray<FResourceCost> Costs=GenericBuildingPlacementPreview->GetConstructionCosts(); AResourceManager* Resources=FindResourceManager();
-	if((Costs.Num()>0&&!Resources)||(Resources&&!Resources->CanAffordCosts(Costs)))return true; const FSTPGridPlacement Placement=Surface->GetBuildingPlacementForWorldLocation(Target,Footprint); if(!Placement.bValid)return true;
+	const FIntPoint Footprint = GenericBuildingPlacementPreview->GetGridFootprint();
+ const FSTPGridPlacement Placement = Surface->GetBuildingPlacementForWorldLocation(Target, Footprint);
+ if (!Placement.bValid || !Surface->CanBuildInSector(GenericBuildingPlacementPreview, Placement.WorldLocation)) return true;
+ GenericBuildingPlacementPreview->SetActorLocation(Placement.WorldLocation);
+ GenericBuildingPlacementPreview->SetActorRotation(Placement.WorldRotation);
+ if (auto* Connection = GenericBuildingPlacementPreview->FindComponentByClass<UEnergyConnectionComponent>())
+ {
+  Connection->UpdateRoute(true, true);
+  if (!HasRequiredPowerConnection(ActiveBuildTool, Connection, World)) return true;
+ }
+ const TArray<FResourceCost> Costs = GetBuildCosts(ActiveBuildTool, true);
+ AResourceManager* Resources = FindResourceManager();
+ if ((!Costs.IsEmpty() && !Resources) || (Resources && !Resources->CanAffordCosts(Costs))) return true;
 	FActorSpawnParameters Params; Params.Owner=this; Params.SpawnCollisionHandlingOverride=ESpawnActorCollisionHandlingMethod::AlwaysSpawn; ABaseBuilding* Building=World->SpawnActor<ABaseBuilding>(ClassToSpawn,Placement.WorldLocation,Placement.WorldRotation,Params); if(!Building)return true;
 	Building->SetPlacementPreview(false); if(!Surface->ReserveCells(Building,Placement.OriginCell,Building->GetGridFootprint())||(Resources&&!Resources->TrySpendCosts(Costs))){Building->Destroy();return true;}
-	if (ActiveBuildTool == ESTPBuildTool::EnergyExtender)
+	if (RequiresDistanceConnection(ActiveBuildTool))
  {
   // Refresh at the actual clicked cell, then preserve the preview's selected parent.
   auto* PreviewConnection = GenericBuildingPlacementPreview->FindComponentByClass<UEnergyConnectionComponent>();
   GenericBuildingPlacementPreview->SetActorLocation(Placement.WorldLocation);
   if (PreviewConnection) PreviewConnection->UpdateRoute(true, true);
-  auto* Connection = NewObject<UEnergyConnectionComponent>(Building);
-  Connection->SetupAttachment(Building->GetRootComponent());
-  Building->AddInstanceComponent(Connection);
-  Connection->RegisterComponent();
+  auto* Connection = Building->FindComponentByClass<UEnergyConnectionComponent>();
+  if (!Connection)
+  {
+   Connection = NewObject<UEnergyConnectionComponent>(Building);
+   Connection->SetupAttachment(Building->GetRootComponent());
+   Building->AddInstanceComponent(Connection);
+   Connection->RegisterComponent();
+  }
   Connection->CopyPlacedRoute(PreviewConnection);
  }
  Building->SetConstructionProgress(0); Building->ShowConstructionProgress(); if(UConstructionJobQueueSubsystem* Queue=World->GetSubsystem<UConstructionJobQueueSubsystem>())Queue->EnqueueConstructionJob(Building); SetActiveBuildTool(ESTPBuildTool::None); SetSelectedActor(Building); return true;

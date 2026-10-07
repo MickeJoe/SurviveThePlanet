@@ -38,3 +38,29 @@ USteelworksBuildingDataAsset::USteelworksBuildingDataAsset()
 	EnergyConsumptionPerMinute = 18.0f;
 	bOverrideEnergySettings = true;
 }
+
+UPolymerPlantBuildingDataAsset::UPolymerPlantBuildingDataAsset()
+{
+	BuildCategory = ESTPBuildCategory::Industry;
+	BuildTool = ESTPBuildTool::PolymerPlant;
+	BuildingType = ESTPBuildingType::PolymerPlant;
+	BuildingTag = TEXT("PolymerPlant");
+	BlueprintId = TEXT("PolymerPlant");
+	DisplayName = NSLOCTEXT("STP", "PolymerPlantName", "Polymer Plant");
+	Description = NSLOCTEXT("STP", "PolymerPlantDescription", "Converts coal and water into polymer while supplied with electricity.");
+	EnergyConsumptionPerMinute = 12.0f;
+	bOverrideEnergySettings = true;
+}
+
+UConnectorPlantBuildingDataAsset::UConnectorPlantBuildingDataAsset()
+{
+	BuildCategory = ESTPBuildCategory::Industry;
+	BuildTool = ESTPBuildTool::ConnectorPlant;
+	BuildingType = ESTPBuildingType::ConnectorPlant;
+	BuildingTag = TEXT("ConnectorPlant");
+	BlueprintId = TEXT("ConnectorPlant");
+	DisplayName = NSLOCTEXT("STP", "ConnectorPlantName", "Connector Plant");
+	Description = NSLOCTEXT("STP", "ConnectorPlantDescription", "Consumes copper, polymer and electricity to produce connectors.");
+	EnergyConsumptionPerMinute = 12.0f;
+	bOverrideEnergySettings = true;
+}

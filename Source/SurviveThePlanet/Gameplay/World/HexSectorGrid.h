@@ -5,6 +5,7 @@
 #include "HexSectorGrid.generated.h"
 
 class UStaticMesh;
+class ABaseBuilding;
 
 UENUM(BlueprintType)
 enum class ESectorState : uint8
@@ -117,6 +118,14 @@ public:
 	UFUNCTION(BlueprintPure, Category="Hex Sector|Fog") float GetFogOpacityForSector(int32 SectorId) const;
 	UFUNCTION(BlueprintPure, Category="Hex Sector|Generation") bool GetTemplateForSector(int32 SectorId, FSectorTemplateDefinition& OutTemplate) const;
 	UFUNCTION(BlueprintPure, Category="Hex Sector|Generation") bool ValidateGeneratedLayout(FString& OutDiagnostic) const;
+
+	/** Includes bases under construction; placement ghosts never reserve a sector. */
+	UFUNCTION(BlueprintPure, Category="Hex Sector|Construction")
+	bool HasSectorBase(int32 SectorId, const ABaseBuilding* IgnoredBuilding = nullptr) const;
+
+	/** Shared discovered/established-sector rule, used by previews and final reservations. */
+	bool CanPlaceBuilding(const ABaseBuilding* Building, const FVector& Location,
+		const FVector& FootprintX, const FVector& FootprintY) const;
 
 	UPROPERTY(BlueprintAssignable, Category="Hex Sector|Exploration")
 	FSectorStateChangedSignature OnSectorStateChanged;

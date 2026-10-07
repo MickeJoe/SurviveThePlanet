@@ -75,6 +75,9 @@ void ABaseBuilding::BeginPlay()
 		case ESTPBuildingType::ConcretePlant: BuildTool = ESTPBuildTool::ConcretePlant; break;
 		case ESTPBuildingType::CommunicationModule: BuildTool = ESTPBuildTool::CommunicationModule; break;
 		case ESTPBuildingType::CargoBay: BuildTool = ESTPBuildTool::CargoBay; break;
+		case ESTPBuildingType::PolymerPlant: BuildTool = ESTPBuildTool::PolymerPlant; break;
+		case ESTPBuildingType::ConnectorPlant: BuildTool = ESTPBuildTool::ConnectorPlant; break;
+		case ESTPBuildingType::RemoteBase: BuildTool = ESTPBuildTool::RemoteBase; break;
 		case ESTPBuildingType::Steelworks: BuildTool = ESTPBuildTool::Steelworks; break;
 		default: break;
 		}
@@ -558,3 +561,30 @@ FName ABaseBuilding::GetBuildingTag() const
 {
 	return IsValid(BuildingData) ? BuildingData->BuildingTag : BuildingTag;
 }
+
+void ABaseBuilding::GroundBuildingMesh(bool bForce)
+{
+	if (!GetWorld() || !BuildingMesh || (!bForce && bHasGroundedTransform && GetActorTransform().Equals(LastGroundedTransform, 0.1f)))
+	{
+		return;
+	}
+
+	// Grid height is an authoring reference, not the terrain's visible surface.
+	// Keep the grid actor fixed and seat the ground-pivot mesh on an actual hit.
+	FCollisionQueryParams Params(SCENE_QUERY_STAT(BuildingGround), true, this);
+	for (TActorIterator<ABaseBuilding> It(GetWorld()); It; ++It)
+	{
+		Params.AddIgnoredActor(*It);
+	}
+	const FVector Up = GetActorUpVector();
+	FHitResult Hit;
+	if (GetWorld()->LineTraceSingleByChannel(Hit, GetActorLocation() + Up * 500.0f,
+		GetActorLocation() - Up * 1500.0f, ECC_Visibility, Params))
+	{
+		const FVector LocalGround = GetActorTransform().InverseTransformPosition(Hit.ImpactPoint - Up * 0.5f);
+		BuildingMesh->SetRelativeLocation(FVector(0.0f, 0.0f, LocalGround.Z));
+		LastGroundedTransform = GetActorTransform();
+		bHasGroundedTransform = true;
+	}
+}
+

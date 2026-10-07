@@ -11,6 +11,9 @@
 #include "Gameplay/Buildings/MiningMachine.h"
 #include "Gameplay/Buildings/WaterCollector.h"
 #include "Gameplay/Buildings/Steelworks.h"
+#include "Gameplay/Buildings/PolymerPlant.h"
+#include "Gameplay/Buildings/ConnectorPlant.h"
+#include "Gameplay/Buildings/RemoteBase.h"
 
 void UBuildingManagerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
@@ -31,7 +34,9 @@ void UBuildingManagerSubsystem::LoadDefaultCatalog()
 			{ESTPBuildTool::MiningMachine, TEXT("/Game/Data/Buildings/DA_MiningMachine.DA_MiningMachine")},
 			{ESTPBuildTool::WaterCollector, TEXT("/Game/Data/Buildings/DA_WaterCollector.DA_WaterCollector")},
 			{ESTPBuildTool::ConcretePlant, TEXT("/Game/Data/Buildings/DA_ConcretePlant.DA_ConcretePlant")},
-			{ESTPBuildTool::Steelworks, TEXT("/Game/Data/Buildings/DA_Steelworks.DA_Steelworks")}
+			{ESTPBuildTool::Steelworks, TEXT("/Game/Data/Buildings/DA_Steelworks.DA_Steelworks")},
+			{ESTPBuildTool::PolymerPlant, TEXT("/Game/Data/Buildings/DA_PolymerPlant.DA_PolymerPlant")},
+			{ESTPBuildTool::ConnectorPlant, TEXT("/Game/Data/Buildings/DA_ConnectorPlant.DA_ConnectorPlant")}
 		};
 		for (const FFallbackDefinition& Entry : Fallbacks)
 		{
@@ -90,6 +95,12 @@ TSubclassOf<ABaseBuilding> UBuildingManagerSubsystem::GetBuildingClass(ESTPBuild
 	case ESTPBuildTool::ConcretePlant:
 		if (UClass* BPClass = LoadClass<AConcretePlant>(nullptr, TEXT("/Game/BluePrints/ConcretePlant/BP_ConcretePlant.BP_ConcretePlant_C"))) return BPClass;
 		return AConcretePlant::StaticClass();
+	case ESTPBuildTool::RemoteBase:
+		return ARemoteBase::StaticClass();
+	case ESTPBuildTool::ConnectorPlant:
+		return AConnectorPlant::StaticClass();
+	case ESTPBuildTool::PolymerPlant:
+		return APolymerPlant::StaticClass();
 	case ESTPBuildTool::Steelworks:
 		if (UClass* BPClass = LoadClass<ASteelworks>(nullptr, TEXT("/Game/BluePrints/Buildings/Steelworks/BP_Steelworks.BP_Steelworks_C"))) return BPClass;
 		return ASteelworks::StaticClass();

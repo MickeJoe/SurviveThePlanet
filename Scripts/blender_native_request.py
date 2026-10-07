@@ -1,6 +1,6 @@
 import json, socket, sys
 from pathlib import Path
-code=Path(sys.argv[1]).read_text(encoding="utf-8") if len(sys.argv)>1 else "import bpy\nresult={'scene':bpy.context.scene.name,'file':bpy.data.filepath,'objects':len(bpy.data.objects)}"
+code=Path(sys.argv[1]).read_text(encoding="utf-8-sig") if len(sys.argv)>1 else "import bpy\nresult={'scene':bpy.context.scene.name,'file':bpy.data.filepath,'objects':len(bpy.data.objects)}"
 with socket.create_connection(("127.0.0.1",9876),timeout=120) as s:
     s.sendall(json.dumps({"type":"execute","strict_json":True,"code":code}).encode()+b"\0")
     data=b""

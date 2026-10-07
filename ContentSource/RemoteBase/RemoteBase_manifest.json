@@ -1,0 +1,46 @@
+{
+  "scene": "STP_RemoteBase",
+  "source": "C:\\UE5\\SurviveThePlanet 5.8\\ContentSource\\RemoteBase",
+  "antenna_pivot_cm": [
+    0,
+    0,
+    218
+  ],
+  "meshes": {
+    "Body": {
+      "vertices": 6352,
+      "triangles": 12316,
+      "materials": [
+        "Remote_Graphite",
+        "Remote_Orange",
+        "Remote_Ivory",
+        "Remote_Steel",
+        "Remote_Cyan"
+      ]
+    },
+    "Antenna": {
+      "vertices": 1138,
+      "triangles": 2216,
+      "materials": [
+        "Remote_Graphite",
+        "Remote_Steel",
+        "Remote_Cyan",
+        "Remote_Ivory"
+      ]
+    },
+    "Ring": {
+      "vertices": 272,
+      "triangles": 256,
+      "materials": [
+        "Remote_Cyan"
+      ]
+    },
+    "Scan": {
+      "vertices": 194,
+      "triangles": 192,
+      "materials": [
+        "Remote_Cyan"
+      ]
+    }
+  }
+}

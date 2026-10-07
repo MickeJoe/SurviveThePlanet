@@ -2,14 +2,19 @@
 
 #include "Components/Image.h"
 #include "Components/Button.h"
+#include "Components/UniformGridPanel.h"
+#include "Components/UniformGridSlot.h"
 #include "Components/TextBlock.h"
 #include "Blueprint/WidgetTree.h"
 #include "Kismet/GameplayStatics.h"
 #include "EngineUtils.h"
+#include "Engine/Texture2D.h"
 #include "Gameplay/Buildings/MiningMachine.h"
 #include "Gameplay/Buildings/WaterCollector.h"
 #include "Gameplay/Buildings/ConcretePlant.h"
 #include "Gameplay/Buildings/Steelworks.h"
+#include "Gameplay/Buildings/PolymerPlant.h"
+#include "Gameplay/Buildings/ConnectorPlant.h"
 #include "Gameplay/Cables/CableNetworkManager.h"
 #include "Gameplay/Resources/BaseResourceSource.h"
 #include "Gameplay/Planet/PlanetWeatherManager.h"
@@ -47,11 +52,14 @@ void UResourceDisplayWidget::NativePreConstruct()
 {
 	Super::NativePreConstruct();
 	ApplyConfiguredIcons();
+	RefreshCategoryDisplay();
 }
 
 void UResourceDisplayWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
+	ResolveCategoryWidgets();
+	RefreshCategoryDisplay();
 	ResolveResourceManager();
 	RefreshAllResources();
 	RefreshResourceRates();
@@ -312,24 +320,10 @@ void UResourceDisplayWidget::ResolveResourceManager()
 
 void UResourceDisplayWidget::RefreshAllResources()
 {
-	static constexpr EResourceType DisplayedResourceTypes[] = {
-		EResourceType::Energy,
-		EResourceType::Iron,
-		EResourceType::ControlChip,
-		EResourceType::Copper,
-		EResourceType::Stone,
-		EResourceType::Water,
-		EResourceType::Concrete,
-		EResourceType::Steel,
-		EResourceType::Coal
-	};
-
-	for (const EResourceType ResourceType : DisplayedResourceTypes)
+	for (const FResourceDefinition& Definition : UResourceCatalog::GetDefinitions())
 	{
-		const int32 Amount = ResourceManager
-			? ResourceManager->GetResourceAmount(ResourceType)
-			: 0;
-		HandleResourceAmountChanged(ResourceType, Amount);
+		HandleResourceAmountChanged(Definition.ResourceType,
+			ResourceManager ? ResourceManager->GetResourceAmount(Definition.ResourceType) : 0);
 	}
 }
 
@@ -343,6 +337,8 @@ void UResourceDisplayWidget::RefreshResourceRates()
 	float WaterRatePerMinute = 0.0f;
 	float ConcreteRatePerMinute = 0.0f;
 	float SteelRatePerMinute = 0.0f;
+	float PolymerRatePerMinute = 0.0f;
+	float ConnectorRatePerMinute = 0.0f;
 
 	if (UWorld* World = GetWorld())
 	{
@@ -395,6 +391,24 @@ void UResourceDisplayWidget::RefreshResourceRates()
 			}
 		}
 
+		for (TActorIterator<AConnectorPlant> It(World); It; ++It)
+		{
+			if (It->IsProducing())
+			{
+				ConnectorRatePerMinute += It->GetConnectorProductionPerMinute();
+				CopperRatePerMinute -= It->GetCopperConsumptionPerMinute();
+				PolymerRatePerMinute -= It->GetPolymerConsumptionPerMinute();
+			}
+		}
+		for (TActorIterator<APolymerPlant> It(World); It; ++It)
+		{
+			if (It->IsProducing())
+			{
+				PolymerRatePerMinute += It->GetPolymerProductionPerMinute();
+				CoalRatePerMinute -= It->GetCoalConsumptionPerMinute();
+				WaterRatePerMinute -= It->GetWaterConsumptionPerMinute();
+			}
+		}
 		for (TActorIterator<ASteelworks> It(World); It; ++It)
 		{
 			if (It->IsProducing())
@@ -405,49 +419,50 @@ void UResourceDisplayWidget::RefreshResourceRates()
 		}
 	}
 
-	if (EnergyRateText)
-	{
-		EnergyRateText->SetText(FormatRate(EnergyRatePerMinute));
-	}
-	if (IronRateText)
-	{
-		IronRateText->SetText(FormatRate(IronRatePerMinute));
-	}
-	if (CopperRateText)
-	{
-		CopperRateText->SetText(FormatRate(CopperRatePerMinute));
-	}
-	if (CoalRateText)
-	{
-		CoalRateText->SetText(FormatRate(CoalRatePerMinute));
-	}
-	if (StoneRateText)
-	{
-		StoneRateText->SetText(FormatRate(StoneRatePerMinute));
-	}
-	if (WaterRateText)
-	{
-		WaterRateText->SetText(FormatRate(WaterRatePerMinute));
-	}
-	if (ConcreteRateText)
-	{
-		ConcreteRateText->SetText(FormatRate(ConcreteRatePerMinute));
-	}
-	if (SteelRateText)
-	{
-		SteelRateText->SetText(FormatRate(SteelRatePerMinute));
-	}
+	const TMap<EResourceType, float> Rates = {
+        {EResourceType::Energy, EnergyRatePerMinute},
+        {EResourceType::Iron, IronRatePerMinute},
+        {EResourceType::Copper, CopperRatePerMinute},
+        {EResourceType::Coal, CoalRatePerMinute},
+        {EResourceType::Stone, StoneRatePerMinute},
+        {EResourceType::Water, WaterRatePerMinute},
+        {EResourceType::Concrete, ConcreteRatePerMinute},
+        {EResourceType::Polymer, PolymerRatePerMinute},
+        {EResourceType::Connector, ConnectorRatePerMinute},
+        {EResourceType::Steel, SteelRatePerMinute}
+    };
+    for (const FResourceDefinition& Definition : UResourceCatalog::GetDefinitions())
+    {
+        if (UTextBlock* RateText = GetResourceRateText(Definition.ResourceType))
+        {
+            const float Rate = Rates.FindRef(Definition.ResourceType);
+            RateText->SetText(FormatRate(Rate));
+            RateText->SetColorAndOpacity(Rate < -0.05f
+                ? FLinearColor(1.0f, 0.3f, 0.18f) : FLinearColor(0.68f, 0.9f, 0.28f));
+        }
+    }
 }
 
 void UResourceDisplayWidget::ApplyConfiguredIcons()
 {
+    for (const FResourceDefinition& Definition : UResourceCatalog::GetDefinitions())
+    {
+        if (UImage* Image = GetResourceImage(Definition.ResourceType))
+        {
+            if (UTexture2D* Icon = Definition.Icon.LoadSynchronous())
+            {
+                Image->SetBrushFromTexture(Icon, false);
+                Image->SetColorAndOpacity(FLinearColor::White);
+            }
+        }
+    }
 	for (const FResourceDisplayConfig& Config : Resources)
 	{
 		if (UImage* Image = GetResourceImage(Config.ResourceType))
 		{
 			if (Config.IconTexture)
 			{
-				Image->SetBrushFromTexture(Config.IconTexture, true);
+				Image->SetBrushFromTexture(Config.IconTexture, false);
 				Image->SetColorAndOpacity(FLinearColor::White);
 			}
 		}
@@ -456,58 +471,39 @@ void UResourceDisplayWidget::ApplyConfiguredIcons()
 
 UImage* UResourceDisplayWidget::GetResourceImage(EResourceType ResourceType) const
 {
-	switch (ResourceType)
-	{
-	case EResourceType::Energy:
-		return EnergyIcon;
-	case EResourceType::Iron:
-		return IronIcon;
-	case EResourceType::ControlChip:
-		return ControlChipIcon;
-	case EResourceType::Copper:
-		return CopperIcon;
-	case EResourceType::Stone:
-		return StoneIcon;
-	case EResourceType::Water:
-		return WaterIcon;
-	case EResourceType::Concrete:
-		return ConcreteIcon;
-	case EResourceType::Coal:
-		return CoalIcon;
-	case EResourceType::Steel:
-		return SteelIcon;
-	default:
-		return nullptr;
-	}
+    for (const FResourceDefinition& Definition : UResourceCatalog::GetDefinitions())
+    {
+        if (Definition.ResourceType == ResourceType)
+        {
+            return Cast<UImage>(GetWidgetFromName(FName(Definition.WidgetPrefix.ToString() + TEXT("Icon"))));
+        }
+    }
+    return nullptr;
 }
 
 UTextBlock* UResourceDisplayWidget::GetResourceAmountText(EResourceType ResourceType) const
 {
-	switch (ResourceType)
-	{
-	case EResourceType::Energy:
-		return EnergyAmountText;
-	case EResourceType::Iron:
-		return IronAmountText;
-	case EResourceType::ControlChip:
-		return ControlChipAmountText;
-	case EResourceType::Copper:
-		return CopperAmountText;
-	case EResourceType::Stone:
-		return StoneAmountText;
-	case EResourceType::Water:
-		return WaterAmountText;
-	case EResourceType::Concrete:
-		return ConcreteAmountText;
-	case EResourceType::Coal:
-		return CoalAmountText;
-	case EResourceType::Steel:
-		return SteelAmountText;
-	default:
-		return nullptr;
-	}
+    for (const FResourceDefinition& Definition : UResourceCatalog::GetDefinitions())
+    {
+        if (Definition.ResourceType == ResourceType)
+        {
+            return Cast<UTextBlock>(GetWidgetFromName(FName(Definition.WidgetPrefix.ToString() + TEXT("AmountText"))));
+        }
+    }
+    return nullptr;
 }
 
+UTextBlock* UResourceDisplayWidget::GetResourceRateText(EResourceType ResourceType) const
+{
+    for (const FResourceDefinition& Definition : UResourceCatalog::GetDefinitions())
+    {
+        if (Definition.ResourceType == ResourceType)
+        {
+            return Cast<UTextBlock>(GetWidgetFromName(FName(Definition.WidgetPrefix.ToString() + TEXT("RateText"))));
+        }
+    }
+    return nullptr;
+}
 void UResourceDisplayWidget::HandleResourceAmountChanged(
 	EResourceType ResourceType,
 	int32 NewAmount)
@@ -517,3 +513,83 @@ void UResourceDisplayWidget::HandleResourceAmountChanged(
 		AmountText->SetText(FText::AsNumber(NewAmount));
 	}
 }
+
+void UResourceDisplayWidget::ResolveCategoryWidgets()
+{
+    if (UButton* Button = Cast<UButton>(GetWidgetFromName(TEXT("RawMaterialsButton"))))
+        Button->OnClicked.AddUniqueDynamic(this, &UResourceDisplayWidget::HandleRawMaterialsClicked);
+    if (UButton* Button = Cast<UButton>(GetWidgetFromName(TEXT("MaterialsButton"))))
+        Button->OnClicked.AddUniqueDynamic(this, &UResourceDisplayWidget::HandleMaterialsClicked);
+    if (UButton* Button = Cast<UButton>(GetWidgetFromName(TEXT("ComponentsButton"))))
+        Button->OnClicked.AddUniqueDynamic(this, &UResourceDisplayWidget::HandleComponentsClicked);
+    if (UButton* Button = Cast<UButton>(GetWidgetFromName(TEXT("AdvancedGoodsButton"))))
+        Button->OnClicked.AddUniqueDynamic(this, &UResourceDisplayWidget::HandleAdvancedGoodsClicked);
+    if (UButton* Button = Cast<UButton>(GetWidgetFromName(TEXT("ToggleResourceCardsButton"))))
+        Button->OnClicked.AddUniqueDynamic(this, &UResourceDisplayWidget::HandleToggleResourceCardsClicked);
+}
+
+void UResourceDisplayWidget::SelectResourceCategory(EResourceCategory Category)
+{
+    if (Category == EResourceCategory::Energy) return;
+    SelectedResourceCategory = Category;
+    bResourceCardsVisible = true;
+    RefreshCategoryDisplay();
+}
+
+void UResourceDisplayWidget::SetResourceCardsVisible(bool bVisible)
+{
+    bResourceCardsVisible = bVisible;
+    RefreshCategoryDisplay();
+}
+
+void UResourceDisplayWidget::RefreshCategoryDisplay()
+{
+    UUniformGridPanel* Grid = Cast<UUniformGridPanel>(GetWidgetFromName(TEXT("ResourceCardsGrid")));
+    if (!Grid) return;
+    Grid->SetVisibility(bResourceCardsVisible ? ESlateVisibility::SelfHitTestInvisible : ESlateVisibility::Collapsed);
+    if (UWidget* Body = GetWidgetFromName(TEXT("ResourceCardsBody")))
+        Body->SetVisibility(bResourceCardsVisible ? ESlateVisibility::SelfHitTestInvisible : ESlateVisibility::Collapsed);
+    int32 ResourceCount = 0;
+    for (const FResourceDefinition& Definition : UResourceCatalog::GetDefinitions())
+        if (Definition.Category == SelectedResourceCategory) ++ResourceCount;
+    const int32 Columns = FMath::Max(1, (ResourceCount + 1) / 2);
+    int32 Index = 0;
+    for (const FResourceDefinition& Definition : UResourceCatalog::GetDefinitions())
+    {
+        UWidget* Card = GetWidgetFromName(FName(Definition.WidgetPrefix.ToString() + TEXT("ResourceCard")));
+        if (!Card) continue;
+        const bool bEnergy = Definition.ResourceType == EResourceType::Energy;
+        const bool bSelected = bEnergy || Definition.Category == SelectedResourceCategory;
+        Card->SetVisibility(bSelected ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
+        if (bSelected)
+        {
+            if (UUniformGridSlot* GridSlot = Cast<UUniformGridSlot>(Card->Slot))
+            {
+                GridSlot->SetRow(Index / Columns);
+                GridSlot->SetColumn(Index % Columns);
+            }
+            if (!bEnergy) ++Index;
+        }
+    }
+    static const TCHAR* Prefixes[] = {TEXT("RawMaterials"), TEXT("Materials"), TEXT("Components"), TEXT("AdvancedGoods")};
+    for (int32 CategoryIndex = 0; CategoryIndex < 4; ++CategoryIndex)
+    {
+        const bool bSelected = static_cast<int32>(SelectedResourceCategory) == CategoryIndex;
+        if (UButton* Button = Cast<UButton>(GetWidgetFromName(FName(FString(Prefixes[CategoryIndex]) + TEXT("Button")))))
+            Button->SetBackgroundColor(bSelected ? FLinearColor(0.06f, 0.28f, 0.34f) : FLinearColor(0.04f, 0.07f, 0.09f));
+        if (UTextBlock* Label = Cast<UTextBlock>(GetWidgetFromName(FName(FString(Prefixes[CategoryIndex]) + TEXT("Label")))))
+            Label->SetColorAndOpacity(bSelected ? FLinearColor(0.0f, 0.85f, 1.0f) : FLinearColor(0.75f, 0.8f, 0.82f));
+    }
+    if (UWidget* UpIcon = GetWidgetFromName(TEXT("ResourceCollapseUpIcon")))
+        UpIcon->SetVisibility(bResourceCardsVisible ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
+    if (UWidget* DownIcon = GetWidgetFromName(TEXT("ResourceCollapseDownIcon")))
+        DownIcon->SetVisibility(bResourceCardsVisible ? ESlateVisibility::Collapsed : ESlateVisibility::HitTestInvisible);
+    if (UButton* Toggle = Cast<UButton>(GetWidgetFromName(TEXT("ToggleResourceCardsButton"))))
+        Toggle->SetToolTipText(FText::FromString(bResourceCardsVisible ? TEXT("Hide resources") : TEXT("Show resources")));
+}
+
+void UResourceDisplayWidget::HandleRawMaterialsClicked() { SelectResourceCategory(EResourceCategory::RawMaterials); }
+void UResourceDisplayWidget::HandleMaterialsClicked() { SelectResourceCategory(EResourceCategory::Materials); }
+void UResourceDisplayWidget::HandleComponentsClicked() { SelectResourceCategory(EResourceCategory::Components); }
+void UResourceDisplayWidget::HandleAdvancedGoodsClicked() { SelectResourceCategory(EResourceCategory::AdvancedGoods); }
+void UResourceDisplayWidget::HandleToggleResourceCardsClicked() { SetResourceCardsVisible(!bResourceCardsVisible); }

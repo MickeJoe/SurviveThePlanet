@@ -1,0 +1,10 @@
+{
+  "antenna_frame_76_yaw_degrees": 30.000000834826057,
+  "scan_frame_76_scale": [
+    1.40625,
+    1.40625,
+    1.0
+  ],
+  "frame_end": 901,
+  "fps": 30
+}

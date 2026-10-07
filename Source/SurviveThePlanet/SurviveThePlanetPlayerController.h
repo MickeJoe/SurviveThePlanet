@@ -6,6 +6,7 @@
 //#include "Templates/SubclassOf.h"
 #include "GameFramework/PlayerController.h"
 #include "Gameplay/BuildTools/BuildToolTypes.h"
+#include "Gameplay/Resources/ResourceManager.h"
 #include "SurviveThePlanetPlayerController.generated.h"
 
 class UNiagaraSystem;
@@ -122,6 +123,12 @@ protected:
 	ESTPBuildTool ActiveBuildTool = ESTPBuildTool::None;
 
 public:
+	UFUNCTION(BlueprintPure, Category = "Construction")
+	TArray<FResourceCost> GetBuildCosts(ESTPBuildTool Tool, bool bIncludePlacement) const;
+
+	UFUNCTION(BlueprintPure, Category = "Construction")
+	ABaseBuilding* GetActivePlacementPreview() const;
+
 	/** Constructor */
 	ASurviveThePlanetPlayerController();
 

@@ -42,6 +42,14 @@ void UEnergyConnectionComponent::EndPlay(const EEndPlayReason::Type Reason)
  Super::EndPlay(Reason);
 }
 AActor* UEnergyConnectionComponent::GetSourceActor() const { return Source.IsValid()?Source->GetOwner():nullptr; }
+float UEnergyConnectionComponent::GetConnectionDistanceMeters() const
+{
+ AActor* Parent = GetSourceActor();
+ if (!Parent || !GetOwner()) return 0.0f;
+ return FVector::Dist2D(GetAttachment(Parent, GetOwner()->GetActorLocation()),
+  GetAttachment(GetOwner(), Parent->GetActorLocation())) / 100.0f;
+}
+
 void UEnergyConnectionComponent::SourcesChanged()
 {
  // Fixed parent after placement prevents completed extenders from forming cycles.

@@ -1,0 +1,232 @@
+[
+  {
+    "key": "Energy",
+    "name": "Energy",
+    "category": "Energy"
+  },
+  {
+    "key": "Water",
+    "name": "Water",
+    "category": "RawMaterials"
+  },
+  {
+    "key": "Stone",
+    "name": "Stone",
+    "category": "RawMaterials"
+  },
+  {
+    "key": "Copper",
+    "name": "Copper Ore",
+    "category": "RawMaterials"
+  },
+  {
+    "key": "Iron",
+    "name": "Iron Ore",
+    "category": "RawMaterials"
+  },
+  {
+    "key": "Silica",
+    "name": "Silica",
+    "category": "RawMaterials"
+  },
+  {
+    "key": "Coal",
+    "name": "Carbon",
+    "category": "RawMaterials"
+  },
+  {
+    "key": "RareMinerals",
+    "name": "Rare Minerals",
+    "category": "RawMaterials"
+  },
+  {
+    "key": "UraniumOre",
+    "name": "Uranium Ore",
+    "category": "RawMaterials"
+  },
+  {
+    "key": "AlienMaterial",
+    "name": "Alien Material",
+    "category": "RawMaterials"
+  },
+  {
+    "key": "Concrete",
+    "name": "Concrete",
+    "category": "Materials"
+  },
+  {
+    "key": "CopperMetal",
+    "name": "Copper",
+    "category": "Materials"
+  },
+  {
+    "key": "Steel",
+    "name": "Steel",
+    "category": "Materials"
+  },
+  {
+    "key": "Glass",
+    "name": "Glass",
+    "category": "Materials"
+  },
+  {
+    "key": "Polymer",
+    "name": "Polymer",
+    "category": "Materials"
+  },
+  {
+    "key": "PurifiedWater",
+    "name": "Purified Water",
+    "category": "Materials"
+  },
+  {
+    "key": "Ceramics",
+    "name": "Ceramics",
+    "category": "Materials"
+  },
+  {
+    "key": "RareMetals",
+    "name": "Rare Metals",
+    "category": "Materials"
+  },
+  {
+    "key": "SyntheticFuel",
+    "name": "Synthetic Fuel",
+    "category": "Materials"
+  },
+  {
+    "key": "FuelRods",
+    "name": "Fuel Rods",
+    "category": "Materials"
+  },
+  {
+    "key": "XenoCompound",
+    "name": "Xeno Compound",
+    "category": "Materials"
+  },
+  {
+    "key": "Connector",
+    "name": "Connectors",
+    "category": "Components"
+  },
+  {
+    "key": "MachineParts",
+    "name": "Machine Parts",
+    "category": "Components"
+  },
+  {
+    "key": "StructuralComponents",
+    "name": "Structural Components",
+    "category": "Components"
+  },
+  {
+    "key": "CompositePanels",
+    "name": "Composite Panels",
+    "category": "Components"
+  },
+  {
+    "key": "BatteryCells",
+    "name": "Battery Cells",
+    "category": "Components"
+  },
+  {
+    "key": "OpticalUnits",
+    "name": "Optical Units",
+    "category": "Components"
+  },
+  {
+    "key": "CoolingUnits",
+    "name": "Cooling Units",
+    "category": "Components"
+  },
+  {
+    "key": "PressureUnits",
+    "name": "Pressure Units",
+    "category": "Components"
+  },
+  {
+    "key": "SensorUnits",
+    "name": "Sensor Units",
+    "category": "Components"
+  },
+  {
+    "key": "PowerRegulators",
+    "name": "Power Regulators",
+    "category": "Components"
+  },
+  {
+    "key": "FuelCells",
+    "name": "Fuel Cells",
+    "category": "Components"
+  },
+  {
+    "key": "IndustrialTools",
+    "name": "Industrial Tools",
+    "category": "Components"
+  },
+  {
+    "key": "DroneSpareParts",
+    "name": "Drone Spare Parts",
+    "category": "Components"
+  },
+  {
+    "key": "AdvancedAlloy",
+    "name": "Advanced Alloy",
+    "category": "Components"
+  },
+  {
+    "key": "ControlChip",
+    "name": "Circuit Boards",
+    "category": "Components"
+  },
+  {
+    "key": "ControlUnits",
+    "name": "Control Units",
+    "category": "AdvancedGoods"
+  },
+  {
+    "key": "NavigationCores",
+    "name": "Navigation Cores",
+    "category": "AdvancedGoods"
+  },
+  {
+    "key": "LifeSupportModules",
+    "name": "Life Support Modules",
+    "category": "AdvancedGoods"
+  },
+  {
+    "key": "ReactorAssemblies",
+    "name": "Reactor Assemblies",
+    "category": "AdvancedGoods"
+  },
+  {
+    "key": "PowerPacks",
+    "name": "Power Packs",
+    "category": "AdvancedGoods"
+  },
+  {
+    "key": "SurveyPackages",
+    "name": "Survey Packages",
+    "category": "AdvancedGoods"
+  },
+  {
+    "key": "CommunicationArrays",
+    "name": "Communication Arrays",
+    "category": "AdvancedGoods"
+  },
+  {
+    "key": "PrecisionComponents",
+    "name": "Precision Components",
+    "category": "AdvancedGoods"
+  },
+  {
+    "key": "HabitatModules",
+    "name": "Habitat Modules",
+    "category": "AdvancedGoods"
+  },
+  {
+    "key": "XenotechModules",
+    "name": "Xenotech Modules",
+    "category": "AdvancedGoods"
+  }
+]

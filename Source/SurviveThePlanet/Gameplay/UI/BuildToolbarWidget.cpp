@@ -1,4 +1,5 @@
 #include "Gameplay/UI/BuildToolbarWidget.h"
+#include "Gameplay/UI/BuildCostWidget.h"
 
 #include "Blueprint/WidgetTree.h"
 #include "Components/Border.h"
@@ -223,6 +224,19 @@ void UBuildToolbarWidget::RebuildToolbar()
 		ToolbarSlot->SetAutoSize(true);
 	}
 
+ if (UClass* CostClass = LoadClass<UBuildCostWidget>(nullptr, TEXT("/Game/UI/WBP_BuildCost.WBP_BuildCost_C")))
+ {
+  if (!PlacementCosts) PlacementCosts = CreateWidget<UBuildCostWidget>(GetOwningPlayer(), CostClass);
+  if (PlacementCosts)
+  {
+   PlacementCosts->RemoveFromParent();
+   UVerticalBoxSlot* CostSlot = ToolbarStack->AddChildToVerticalBox(PlacementCosts);
+   CostSlot->SetHorizontalAlignment(HAlign_Center);
+   CostSlot->SetPadding(FMargin(0,0,0,8));
+   PlacementCosts->Configure(ActiveTool, true);
+   ApplyIcon(PlacementCosts->BuildingIcon, ActiveTool);
+  }
+ }
 	TMap<ESTPBuildCategory,UHorizontalBox*> Rows;
 	for (ESTPBuildCategory Category : {ESTPBuildCategory::Energy, ESTPBuildCategory::Industry, ESTPBuildCategory::Logistics, ESTPBuildCategory::Infrastructure})
 	{
@@ -270,6 +284,11 @@ void UBuildToolbarWidget::SetActiveTool(ESTPBuildTool NewTool)
 	}
 
 	ActiveTool = NewTool;
+	if (PlacementCosts)
+	{
+		PlacementCosts->Configure(NewTool, true);
+		ApplyIcon(PlacementCosts->BuildingIcon, NewTool);
+	}
 	RefreshButtonStates();
 	BP_ActiveToolChanged(ActiveTool);
 }
@@ -491,6 +510,25 @@ void UBuildToolbarWidget::ApplyIcon(UImage* Icon, ESTPBuildTool Tool) const
 		return;
 	}
 
+	UImage* AuthoredIcon = nullptr;
+	switch (Tool)
+	{
+	case ESTPBuildTool::EnergyModule: AuthoredIcon = EnergyModuleIcon; break;
+	case ESTPBuildTool::EnergyStorage: AuthoredIcon = EnergyStorageIcon; break;
+	case ESTPBuildTool::MiningMachine: AuthoredIcon = MiningBuildingIcon; break;
+	case ESTPBuildTool::WaterCollector: AuthoredIcon = WaterCollectorIcon; break;
+	case ESTPBuildTool::ConcretePlant: AuthoredIcon = ConcretePlantIcon; break;
+	case ESTPBuildTool::CommunicationModule: AuthoredIcon = CommunicationModuleIcon; break;
+	case ESTPBuildTool::CargoBay: AuthoredIcon = CargoBayIcon; break;
+	default: break;
+	}
+	if (AuthoredIcon && Icon != AuthoredIcon && AuthoredIcon->GetBrush().GetResourceObject())
+	{
+		Icon->SetBrush(AuthoredIcon->GetBrush());
+		Icon->SetColorAndOpacity(FLinearColor::White);
+		return;
+	}
+
 	// Preserve artwork authored directly in the designed WBP. This also keeps the
 	// Cargo Bay icon visible while catalog data is being reloaded in the editor.
 	if (Icon->GetBrush().GetResourceObject())
@@ -594,11 +632,27 @@ void UBuildToolbarWidget::RefreshButtonStates()
 		const bool bAffordable = CanAffordTool(Entry.Key, &Costs);
 		Entry.Value->SetIsEnabled(IsToolAvailable(Entry.Key) && bOwned && bAffordable);
 		const FText Tooltip = BuildToolTooltip(Entry.Key, bAffordable, Costs);
-		Entry.Value->SetToolTipText(Tooltip);
-		if (const TObjectPtr<UBorder>* Border = ButtonBorders.Find(Entry.Key); Border && *Border)
-		{
-			(*Border)->SetToolTipText(Tooltip);
-		}
+  UBuildCostWidget* CostTooltip = CostTooltips.FindRef(Entry.Key);
+  if (!CostTooltip)
+  {
+   if (UClass* CostClass = LoadClass<UBuildCostWidget>(nullptr, TEXT("/Game/UI/WBP_BuildCost.WBP_BuildCost_C")))
+   {
+    CostTooltip = CreateWidget<UBuildCostWidget>(GetOwningPlayer(), CostClass);
+    CostTooltips.Add(Entry.Key, CostTooltip);
+   }
+  }
+  if (CostTooltip)
+  {
+   CostTooltip->Configure(Entry.Key, false, Tooltip);
+   ApplyIcon(CostTooltip->BuildingIcon, Entry.Key);
+   Entry.Value->SetToolTip(CostTooltip);
+   if (const auto* Border = ButtonBorders.Find(Entry.Key); Border && *Border) (*Border)->SetToolTip(CostTooltip);
+  }
+  else
+  {
+   Entry.Value->SetToolTipText(Tooltip);
+   if (const auto* Border = ButtonBorders.Find(Entry.Key); Border && *Border) (*Border)->SetToolTipText(Tooltip);
+  }
 	}
 
 	for (const TPair<ESTPBuildTool, TObjectPtr<UBorder>>& ButtonBorder : ButtonBorders)
@@ -617,7 +671,8 @@ void UBuildToolbarWidget::RefreshButtonStates()
 bool UBuildToolbarWidget::CanAffordTool(ESTPBuildTool Tool, TArray<FResourceCost>* OutCosts) const
 {
 	TArray<FResourceCost> Costs;
-	if (const UWorld* World = GetWorld())
+	if (const ASurviveThePlanetPlayerController* Controller = GetOwningPlayer<ASurviveThePlanetPlayerController>()) Costs = Controller->GetBuildCosts(Tool, false);
+	else if (const UWorld* World = GetWorld())
 	{
 		if (const UBuildingManagerSubsystem* Manager = World->GetSubsystem<UBuildingManagerSubsystem>())
 		{
@@ -711,6 +766,8 @@ ESTPBuildCategory UBuildToolbarWidget::GetCategoryForTool(ESTPBuildTool Tool) co
 	case ESTPBuildTool::MiningStation:
 	case ESTPBuildTool::ConcretePlant:
 	case ESTPBuildTool::DroneFactory:
+	case ESTPBuildTool::ConnectorPlant:
+	case ESTPBuildTool::PolymerPlant:
 	case ESTPBuildTool::Steelworks:
 		return ESTPBuildCategory::Industry;
 	case ESTPBuildTool::CargoBay:

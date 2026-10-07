@@ -100,6 +100,9 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Planet Surface|Grid")
 	int32 GetBuildingClearanceCells() const;
 
+	UFUNCTION(BlueprintPure, Category = "Planet Surface|Construction")
+	bool CanBuildInSector(const ABaseBuilding* Building, const FVector& WorldLocation) const;
+
 	/** Shared final building reservation rules; the replaced deposit is the only static occupancy exception. */
 	bool CanReserveBuildingCells(ABaseBuilding* Building, FSTPGridCell OriginCell, FIntPoint Footprint, const AActor* ReplacedActor = nullptr) const;
 

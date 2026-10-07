@@ -8,6 +8,7 @@
 #include "EngineUtils.h"
 #include "Gameplay/Drones/BaseDrone.h"
 #include "Gameplay/Base/BaseBuilding.h"
+#include "Gameplay/World/HexSectorGrid.h"
 #include "Gameplay/World/Authoring/PlanetSectorTemplate.h"
 #include "Gameplay/World/Authoring/PlanetTerrainClusterVariant.h"
 
@@ -242,6 +243,9 @@ bool APlanetSurfaceManager::HasTerrainClearance(FSTPGridCell OriginCell, FIntPoi
 bool APlanetSurfaceManager::CanReserveBuildingCells(ABaseBuilding* Building, FSTPGridCell OriginCell, FIntPoint Footprint, const AActor* ReplacedActor) const
 {
 	Footprint = SanitizeFootprint(Footprint);
+	// Template mining checks validate terrain generation, not player build permission.
+	if (Building && !Building->IsTemplate()
+		&& !CanBuildInSector(Building, GetWorldLocationForOriginCell(OriginCell, Footprint))) return false;
 	for (int32 Y = 0; Y < Footprint.Y; ++Y)
 	{
 		for (int32 X = 0; X < Footprint.X; ++X)
@@ -856,4 +860,18 @@ bool APlanetSurfaceManager::FindOccupiedCellsForActor(AActor* Actor, TArray<FSTP
 	}
 
 	return OutCells.Num() > 0;
+}
+
+bool APlanetSurfaceManager::CanBuildInSector(const ABaseBuilding* Building, const FVector& WorldLocation) const
+{
+	if (!Building) return false;
+	for (TActorIterator<AHexSectorGrid> It(GetWorld()); It; ++It)
+	{
+		const FIntPoint Footprint = Building->GetGridFootprint();
+		const FVector HalfX = GetActorTransform().TransformVector(FVector(Footprint.X * TileSpacing * 0.5f, 0, 0));
+		const FVector HalfY = GetActorTransform().TransformVector(FVector(0, Footprint.Y * TileSpacing * 0.5f, 0));
+		return It->CanPlaceBuilding(Building, WorldLocation, HalfX, HalfY);
+	}
+	// Legacy and isolated asset-preview maps do not have exploration sectors.
+	return true;
 }

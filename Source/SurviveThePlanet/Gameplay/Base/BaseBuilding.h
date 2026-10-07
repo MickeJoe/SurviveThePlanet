@@ -28,7 +28,7 @@ public:
 	ABaseBuilding();
 
 	UFUNCTION(BlueprintCallable, Category = "Construction")
-	void SetConstructionProgress(float NewProgress);
+	virtual void SetConstructionProgress(float NewProgress);
 
 	UFUNCTION(BlueprintCallable, Category = "Construction")
 	void ShowConstructionProgress();
@@ -126,6 +126,8 @@ public:
 	virtual void SetPlacementPreview(bool bPreview);
 
 	virtual void SetPlacementPreviewValid(bool bValidPlacement);
+
+	bool IsPlacementPreviewValid() const { return bPlacementPreviewValid; }
 
 	UFUNCTION(BlueprintPure, Category = "Base Building|Placement")
 	bool IsPlacementPreview() const { return bPlacementPreview; }
@@ -234,7 +236,13 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Construction", meta = (TitleProperty = "Resource"))
 	TArray<FResourceCost> ConstructionCosts;
 
+protected:
+	/** Seat a ground-pivot mesh on terrain without moving its grid anchor. */
+	void GroundBuildingMesh(bool bForce = false);
+
 private:
+	FTransform LastGroundedTransform;
+	bool bHasGroundedTransform = false;
 	void ConfigureMesh();
 	void RefreshConstructionProgressBar();
 	int32 GetInitiallyUnlockedDroneSlots() const;

@@ -26,7 +26,10 @@ enum class ESTPBuildTool : uint8
 	DroneFactory UMETA(DisplayName = "Drone Factory"),
 	CommunicationsTower UMETA(DisplayName = "Communications Tower"),
 	Steelworks UMETA(DisplayName = "Steelworks"),
-	EnergyExtender UMETA(DisplayName = "Energy Extender")
+	EnergyExtender UMETA(DisplayName = "Energy Extender"),
+	PolymerPlant UMETA(DisplayName = "Polymer Plant"),
+	ConnectorPlant UMETA(DisplayName = "Connector Plant"),
+	RemoteBase UMETA(DisplayName = "Remote Base")
 };
 
 UENUM(BlueprintType)

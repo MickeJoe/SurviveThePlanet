@@ -23,8 +23,10 @@ public:
  void UpdateRoute(bool bPreview, bool bValidPlacement);
  void CopyPlacedRoute(const UEnergyConnectionComponent* Preview);
  AActor* GetSourceActor() const;
+ float GetConnectionDistanceMeters() const;
  UEnergyCoverageComponent* GetSourceCoverage() const { return Source.Get(); }
- bool HasUsableConnection() const { return !bIsPreview && ActiveCableCount > 0 && Source.IsValid(); }
+ bool HasRoutableConnection() const { return ActiveCableCount > 0 && Source.IsValid(); }
+ bool HasUsableConnection() const { return !bIsPreview && HasRoutableConnection(); }
  int32 GetPoleCount() const { return ActivePoleCount; }
  int32 GetRouteRebuildCount() const { return RouteRebuildCount; }
 

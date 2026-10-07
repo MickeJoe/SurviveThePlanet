@@ -1,18 +1,14 @@
 #include "ResourceManager.h"
+#include "Gameplay/Resources/ResourceCatalog.h"
 
 AResourceManager::AResourceManager()
 {
 	PrimaryActorTick.bCanEverTick = false;
 
-	InitialResourceAmounts.Add(EResourceType::Energy, 0);
-	InitialResourceAmounts.Add(EResourceType::Iron, 0);
-	InitialResourceAmounts.Add(EResourceType::ControlChip, 0);
-	InitialResourceAmounts.Add(EResourceType::Copper, 0);
-	InitialResourceAmounts.Add(EResourceType::Stone, 0);
-	InitialResourceAmounts.Add(EResourceType::Coal, 0);
-	InitialResourceAmounts.Add(EResourceType::Water, 0);
-	InitialResourceAmounts.Add(EResourceType::Concrete, 0);
-	InitialResourceAmounts.Add(EResourceType::Steel, 0);
+	for (const FResourceDefinition& Definition : UResourceCatalog::GetDefinitions())
+	{
+		InitialResourceAmounts.Add(Definition.ResourceType, 0);
+	}
 }
 
 void AResourceManager::BeginPlay()
@@ -20,6 +16,11 @@ void AResourceManager::BeginPlay()
 	Super::BeginPlay();
 
 	ResourceAmounts = InitialResourceAmounts;
+	// Existing Blueprint defaults can contain only the original resource entries.
+	for (const FResourceDefinition& Definition : UResourceCatalog::GetDefinitions())
+	{
+		ResourceAmounts.FindOrAdd(Definition.ResourceType);
+	}
 
 	for (TPair<EResourceType, int32>& Resource : ResourceAmounts)
 	{

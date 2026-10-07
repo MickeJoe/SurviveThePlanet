@@ -23,7 +23,10 @@ enum class ESTPBuildingType : uint8
 	ConcretePlant UMETA(DisplayName = "Concrete Plant"),
 	CommunicationModule UMETA(DisplayName = "Communication Module"),
 	CargoBay UMETA(DisplayName = "Cargo Bay"),
-	Steelworks UMETA(DisplayName = "Steelworks")
+	Steelworks UMETA(DisplayName = "Steelworks"),
+	PolymerPlant UMETA(DisplayName = "Polymer Plant"),
+	ConnectorPlant UMETA(DisplayName = "Connector Plant"),
+	RemoteBase UMETA(DisplayName = "Remote Base")
 };
 
 /** Resource produced by one 100%-efficient drone during one minute. */
@@ -112,6 +115,10 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Construction", meta = (TitleProperty = "Resource"))
 	TArray<FResourceCost> ConstructionCosts;
+
+	/** Energy Extenders and Remote Bases pay this additional connection-distance cost. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Construction", meta = (ClampMin = "0"))
+	float ConnectorsPerMeter = 1.0f;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Drone Slots", meta = (ClampMin = "0", UIMin = "0"))
 	int32 MaxDroneSlots = 0;
@@ -204,4 +211,43 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Mining|Placement")
 	FTransform SourceTransformOffset = FTransform::Identity;
+};
+
+/** Recipe for the compact polymer plant. Electricity is supplied by the shared grid. */
+UCLASS(BlueprintType)
+class SURVIVETHEPLANET_API UPolymerPlantBuildingDataAsset : public UBuildingDataAsset
+{
+	GENERATED_BODY()
+public:
+	UPolymerPlantBuildingDataAsset();
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Polymer Production", meta = (ClampMin = "0"))
+	int32 CoalPerCycle = 2;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Polymer Production", meta = (ClampMin = "0"))
+	int32 WaterPerCycle = 1;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Polymer Production", meta = (ClampMin = "1"))
+	int32 PolymerPerCycle = 3;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Polymer Production", meta = (ClampMin = "0.1"))
+	float CycleSeconds = 20.0f;
+};
+
+/** Connector assembly recipe; electricity is charged by the shared power grid. */
+UCLASS(BlueprintType)
+class SURVIVETHEPLANET_API UConnectorPlantBuildingDataAsset : public UBuildingDataAsset
+{
+	GENERATED_BODY()
+
+public:
+	UConnectorPlantBuildingDataAsset();
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Connector Production", meta = (ClampMin = "0"))
+	int32 CopperPerCycle = 2;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Connector Production", meta = (ClampMin = "0"))
+	int32 PolymerPerCycle = 1;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Connector Production", meta = (ClampMin = "1"))
+	int32 ConnectorsPerCycle = 3;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Connector Production", meta = (ClampMin = "0.1"))
+	float CycleSeconds = 20.0f;
 };

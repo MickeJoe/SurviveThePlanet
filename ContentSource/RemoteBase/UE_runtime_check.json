@@ -1,0 +1,12 @@
+{
+  "passed": true,
+  "seconds": 40.66887417435646,
+  "start_yaw": -159.99116671085335,
+  "end_yaw": -31.964676618575997,
+  "expected_rotation_degrees": 488.0264900922775,
+  "error_degrees": 1.7053025658242404e-13,
+  "antenna_target": "Antenna",
+  "rotation_rate": "<Struct 'Rotator' (0x000001ED21662298) {pitch: 0.000000, yaw: 12.000000, roll: 0.000000}>",
+  "blueprint": "/Game/Units/Buildings/RemoteBase/BP_RemoteBase",
+  "preview_map": "/Game/Units/Buildings/RemoteBase/Preview/L_RemoteBasePreview"
+}
