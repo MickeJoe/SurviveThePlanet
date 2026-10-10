@@ -91,6 +91,8 @@ void ABaseBuilding::BeginPlay()
 		}
 	}
 
+	if (bGroundMeshToSurface) GroundBuildingMesh(true);
+
 	CurrentHealth = GetMaxHealth();
 	const int32 SlotCapacity = GetMaxDroneSlots();
 	UnlockedDroneSlots = FMath::Clamp(GetInitiallyUnlockedDroneSlots(), 0, SlotCapacity);
@@ -103,6 +105,12 @@ void ABaseBuilding::BeginPlay()
 	}
 
 	RefreshConstructionProgressBar();
+}
+
+void ABaseBuilding::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+	if (bGroundMeshToSurface) GroundBuildingMesh();
 }
 
 bool ABaseBuilding::IsConnectedToPowerGrid() const
@@ -407,6 +415,7 @@ void ABaseBuilding::SetPlacementPreview(bool bPreview)
 
 void ABaseBuilding::SetPlacementPreviewValid(bool bValidPlacement)
 {
+	if (bGroundMeshToSurface) GroundBuildingMesh();
 	bPlacementPreviewValid = bValidPlacement;
 	if (!BuildingMesh || !bPlacementPreview)
 	{

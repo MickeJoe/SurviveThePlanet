@@ -26,3 +26,10 @@ ACargoBay::ACargoBay()
 		BuildingThumbnail = ThumbnailFinder.Object;
 	}
 }
+
+FTransform ACargoBay::GetMerchantDockTransform() const
+{
+	const FTransform MeshTransform = BuildingMesh ? BuildingMesh->GetComponentTransform() : GetActorTransform();
+	return FTransform(MeshTransform.GetRotation() * MerchantDockRotation.Quaternion(),
+		MeshTransform.TransformPosition(MerchantDockOffset));
+}

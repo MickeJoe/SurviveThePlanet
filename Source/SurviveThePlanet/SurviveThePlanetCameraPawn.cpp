@@ -69,8 +69,15 @@ void ASurviveThePlanetCameraPawn::Tick(float DeltaSeconds)
 		? DeltaSeconds / GlobalDilation
 		: DeltaSeconds;
 
-	PanCamera(KeyboardPanInput + GetEdgeScrollInput(), NavigationDeltaSeconds);
-	RotateCamera(KeyboardRotationInput, NavigationDeltaSeconds);
+    const APlayerController* PlayerController = Cast<APlayerController>(GetController());
+    if (!PlayerController || !PlayerController->IsMoveInputIgnored())
+    {
+        PanCamera(KeyboardPanInput + GetEdgeScrollInput(), NavigationDeltaSeconds);
+    }
+    if (!PlayerController || !PlayerController->IsLookInputIgnored())
+    {
+        RotateCamera(KeyboardRotationInput, NavigationDeltaSeconds);
+    }
 	RefreshFogOfWarVisual();
 }
 

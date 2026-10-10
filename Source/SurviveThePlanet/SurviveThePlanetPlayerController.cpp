@@ -41,6 +41,9 @@
 #include "Gameplay/UI/ExplorerDroneActivationWidget.h"
 #include "Gameplay/Drones/ExplorerDrone.h"
 #include "Gameplay/Cheats/CheatMenuWidget.h"
+#include "Gameplay/UI/TradeScreenWidget.h"
+#include "Gameplay/UI/VisitingMerchantWidget.h"
+#include "Gameplay/Trading/TradeSubsystem.h"
 #include "Gameplay/Cheats/STPCheatManager.h"
 #include "Blueprint/UserWidget.h"
 #include "SurviveThePlanet.h"
@@ -183,7 +186,18 @@ void ASurviveThePlanetPlayerController::BeginPlay()
 		*GameModeName,
 		*GameModeClassName);
 
+
 	LogSelectableActors(TEXT("BeginPlay"));
+	if (IsLocalPlayerController())
+	{
+		UClass* MerchantClass = LoadClass<UVisitingMerchantWidget>(nullptr,
+			TEXT("/Game/UI/Trading/WBP_VisitingMerchant.WBP_VisitingMerchant_C"));
+		if (MerchantClass)
+		{
+			VisitingMerchantWidget = CreateWidget<UVisitingMerchantWidget>(this, MerchantClass);
+			if (VisitingMerchantWidget) VisitingMerchantWidget->AddToViewport(25);
+		}
+	}
 
 	if (IsLocalPlayerController() && BuildingInfoWidgetClass)
 	{
@@ -298,6 +312,12 @@ void ASurviveThePlanetPlayerController::ToggleCheatMenu()
 		return;
 	}
 
+	if (TradeScreenWidget && TradeScreenWidget->IsInViewport())
+	{
+		TradeScreenWidget->CloseTrade();
+		return;
+	}
+
 	if (CheatMenuWidget && CheatMenuWidget->IsInViewport())
 	{
 		CheatMenuWidget->RemoveFromParent();
@@ -321,7 +341,7 @@ void ASurviveThePlanetPlayerController::ToggleCheatMenu()
 	if (CheatMenuWidget)
 	{
 		CheatMenuWidget->AddToViewport(1000);
-		CheatMenuWidget->SetDesiredSizeInViewport(FVector2D(420.0f, 430.0f));
+		CheatMenuWidget->SetDesiredSizeInViewport(FVector2D(420.0f, 650.0f));
 		CheatMenuWidget->SetPositionInViewport(FVector2D(40.0f, 120.0f), false);
 		FInputModeGameAndUI InputMode;
 		InputMode.SetWidgetToFocus(CheatMenuWidget->TakeWidget());
@@ -444,35 +464,17 @@ void ASurviveThePlanetPlayerController::OnCancelBuildToolPressed()
 
 bool ASurviveThePlanetPlayerController::TryHandleActiveBuildToolClick()
 {
-	switch (ActiveBuildTool)
+	if (ActiveBuildTool == ESTPBuildTool::None || ActiveBuildTool == ESTPBuildTool::EnergyCable)
 	{
-	case ESTPBuildTool::EnergyModule:
-		return TryPlaceGenericBuildingAtCursor();
-	case ESTPBuildTool::EnergyStorage:
-		return TryPlaceGenericBuildingAtCursor();
-	case ESTPBuildTool::MiningMachine:
-		return TryPlaceMiningMachineAtCursor();
-	case ESTPBuildTool::WaterCollector:
-		return TryPlaceGenericBuildingAtCursor();
-	case ESTPBuildTool::ConcretePlant:
-		return TryPlaceGenericBuildingAtCursor();
-	case ESTPBuildTool::CommunicationModule:
-		return TryPlaceGenericBuildingAtCursor();
-	case ESTPBuildTool::CargoBay:
-		return TryPlaceGenericBuildingAtCursor();
-	case ESTPBuildTool::CommandHub: case ESTPBuildTool::SolarArray: case ESTPBuildTool::WindGenerator:
-	case ESTPBuildTool::GeothermalPlant: case ESTPBuildTool::NuclearReactor: case ESTPBuildTool::MiningStation:
-	case ESTPBuildTool::ResourceStorage: case ESTPBuildTool::DroneFactory: case ESTPBuildTool::CommunicationsTower:
-	case ESTPBuildTool::EnergyExtender:
-	case ESTPBuildTool::RemoteBase:
-	case ESTPBuildTool::ConnectorPlant:
-	case ESTPBuildTool::PolymerPlant:
-	case ESTPBuildTool::Steelworks:
-		return TryPlaceGenericBuildingAtCursor();
-	case ESTPBuildTool::None:
-	default:
 		return false;
 	}
+	if (ActiveBuildTool == ESTPBuildTool::MiningMachine)
+	{
+		return TryPlaceMiningMachineAtCursor();
+	}
+
+	const UBuildingManagerSubsystem* Manager = GetWorld() ? GetWorld()->GetSubsystem<UBuildingManagerSubsystem>() : nullptr;
+	return Manager && Manager->GetDefinition(ActiveBuildTool) && TryPlaceGenericBuildingAtCursor();
 }
 
 bool ASurviveThePlanetPlayerController::TryPlaceConcretePlantAtCursor()
@@ -937,42 +939,20 @@ bool ASurviveThePlanetPlayerController::TryPlaceEnergyModuleAtCursor()
 }
 void ASurviveThePlanetPlayerController::UpdateBuildPlacementPreview()
 {
-	switch (ActiveBuildTool)
+	if (ActiveBuildTool == ESTPBuildTool::MiningMachine)
 	{
-	case ESTPBuildTool::EnergyModule:
-		UpdateGenericBuildingPlacementPreview();
-		break;
-	case ESTPBuildTool::EnergyStorage:
-		UpdateGenericBuildingPlacementPreview();
-		break;
-	case ESTPBuildTool::MiningMachine:
 		UpdateMiningMachinePlacementPreview();
-		break;
-	case ESTPBuildTool::WaterCollector:
-		UpdateGenericBuildingPlacementPreview();
-		break;
-	case ESTPBuildTool::ConcretePlant:
-		UpdateGenericBuildingPlacementPreview();
-		break;
-	case ESTPBuildTool::CommunicationModule:
-		UpdateGenericBuildingPlacementPreview();
-		break;
-	case ESTPBuildTool::CargoBay:
-		UpdateGenericBuildingPlacementPreview();
-		break;
-	case ESTPBuildTool::CommandHub: case ESTPBuildTool::SolarArray: case ESTPBuildTool::WindGenerator:
-	case ESTPBuildTool::GeothermalPlant: case ESTPBuildTool::NuclearReactor: case ESTPBuildTool::MiningStation:
-	case ESTPBuildTool::ResourceStorage: case ESTPBuildTool::DroneFactory: case ESTPBuildTool::CommunicationsTower:
-	case ESTPBuildTool::EnergyExtender:
-	case ESTPBuildTool::RemoteBase:
-	case ESTPBuildTool::ConnectorPlant:
-	case ESTPBuildTool::PolymerPlant:
-	case ESTPBuildTool::Steelworks:
-		UpdateGenericBuildingPlacementPreview(); break;
-	default:
-		DestroyBuildPlacementPreview();
-		break;
+		return;
 	}
+
+	const UBuildingManagerSubsystem* Manager = GetWorld() ? GetWorld()->GetSubsystem<UBuildingManagerSubsystem>() : nullptr;
+	if (ActiveBuildTool != ESTPBuildTool::None && ActiveBuildTool != ESTPBuildTool::EnergyCable
+		&& Manager && Manager->GetDefinition(ActiveBuildTool))
+	{
+		UpdateGenericBuildingPlacementPreview();
+		return;
+	}
+	DestroyBuildPlacementPreview();
 }
 
 void ASurviveThePlanetPlayerController::UpdateConcretePlantPlacementPreview()
@@ -1446,7 +1426,15 @@ void ASurviveThePlanetPlayerController::UpdateGenericBuildingPlacementPreview()
 
 bool ASurviveThePlanetPlayerController::TryPlaceGenericBuildingAtCursor()
 {
-	FVector Target; UWorld* World=GetWorld(); APlanetSurfaceManager* Surface=FindPlanetSurfaceManager(); if(!TryGetCursorWorldLocation(Target)||!World||!Surface)return true;
+	FVector Target;
+	return !TryGetCursorWorldLocation(Target) || TryPlaceGenericBuildingAtWorldLocation(Target);
+}
+
+bool ASurviveThePlanetPlayerController::TryPlaceGenericBuildingAtWorldLocation(const FVector& Target)
+{
+	UWorld* World = GetWorld();
+	APlanetSurfaceManager* Surface = FindPlanetSurfaceManager();
+	if (!World || !Surface) return true;
 	UClass* ClassToSpawn=GetManagedBuildingClass(ActiveBuildTool,ABaseBuilding::StaticClass()); if(!ClassToSpawn)return true; const ABaseBuilding* Defaults=ClassToSpawn->GetDefaultObject<ABaseBuilding>();
 	EnsureGenericBuildingPlacementPreview();
 	if (!IsValid(GenericBuildingPlacementPreview)) return true;
@@ -2068,6 +2056,7 @@ USpringArmComponent* ASurviveThePlanetPlayerController::GetControlledCameraBoom(
 
 void ASurviveThePlanetPlayerController::UpdateCameraControls(float DeltaTime)
 {
+	if (TradeScreenWidget && TradeScreenWidget->IsInViewport()) return;
 	FVector2D PanInput = FVector2D::ZeroVector;
 
 	if (IsInputKeyDown(EKeys::W))
@@ -2195,4 +2184,21 @@ void ASurviveThePlanetPlayerController::EndPlay(const EEndPlayReason::Type EndPl
 	}
 	DestroyBuildPlacementPreview();
 	Super::EndPlay(EndPlayReason);
+}
+void ASurviveThePlanetPlayerController::OpenTradeScreen(FName TraderId)
+{
+    if (!IsLocalPlayerController() || !GetWorld()->GetSubsystem<UTradeSubsystem>()->IsTraderAvailable(TraderId)) return;
+    if (TradeScreenWidget && TradeScreenWidget->IsInViewport()) return;
+    UClass* WidgetClass = LoadClass<UTradeScreenWidget>(nullptr, TEXT("/Game/UI/Trading/WBP_TradeScreen.WBP_TradeScreen_C"));
+    if (!WidgetClass)
+    {
+        UE_LOG(LogSurviveThePlanet, Error, TEXT("WBP_TradeScreen could not be loaded."));
+        return;
+    }
+    TradeScreenWidget = CreateWidget<UTradeScreenWidget>(this, WidgetClass);
+    if (!TradeScreenWidget) return;
+    SetActiveBuildTool(ESTPBuildTool::None);
+    if (CheatMenuWidget) CheatMenuWidget->RemoveFromParent();
+    TradeScreenWidget->AddToViewport(1100);
+    TradeScreenWidget->OpenForTrader(TraderId);
 }

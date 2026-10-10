@@ -1,0 +1,16 @@
+{
+  "id": 67,
+  "name": "Research Laboratory",
+  "key": "ResearchLaboratory",
+  "existing_asset": null,
+  "status": "authored",
+  "revision": 3,
+  "motion": "beacon",
+  "pivot_m": [
+    0.7,
+    0.55,
+    2.5
+  ],
+  "triangles": 7664,
+  "source": "C:\\UE5\\SurviveThePlanet 5.8\\ContentSource\\BlueprintCatalog\\ResearchLaboratory\\ResearchLaboratory.blend"
+}

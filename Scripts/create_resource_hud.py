@@ -193,3 +193,7 @@ tracker=next(n.widget for n in umg.call_method('GetWidgets',(objectives,)).widge
 props(tracker,{'widthOverride':310,'bOverride_WidthOverride':True})
 assert umg.call_method('CompileWidgetBlueprint',(objectives,))
 assert unreal.EditorAssetLibrary.save_loaded_asset(objectives)
+
+# Keep the credits row when regenerating the resource HUD.
+import runpy
+runpy.run_path(str(root / "Scripts/configure_credits_hud.py"))

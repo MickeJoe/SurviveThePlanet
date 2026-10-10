@@ -1,0 +1,16 @@
+{
+  "id": 69,
+  "name": "Decontamination Bay",
+  "key": "DecontaminationBay",
+  "existing_asset": null,
+  "status": "authored",
+  "revision": 3,
+  "motion": "fan",
+  "pivot_m": [
+    0,
+    0.6,
+    2.0
+  ],
+  "triangles": 10160,
+  "source": "C:\\UE5\\SurviveThePlanet 5.8\\ContentSource\\BlueprintCatalog\\DecontaminationBay\\DecontaminationBay.blend"
+}

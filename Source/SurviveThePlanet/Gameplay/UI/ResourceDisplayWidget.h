@@ -56,6 +56,13 @@ public:
 	UResourceDisplayWidget(const FObjectInitializer& ObjectInitializer);
 
 public:
+	UFUNCTION(BlueprintCallable, Category = "Cheats")
+	void SetCheatSpeed10();
+	UFUNCTION(BlueprintCallable, Category = "Cheats")
+	void SetCheatSpeed30();
+	void SetTradingPaused(bool bPaused);
+	bool IsSimulationPaused() const { return bTimePaused || bTradingPaused; }
+
     UFUNCTION(BlueprintCallable, Category = "Resource Display")
     void SelectResourceCategory(EResourceCategory Category);
 
@@ -83,6 +90,9 @@ protected:
 
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidget), Category = "Resource Display")
 	TObjectPtr<UTextBlock> EnergyAmountText;
+
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Resource Display")
+	TObjectPtr<UTextBlock> CreditsAmountText;
 
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidget), Category = "Resource Display")
 	TObjectPtr<UImage> IronIcon;
@@ -200,6 +210,7 @@ private:
 	double TotalGameMinutes = 480.0;
 	float TimeScale = 1.0f;
 	bool bTimePaused = true;
+	bool bTradingPaused = false;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UTextBlock> ClockText;
@@ -248,6 +259,9 @@ private:
 
 	UFUNCTION()
 	void HandleResourceAmountChanged(EResourceType ResourceType, int32 NewAmount);
+
+	UFUNCTION()
+	void HandleCreditsChanged(int32 NewCredits);
 
 	UFUNCTION()
 	void HandlePlanetWeatherChanged(FPlanetWeatherState NewWeather);

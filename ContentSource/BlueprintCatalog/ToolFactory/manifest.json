@@ -1,0 +1,16 @@
+{
+  "id": 49,
+  "name": "Tool Factory",
+  "key": "ToolFactory",
+  "existing_asset": null,
+  "status": "authored",
+  "revision": 3,
+  "motion": "fan",
+  "pivot_m": [
+    0,
+    0.6,
+    2.3600000000000003
+  ],
+  "triangles": 6892,
+  "source": "C:\\UE5\\SurviveThePlanet 5.8\\ContentSource\\BlueprintCatalog\\ToolFactory\\ToolFactory.blend"
+}

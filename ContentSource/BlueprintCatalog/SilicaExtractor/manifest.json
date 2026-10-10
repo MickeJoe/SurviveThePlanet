@@ -1,0 +1,16 @@
+{
+  "id": 22,
+  "name": "Silica Extractor",
+  "key": "SilicaExtractor",
+  "existing_asset": null,
+  "status": "authored",
+  "revision": 3,
+  "motion": "drill",
+  "pivot_m": [
+    0,
+    -1.45,
+    1.7
+  ],
+  "triangles": 8764,
+  "source": "C:\\UE5\\SurviveThePlanet 5.8\\ContentSource\\BlueprintCatalog\\SilicaExtractor\\SilicaExtractor.blend"
+}

@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Engine/DataAsset.h"
+#include "Gameplay/Trading/MerchantDefinition.h"
 #include "PlanetDefinition.generated.h"
 
 /** A numeric range used when generating a global weather value. */
@@ -74,12 +75,46 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Planet")
 	FText DisplayName;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Planet")
+	FText ClimateDescription;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Planet")
+	FLinearColor PlanetColor = FLinearColor(0.1f, 0.5f, 0.7f);
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Planet")
+	TSoftObjectPtr<UWorld> LandingMap;
+
+	/** Local rotation period expressed in Earth hours. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Planet|Climate", meta = (ClampMin = "1.0"))
+	float DayLengthHours = 24.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Planet|Climate", meta = (ClampMin = "-89.0", ClampMax = "89.0"))
+	float LandingLatitudeDegrees = 35.0f;
+
+	/** Solar declination at landing; controls the local season and daylight length. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Planet|Climate", meta = (ClampMin = "-45.0", ClampMax = "45.0"))
+	float SolarDeclinationDegrees = 10.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Planet|Climate")
+	float MeanTemperatureCelsius = 15.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Planet|Climate", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float RainProbability = 0.45f;
+
 	/** Makes the generated weather sequence reproducible. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Planet")
 	int32 Seed = 12345;
 
+	/** Credits granted when a new game starts on this planet. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Planet|Economy", meta = (ClampMin = "0", UIMin = "0"))
+	int32 StartingCredits = 1000;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Planet|Weather")
 	FPlanetWeatherSettings Weather;
+
+	/** Visits are timed from the first completed Cargo Bay, in game hours. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Planet|Trading")
+	FMerchantVisitSchedule MerchantVisits;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Planet|Mission Confidence")
 	FMissionConfidenceSettings MissionConfidence;

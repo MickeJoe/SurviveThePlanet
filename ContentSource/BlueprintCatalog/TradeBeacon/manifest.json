@@ -1,0 +1,16 @@
+{
+  "id": 16,
+  "name": "Trade Beacon",
+  "key": "TradeBeacon",
+  "existing_asset": null,
+  "status": "authored",
+  "revision": 3,
+  "motion": "beacon",
+  "pivot_m": [
+    0,
+    0.45,
+    3.9
+  ],
+  "triangles": 7264,
+  "source": "C:\\UE5\\SurviveThePlanet 5.8\\ContentSource\\BlueprintCatalog\\TradeBeacon\\TradeBeacon.blend"
+}

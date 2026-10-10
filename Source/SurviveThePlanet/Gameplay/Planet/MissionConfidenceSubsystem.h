@@ -30,6 +30,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Mission Confidence")
 	void SetMissionConfidence(float NewConfidence);
 
+	UFUNCTION(BlueprintPure, Category = "Mission Confidence")
+	bool IsDecayPaused() const { return bDecayPaused; }
+
+	UFUNCTION(BlueprintCallable, Category = "Mission Confidence")
+	void SetDecayPaused(bool bPaused);
+
 	UPROPERTY(BlueprintAssignable, Category = "Mission Confidence")
 	FMissionConfidenceChangedSignature OnMissionConfidenceChanged;
 
@@ -37,6 +43,7 @@ private:
 	float MissionConfidence = 100.0f;
 	float DecayPerGameHour = 5.0f;
 	bool bSettingsResolved = false;
+	bool bDecayPaused = false;
 
 	void ResolvePlanetSettings();
 };

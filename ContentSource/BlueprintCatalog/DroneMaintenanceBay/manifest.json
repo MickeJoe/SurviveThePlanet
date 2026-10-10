@@ -1,0 +1,16 @@
+{
+  "id": 65,
+  "name": "Drone Maintenance Bay",
+  "key": "DroneMaintenanceBay",
+  "existing_asset": null,
+  "status": "authored",
+  "revision": 3,
+  "motion": "slide",
+  "pivot_m": [
+    0,
+    -1.1,
+    3.75
+  ],
+  "triangles": 6616,
+  "source": "C:\\UE5\\SurviveThePlanet 5.8\\ContentSource\\BlueprintCatalog\\DroneMaintenanceBay\\DroneMaintenanceBay.blend"
+}

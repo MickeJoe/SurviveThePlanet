@@ -10,6 +10,11 @@
 #include "Blueprint/WidgetTree.h"
 #include "Components/Button.h"
 #include "Components/HorizontalBox.h"
+#include "Components/ScrollBox.h"
+#include "Components/StaticMeshComponent.h"
+#include "Gameplay/Planet/PlanetSurfaceManager.h"
+#include "Gameplay/Cheats/STPCheatManager.h"
+#include "Gameplay/Work/ConstructionJobQueueSubsystem.h"
 #include "Gameplay/UI/BuildToolbarWidget.h"
 #include "Gameplay/Base/BuildingDataAsset.h"
 #include "Gameplay/Base/BaseBuilding.h"
@@ -123,6 +128,81 @@ bool FSTPBlueprintToolbarTest::RunTest(const FString& Parameters)
                 *GetNameSafe(Manager->GetBuildingClass(Entry->BuildTool).Get()),
                 *GetNameSafe(Entry->ToolbarIcon ? Entry->ToolbarIcon.Get() : Entry->Thumbnail.Get())));
         }
+        APlanetSurfaceManager* Surface = World->SpawnActor<APlanetSurfaceManager>();
+        AResourceManager* CatalogResources = Toolbar->ResolveResourceManager();
+        if (!CatalogResources) CatalogResources = World->SpawnActor<AResourceManager>();
+        World->GetTimerManager().Tick(0.3f);
+        Controller->EnableCheats();
+        USTPCheatManager* Cheats = Cast<USTPCheatManager>(Controller->CheatManager);
+        int32 CatalogBuildingsTested = 0;
+        for (UBuildingDataAsset* Entry : Manager->GetAllDefinitions())
+        {
+            if (static_cast<uint8>(Entry->BuildTool) < static_cast<uint8>(ESTPBuildTool::CrudeWorkshop)) continue;
+            const FString Name = Entry->DisplayName.ToString();
+            TestFalse(Name + TEXT(" starts locked"), Entry->bBlueprintInitiallyOwned);
+            Inventory->RevokeBlueprint(Entry->BuildTool);
+            UWidget* ToolWidget = Toolbar->ToolWidgets.FindRef(Entry->BuildTool);
+            UButton* Button = Toolbar->ToolButtons.FindRef(Entry->BuildTool);
+            if (!TestNotNull(Name + TEXT(" button"), Button) || !TestNotNull(Name + TEXT(" icon widget"), ToolWidget)) continue;
+            TestTrue(Name + TEXT(" hidden before grant"), ToolWidget->GetVisibility() == ESlateVisibility::Collapsed);
+            Controller->SetActiveBuildTool(Entry->BuildTool);
+            TestEqual(Name + TEXT(" unowned placement rejected"), Controller->GetActiveBuildTool(), ESTPBuildTool::None);
+            if (!TestNotNull(TEXT("Existing cheat manager"), Cheats)) continue;
+            TestTrue(Name + TEXT(" cheat grants blueprint"), Cheats->GrantBuildingBlueprint(Entry->BuildTool));
+            TestFalse(Name + TEXT(" duplicate grant rejected"), Cheats->GrantBuildingBlueprint(Entry->BuildTool));
+            TestTrue(Name + TEXT(" ownership ID resolves"), Inventory->OwnsBlueprintById(Entry->BlueprintId));
+            TestTrue(Name + TEXT(" shown immediately"), ToolWidget->GetVisibility() == ESlateVisibility::Visible);
+            TestEqual(Name + TEXT(" category selected"), Toolbar->ActiveCategory, Entry->BuildCategory);
+            for (const FResourceCost& Cost : Entry->ConstructionCosts) CatalogResources->AddResource(Cost.Resource, Cost.Cost);
+            Toolbar->RefreshButtonStates();
+            TestTrue(Name + TEXT(" affordable button enabled"), Button->GetIsEnabled());
+            Button->OnClicked.Broadcast();
+            TestEqual(Name + TEXT(" button selects placement"), Controller->GetActiveBuildTool(), Entry->BuildTool);
+            Controller->PlayerTick(0.016f);
+            ABaseBuilding* Preview = Controller->GetActivePlacementPreview();
+            if (TestNotNull(Name + TEXT(" generic placement preview"), Preview))
+            {
+                TestTrue(Name + TEXT(" preview marked"), Preview->IsPlacementPreview());
+                TestEqual(Name + TEXT(" preview data"), Preview->GetBuildingData(), Entry);
+                TestTrue(Name + TEXT(" preview has full sized footprint"), Preview->GetGridFootprint().X >= 4);
+            }
+            TMap<EResourceType,int32> ExpectedBalances;
+            for (const FResourceCost& Cost : Entry->ConstructionCosts)
+                ExpectedBalances.FindOrAdd(Cost.Resource,CatalogResources->GetResourceAmount(Cost.Resource)) -= Cost.Cost;
+            UConstructionJobQueueSubsystem* Queue = World->GetSubsystem<UConstructionJobQueueSubsystem>();
+            const int32 JobsBefore = Queue ? Queue->GetJobCount() : 0;
+            const FSTPGridCell Cell(130,130);
+            Controller->TryPlaceGenericBuildingAtWorldLocation(Surface->GetWorldLocationForCell(Cell));
+            ABaseBuilding* Building = Cast<ABaseBuilding>(Controller->GetSelectedActor());
+            if (TestNotNull(Name + TEXT(" placed through controller"), Building))
+            {
+                TestEqual(Name + TEXT(" correct placed class"), Building->GetClass(), Manager->GetBuildingClass(Entry->BuildTool).Get());
+                TestEqual(Name + TEXT(" construction data"), Building->GetBuildingData(), Entry);
+                TestEqual(Name + TEXT(" placement exits after click"), Controller->GetActiveBuildTool(), ESTPBuildTool::None);
+                TestEqual(Name + TEXT(" construction costs"), Building->GetConstructionCosts().Num(), Entry->ConstructionCosts.Num());
+                TestFalse(Name + TEXT(" placed building is not a preview"), Building->IsPlacementPreview());
+                FSTPGridCell OccupiedCell;
+                Surface->GetCellForWorldLocation(Building->GetActorLocation(),OccupiedCell);
+                TestFalse(Name + TEXT(" terrain cells reserved"), Surface->CanOccupyCells(OccupiedCell,FIntPoint(1,1)));
+                TestEqual(Name + TEXT(" starts construction"), Building->GetConstructionProgress(), 0.0f);
+                for (const auto& Balance : ExpectedBalances)
+                    TestEqual(Name + TEXT(" construction resources charged"),CatalogResources->GetResourceAmount(Balance.Key),Balance.Value);
+                if (TestNotNull(Name + TEXT(" construction queue"),Queue))
+                    TestEqual(Name + TEXT(" queued for drones"),Queue->GetJobCount(),JobsBefore+1);
+                Surface->ReleaseCells(Building);
+                Building->Destroy();
+            }
+            Controller->SetActiveBuildTool(ESTPBuildTool::None);
+            Inventory->RevokeBlueprint(Entry->BuildTool);
+            ++CatalogBuildingsTested;
+        }
+        TestEqual(TEXT("All 49 new catalog buildings covered"),CatalogBuildingsTested,49);
+        TArray<UWidget*> Widgets;
+        Toolbar->WidgetTree->GetAllWidgets(Widgets);
+        int32 ScrollRows = 0;
+        for (UWidget* Widget : Widgets) if (UScrollBox* Scroll = Cast<UScrollBox>(Widget))
+            if (Scroll->GetOrientation() == Orient_Horizontal) ++ScrollRows;
+        TestEqual(TEXT("Each category can scroll through unlocked buildings"),ScrollRows,4);
         Toolbar->NativeDestruct();
     }
     GI->Shutdown();

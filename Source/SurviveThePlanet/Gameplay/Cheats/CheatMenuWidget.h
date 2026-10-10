@@ -51,7 +51,28 @@ protected:
 	UFUNCTION(BlueprintCallable, Category = "Cheats")
 	void GrantSelectedBlueprint();
 
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UButton> OpenTradeButton;
+	UFUNCTION() void OpenTrade();
+
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional))
+	TObjectPtr<UButton> Speed10Button;
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional))
+	TObjectPtr<UButton> Speed30Button;
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional))
+	TObjectPtr<UButton> ConfidenceDecayButton;
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional))
+	TObjectPtr<UTextBlock> ConfidenceDecayButtonLabel;
+	UFUNCTION()
+	void EnableSpeed10();
+	UFUNCTION()
+	void EnableSpeed30();
+	UFUNCTION()
+	void ToggleConfidenceDecay();
+
 private:
+	void EnableCheatSpeed(float Speed);
+	void RefreshConfidenceDecayLabel();
 	void BuildFallbackLayout();
 	void PopulateResources();
 	void EnsureObjectiveCheatButton();

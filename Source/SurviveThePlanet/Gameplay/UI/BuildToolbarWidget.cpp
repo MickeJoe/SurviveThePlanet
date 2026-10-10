@@ -19,6 +19,8 @@
 #include "EngineUtils.h"
 #include "TimerManager.h"
 #include "Components/SizeBox.h"
+#include "Components/ScrollBox.h"
+#include "Blueprint/WidgetLayoutLibrary.h"
 #include "Components/Spacer.h"
 #include "SurviveThePlanet.h"
 #include "SurviveThePlanetPlayerController.h"
@@ -241,11 +243,21 @@ void UBuildToolbarWidget::RebuildToolbar()
 	for (ESTPBuildCategory Category : {ESTPBuildCategory::Energy, ESTPBuildCategory::Industry, ESTPBuildCategory::Logistics, ESTPBuildCategory::Infrastructure})
 	{
 		UHorizontalBox* Row = WidgetTree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass());
-		UVerticalBoxSlot* RowSlot = ToolbarStack->AddChildToVerticalBox(Row);
+		UScrollBox* Scroller = WidgetTree->ConstructWidget<UScrollBox>(UScrollBox::StaticClass());
+		Scroller->SetOrientation(Orient_Horizontal);
+		Scroller->SetAllowOverscroll(false);
+		Scroller->AddChild(Row);
+		USizeBox* RowBounds = WidgetTree->ConstructWidget<USizeBox>(USizeBox::StaticClass());
+		const FVector2D ViewportSize = UWidgetLayoutLibrary::GetViewportSize(this);
+		const float ViewportScale = FMath::Max(0.1f, UWidgetLayoutLibrary::GetViewportScale(this));
+		const float AvailableWidth = ViewportSize.X > 0 ? ViewportSize.X / ViewportScale - 80.0f : 1000.0f;
+		RowBounds->SetMaxDesiredWidth(FMath::Max(320.0f, FMath::Min(1000.0f, AvailableWidth)));
+		RowBounds->SetContent(Scroller);
+		UVerticalBoxSlot* RowSlot = ToolbarStack->AddChildToVerticalBox(RowBounds);
 		RowSlot->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 8.0f));
 		RowSlot->SetHorizontalAlignment(HAlign_Center);
 		Rows.Add(Category, Row);
-		CategoryRows.Add(Category, Row);
+		CategoryRows.Add(Category, RowBounds);
 	}
 	for (int32 Index = 0; Index < Buttons.Num(); ++Index)
 	{
@@ -886,6 +898,18 @@ void UBuildToolbarWidget::HandleBlueprintInventoryChanged(ESTPBuildTool ChangedT
 	if (IsToolOwned(ChangedTool) && IsToolAvailable(ChangedTool)) ActiveCategory = GetCategoryForTool(ChangedTool);
 	RefreshToolbarVisibility();
 	RefreshButtonStates();
+	if (IsToolOwned(ChangedTool))
+	{
+		UWidget* ToolWidget = ToolWidgets.FindRef(ChangedTool);
+		for (UWidget* Parent = ToolWidget ? ToolWidget->GetParent() : nullptr; Parent; Parent = Parent->GetParent())
+		{
+			if (UScrollBox* Scroller = Cast<UScrollBox>(Parent))
+			{
+				Scroller->ScrollWidgetIntoView(ToolWidget, true, EDescendantScrollDestination::Center);
+				break;
+			}
+		}
+	}
 }
 
 void UBuildToolbarWidget::HandleResourceAmountChanged(EResourceType ResourceType, int32 NewAmount)

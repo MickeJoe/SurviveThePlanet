@@ -90,7 +90,7 @@ void UTraderPanelWidget::NativeConstruct()
 
 	if (TradersHeading)
 	{
-		TradersHeading->SetText(NSLOCTEXT("SurviveThePlanet", "TradersHeading", "TRADERS"));
+		TradersHeading->SetText(NSLOCTEXT("SurviveThePlanet", "TradersHeading", "CONTRACTS"));
 		STPTraderUI::StyleText(TradersHeading, 18, STPTraderUI::MainText);
 	}
 

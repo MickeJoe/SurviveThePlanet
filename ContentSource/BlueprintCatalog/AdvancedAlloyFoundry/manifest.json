@@ -1,0 +1,16 @@
+{
+  "id": 51,
+  "name": "Advanced Alloy Foundry",
+  "key": "AdvancedAlloyFoundry",
+  "existing_asset": null,
+  "status": "authored",
+  "revision": 3,
+  "motion": "fan",
+  "pivot_m": [
+    0,
+    0.4,
+    2.08
+  ],
+  "triangles": 9528,
+  "source": "C:\\UE5\\SurviveThePlanet 5.8\\ContentSource\\BlueprintCatalog\\AdvancedAlloyFoundry\\AdvancedAlloyFoundry.blend"
+}

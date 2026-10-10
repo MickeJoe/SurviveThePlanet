@@ -1,0 +1,16 @@
+{
+  "id": 64,
+  "name": "Ship Upgrade Dock",
+  "key": "ShipUpgradeDock",
+  "existing_asset": null,
+  "status": "authored",
+  "revision": 3,
+  "motion": "slide",
+  "pivot_m": [
+    0,
+    -1.1,
+    3.75
+  ],
+  "triangles": 6472,
+  "source": "C:\\UE5\\SurviveThePlanet 5.8\\ContentSource\\BlueprintCatalog\\ShipUpgradeDock\\ShipUpgradeDock.blend"
+}

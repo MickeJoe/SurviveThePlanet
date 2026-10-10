@@ -27,7 +27,7 @@ void UMissionConfidenceSubsystem::Tick(float DeltaTime)
 	{
 		ResolvePlanetSettings();
 	}
-	if (!bSettingsResolved || DeltaTime <= 0.0f || MissionConfidence <= 0.0f
+	if (bDecayPaused || !bSettingsResolved || DeltaTime <= 0.0f || MissionConfidence <= 0.0f
 		|| UGameplayStatics::GetGlobalTimeDilation(this) < 0.001f)
 	{
 		return;
@@ -35,6 +35,14 @@ void UMissionConfidenceSubsystem::Tick(float DeltaTime)
 
 	// The HUD clock advances one game minute per simulation second.
 	SetMissionConfidence(MissionConfidence - DecayPerGameHour * DeltaTime / 60.0f);
+}
+
+void UMissionConfidenceSubsystem::SetDecayPaused(bool bPaused)
+{
+	if (bDecayPaused == bPaused) return;
+	bDecayPaused = bPaused;
+	// Refresh the HUD even though the confidence amount itself is unchanged.
+	OnMissionConfidenceChanged.Broadcast(MissionConfidence, 0.0f);
 }
 
 void UMissionConfidenceSubsystem::AddMissionConfidence(float Amount)

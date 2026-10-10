@@ -1,0 +1,16 @@
+{
+  "id": 48,
+  "name": "Fuel Cell Plant",
+  "key": "FuelCellPlant",
+  "existing_asset": null,
+  "status": "authored",
+  "revision": 3,
+  "motion": "fan",
+  "pivot_m": [
+    0,
+    0.6,
+    2.0
+  ],
+  "triangles": 10928,
+  "source": "C:\\UE5\\SurviveThePlanet 5.8\\ContentSource\\BlueprintCatalog\\FuelCellPlant\\FuelCellPlant.blend"
+}

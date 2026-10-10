@@ -28,11 +28,14 @@ void APlanetWeatherManager::BeginPlay()
 {
 	Super::BeginPlay();
 	RestartSimulation();
+	InitializePresentation();
+	UpdatePresentation(480.0);
 }
 
 void APlanetWeatherManager::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
+	UpdateRain(DeltaSeconds);
 
 	if (!bSimulateWeather || !PlanetDefinition)
 	{
@@ -69,6 +72,7 @@ void APlanetWeatherManager::SetWeatherImmediately(FPlanetWeatherState NewWeather
 	TransitionStartWeather = NewWeather;
 	PhaseElapsed = 0.0f;
 	bTransitioning = false;
+	bSimulateWeather = false;
 	BroadcastWeather();
 }
 
@@ -79,9 +83,10 @@ void APlanetWeatherManager::GenerateNextWeather()
 		return;
 	}
 
+	bSimulateWeather = true;
 	const FPlanetWeatherSettings& Settings = PlanetDefinition->Weather;
 	TransitionStartWeather = CurrentWeather;
-	TargetWeather.PrecipitationPercent = Settings.PrecipitationRange.GetRandomValue(WeatherRandomStream);
+	TargetWeather.PrecipitationPercent = WeatherRandomStream.FRand() < WetWeatherProbability() ? Settings.PrecipitationRange.GetRandomValue(WeatherRandomStream) : 0.0f;
 	TargetWeather.WindPercent = Settings.WindRange.GetRandomValue(WeatherRandomStream);
 	TargetWeather.SunPercent = Settings.SunRange.GetRandomValue(WeatherRandomStream);
 	TargetWeather.Clamp();
@@ -100,7 +105,7 @@ void APlanetWeatherManager::RestartSimulation()
 
 	SetActorTickEnabled(true);
 	WeatherRandomStream.Initialize(PlanetDefinition->Seed);
-	CurrentWeather.PrecipitationPercent = PlanetDefinition->Weather.PrecipitationRange.GetRandomValue(WeatherRandomStream);
+	CurrentWeather.PrecipitationPercent = WeatherRandomStream.FRand() < WetWeatherProbability() ? PlanetDefinition->Weather.PrecipitationRange.GetRandomValue(WeatherRandomStream) : 0.0f;
 	CurrentWeather.WindPercent = PlanetDefinition->Weather.WindRange.GetRandomValue(WeatherRandomStream);
 	CurrentWeather.SunPercent = PlanetDefinition->Weather.SunRange.GetRandomValue(WeatherRandomStream);
 	CurrentWeather.Clamp();

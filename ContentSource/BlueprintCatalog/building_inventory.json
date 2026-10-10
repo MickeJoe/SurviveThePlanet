@@ -1,0 +1,485 @@
+[
+  {
+    "id": 1,
+    "name": "Base Module / Headquarters",
+    "key": "BaseModule",
+    "existing_asset": "/Game/Models/Buildings/BaseModuleUsed/BaseModule",
+    "status": "existing"
+  },
+  {
+    "id": 2,
+    "name": "Sub-Base Module",
+    "key": "SubBaseModule",
+    "existing_asset": "/Game/Units/Buildings/RemoteBase/Meshes/SM_RemoteBase_Body",
+    "status": "existing"
+  },
+  {
+    "id": 3,
+    "name": "Communications Module",
+    "key": "CommunicationsModule",
+    "existing_asset": "/Game/Models/Buildings/CommunicationModule/CommunicationModuleMesh",
+    "status": "existing"
+  },
+  {
+    "id": 4,
+    "name": "Cargo Landing Bay",
+    "key": "CargoLandingBay",
+    "existing_asset": "/Game/Models/Buildings/CargoBay/CargoBayMesh",
+    "status": "existing"
+  },
+  {
+    "id": 5,
+    "name": "Crude Workshop",
+    "key": "CrudeWorkshop",
+    "existing_asset": null,
+    "status": "missing"
+  },
+  {
+    "id": 6,
+    "name": "Warehouse",
+    "key": "Warehouse",
+    "existing_asset": "/Game/Units/Buildings/STP/STP_ResourceStorage",
+    "status": "existing"
+  },
+  {
+    "id": 7,
+    "name": "Logistics Hub",
+    "key": "LogisticsHub",
+    "existing_asset": null,
+    "status": "missing"
+  },
+  {
+    "id": 8,
+    "name": "Energy Module",
+    "key": "EnergyModule",
+    "existing_asset": "/Game/Units/Buildings/EnergyExtender/SM_EnergyExtender",
+    "status": "existing"
+  },
+  {
+    "id": 9,
+    "name": "Battery Storage",
+    "key": "BatteryStorage",
+    "existing_asset": "/Game/Models/Buildings/EnergyBatteryStorage/EnergyBatteryStorageMesh",
+    "status": "existing"
+  },
+  {
+    "id": 10,
+    "name": "Solar Array",
+    "key": "SolarArray",
+    "existing_asset": "/Game/Models/Buildings/SolarPanelModule/SolarPanelModule",
+    "status": "existing"
+  },
+  {
+    "id": 11,
+    "name": "Wind Turbine",
+    "key": "WindTurbine",
+    "existing_asset": "/Game/Units/Buildings/STP/STP_WindGenerator",
+    "status": "existing"
+  },
+  {
+    "id": 12,
+    "name": "Geothermal Plant",
+    "key": "GeothermalPlant",
+    "existing_asset": "/Game/Units/Buildings/STP/STP_GeothermalPlant",
+    "status": "existing"
+  },
+  {
+    "id": 13,
+    "name": "Nuclear Reactor",
+    "key": "NuclearReactor",
+    "existing_asset": "/Game/Units/Buildings/STP/STP_NuclearReactor",
+    "status": "existing"
+  },
+  {
+    "id": 14,
+    "name": "Survey Beacon",
+    "key": "SurveyBeacon",
+    "existing_asset": null,
+    "status": "missing"
+  },
+  {
+    "id": 15,
+    "name": "Explorer Drone Control Center",
+    "key": "ExplorerDroneControlCenter",
+    "existing_asset": null,
+    "status": "missing"
+  },
+  {
+    "id": 16,
+    "name": "Trade Beacon",
+    "key": "TradeBeacon",
+    "existing_asset": null,
+    "status": "missing"
+  },
+  {
+    "id": 17,
+    "name": "Rain Collector",
+    "key": "RainCollector",
+    "existing_asset": "/Game/Models/Buildings/WaterCollector/WaterCollectorMesh",
+    "status": "existing"
+  },
+  {
+    "id": 18,
+    "name": "Groundwater Pump",
+    "key": "GroundwaterPump",
+    "existing_asset": null,
+    "status": "missing"
+  },
+  {
+    "id": 19,
+    "name": "Stone Quarry",
+    "key": "StoneQuarry",
+    "existing_asset": "/Game/Models/Buildings/StoneMine/StoneMiningQuerryMesh",
+    "status": "existing"
+  },
+  {
+    "id": 20,
+    "name": "Copper Mine",
+    "key": "CopperMine",
+    "existing_asset": "/Game/Models/Buildings/CopparMiningQuerry/CopparMiningQuerryMesh",
+    "status": "existing"
+  },
+  {
+    "id": 21,
+    "name": "Iron Mine",
+    "key": "IronMine",
+    "existing_asset": "/Game/Models/Buildings/IronMiningQuerry/IronMiningQuerryMesh",
+    "status": "existing"
+  },
+  {
+    "id": 22,
+    "name": "Silica Extractor",
+    "key": "SilicaExtractor",
+    "existing_asset": null,
+    "status": "missing"
+  },
+  {
+    "id": 23,
+    "name": "Carbon Extractor",
+    "key": "CarbonExtractor",
+    "existing_asset": "/Game/Units/Buildings/Coal/Meshes/SM_CoalMine",
+    "status": "existing"
+  },
+  {
+    "id": 24,
+    "name": "Rare Mineral Mine",
+    "key": "RareMineralMine",
+    "existing_asset": null,
+    "status": "missing"
+  },
+  {
+    "id": 25,
+    "name": "Uranium Mine",
+    "key": "UraniumMine",
+    "existing_asset": null,
+    "status": "missing"
+  },
+  {
+    "id": 26,
+    "name": "Alien Material Harvester",
+    "key": "AlienMaterialHarvester",
+    "existing_asset": null,
+    "status": "missing"
+  },
+  {
+    "id": 27,
+    "name": "Concrete Plant",
+    "key": "ConcretePlant",
+    "existing_asset": "/Game/Models/Buildings/ConcretePlant/ConcreatePlantMesh",
+    "status": "existing"
+  },
+  {
+    "id": 28,
+    "name": "Copper Smelter",
+    "key": "CopperSmelter",
+    "existing_asset": null,
+    "status": "missing"
+  },
+  {
+    "id": 29,
+    "name": "Steelworks",
+    "key": "Steelworks",
+    "existing_asset": "/Game/Units/Buildings/Steelworks/SM_Steelworks_Main",
+    "status": "existing"
+  },
+  {
+    "id": 30,
+    "name": "Glassworks",
+    "key": "Glassworks",
+    "existing_asset": null,
+    "status": "missing"
+  },
+  {
+    "id": 31,
+    "name": "Polymer Plant",
+    "key": "PolymerPlant",
+    "existing_asset": "/Game/Units/Buildings/PolymerPlant/Meshes/SM_PolymerPlant",
+    "status": "existing"
+  },
+  {
+    "id": 32,
+    "name": "Water Purifier",
+    "key": "WaterPurifier",
+    "existing_asset": null,
+    "status": "missing"
+  },
+  {
+    "id": 33,
+    "name": "Ceramics Kiln",
+    "key": "CeramicsKiln",
+    "existing_asset": null,
+    "status": "missing"
+  },
+  {
+    "id": 34,
+    "name": "Rare Metal Refinery",
+    "key": "RareMetalRefinery",
+    "existing_asset": null,
+    "status": "missing"
+  },
+  {
+    "id": 35,
+    "name": "Fuel Processor",
+    "key": "FuelProcessor",
+    "existing_asset": null,
+    "status": "missing"
+  },
+  {
+    "id": 36,
+    "name": "Uranium Processor",
+    "key": "UraniumProcessor",
+    "existing_asset": null,
+    "status": "missing"
+  },
+  {
+    "id": 37,
+    "name": "Alien Material Processor",
+    "key": "AlienMaterialProcessor",
+    "existing_asset": null,
+    "status": "missing"
+  },
+  {
+    "id": 38,
+    "name": "Connector Factory",
+    "key": "ConnectorFactory",
+    "existing_asset": "/Game/Units/Buildings/ConnectorFactory/Meshes/SM_ConnectorFactory",
+    "status": "existing"
+  },
+  {
+    "id": 39,
+    "name": "Machine Shop",
+    "key": "MachineShop",
+    "existing_asset": null,
+    "status": "missing"
+  },
+  {
+    "id": 40,
+    "name": "Structural Fabricator",
+    "key": "StructuralFabricator",
+    "existing_asset": null,
+    "status": "missing"
+  },
+  {
+    "id": 41,
+    "name": "Composite Works",
+    "key": "CompositeWorks",
+    "existing_asset": null,
+    "status": "missing"
+  },
+  {
+    "id": 42,
+    "name": "Battery Factory",
+    "key": "BatteryFactory",
+    "existing_asset": null,
+    "status": "missing"
+  },
+  {
+    "id": 43,
+    "name": "Optics Factory",
+    "key": "OpticsFactory",
+    "existing_asset": null,
+    "status": "missing"
+  },
+  {
+    "id": 44,
+    "name": "Cooling Systems Plant",
+    "key": "CoolingSystemsPlant",
+    "existing_asset": null,
+    "status": "missing"
+  },
+  {
+    "id": 45,
+    "name": "Pressure Systems Plant",
+    "key": "PressureSystemsPlant",
+    "existing_asset": null,
+    "status": "missing"
+  },
+  {
+    "id": 46,
+    "name": "Electronics Assembly",
+    "key": "ElectronicsAssembly",
+    "existing_asset": null,
+    "status": "missing"
+  },
+  {
+    "id": 47,
+    "name": "Power Systems Factory",
+    "key": "PowerSystemsFactory",
+    "existing_asset": null,
+    "status": "missing"
+  },
+  {
+    "id": 48,
+    "name": "Fuel Cell Plant",
+    "key": "FuelCellPlant",
+    "existing_asset": null,
+    "status": "missing"
+  },
+  {
+    "id": 49,
+    "name": "Tool Factory",
+    "key": "ToolFactory",
+    "existing_asset": null,
+    "status": "missing"
+  },
+  {
+    "id": 50,
+    "name": "Drone Parts Workshop",
+    "key": "DronePartsWorkshop",
+    "existing_asset": null,
+    "status": "missing"
+  },
+  {
+    "id": 51,
+    "name": "Advanced Alloy Foundry",
+    "key": "AdvancedAlloyFoundry",
+    "existing_asset": null,
+    "status": "missing"
+  },
+  {
+    "id": 52,
+    "name": "Control Systems Assembly",
+    "key": "ControlSystemsAssembly",
+    "existing_asset": null,
+    "status": "missing"
+  },
+  {
+    "id": 53,
+    "name": "Navigation Systems Plant",
+    "key": "NavigationSystemsPlant",
+    "existing_asset": null,
+    "status": "missing"
+  },
+  {
+    "id": 54,
+    "name": "Life Support Assembly",
+    "key": "LifeSupportAssembly",
+    "existing_asset": null,
+    "status": "missing"
+  },
+  {
+    "id": 55,
+    "name": "Reactor Components Plant",
+    "key": "ReactorComponentsPlant",
+    "existing_asset": null,
+    "status": "missing"
+  },
+  {
+    "id": 56,
+    "name": "High-Density Power Plant",
+    "key": "HighDensityPowerPlant",
+    "existing_asset": null,
+    "status": "missing"
+  },
+  {
+    "id": 57,
+    "name": "Survey Equipment Plant",
+    "key": "SurveyEquipmentPlant",
+    "existing_asset": null,
+    "status": "missing"
+  },
+  {
+    "id": 58,
+    "name": "Communication Systems Plant",
+    "key": "CommunicationSystemsPlant",
+    "existing_asset": null,
+    "status": "missing"
+  },
+  {
+    "id": 59,
+    "name": "Precision Engineering Plant",
+    "key": "PrecisionEngineeringPlant",
+    "existing_asset": null,
+    "status": "missing"
+  },
+  {
+    "id": 60,
+    "name": "Habitat Systems Plant",
+    "key": "HabitatSystemsPlant",
+    "existing_asset": null,
+    "status": "missing"
+  },
+  {
+    "id": 61,
+    "name": "Xenotech Laboratory",
+    "key": "XenotechLaboratory",
+    "existing_asset": null,
+    "status": "missing"
+  },
+  {
+    "id": 62,
+    "name": "Ship Repair Bay",
+    "key": "ShipRepairBay",
+    "existing_asset": null,
+    "status": "missing"
+  },
+  {
+    "id": 63,
+    "name": "Refueling Station",
+    "key": "RefuelingStation",
+    "existing_asset": null,
+    "status": "missing"
+  },
+  {
+    "id": 64,
+    "name": "Ship Upgrade Dock",
+    "key": "ShipUpgradeDock",
+    "existing_asset": null,
+    "status": "missing"
+  },
+  {
+    "id": 65,
+    "name": "Drone Maintenance Bay",
+    "key": "DroneMaintenanceBay",
+    "existing_asset": null,
+    "status": "missing"
+  },
+  {
+    "id": 66,
+    "name": "Calibration Center",
+    "key": "CalibrationCenter",
+    "existing_asset": null,
+    "status": "missing"
+  },
+  {
+    "id": 67,
+    "name": "Research Laboratory",
+    "key": "ResearchLaboratory",
+    "existing_asset": null,
+    "status": "missing"
+  },
+  {
+    "id": 68,
+    "name": "Custom Fabrication Center",
+    "key": "CustomFabricationCenter",
+    "existing_asset": null,
+    "status": "missing"
+  },
+  {
+    "id": 69,
+    "name": "Decontamination Bay",
+    "key": "DecontaminationBay",
+    "existing_asset": null,
+    "status": "missing"
+  }
+]

@@ -1,0 +1,16 @@
+{
+  "id": 30,
+  "name": "Glassworks",
+  "key": "Glassworks",
+  "existing_asset": null,
+  "status": "authored",
+  "revision": 3,
+  "motion": "fan",
+  "pivot_m": [
+    0,
+    0.4,
+    2.08
+  ],
+  "triangles": 9596,
+  "source": "C:\\UE5\\SurviveThePlanet 5.8\\ContentSource\\BlueprintCatalog\\Glassworks\\Glassworks.blend"
+}

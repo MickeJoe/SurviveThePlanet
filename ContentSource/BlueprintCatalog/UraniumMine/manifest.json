@@ -1,0 +1,16 @@
+{
+  "id": 25,
+  "name": "Uranium Mine",
+  "key": "UraniumMine",
+  "existing_asset": null,
+  "status": "authored",
+  "revision": 3,
+  "motion": "drill",
+  "pivot_m": [
+    0,
+    -1.45,
+    1.7
+  ],
+  "triangles": 7568,
+  "source": "C:\\UE5\\SurviveThePlanet 5.8\\ContentSource\\BlueprintCatalog\\UraniumMine\\UraniumMine.blend"
+}

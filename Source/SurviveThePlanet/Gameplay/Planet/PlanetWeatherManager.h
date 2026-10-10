@@ -46,6 +46,13 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Planet Weather")
 	UPlanetDefinition* GetPlanetDefinition() const { return PlanetDefinition; }
 
+	/** Uses the HUD's authoritative clock, including pause and speed controls. */
+	UFUNCTION(BlueprintCallable, Category = "Planet Weather")
+	void UpdatePresentation(double TotalGameMinutes);
+
+	UFUNCTION(BlueprintPure, Category = "Planet Weather")
+	FText GetDayPhase(double TotalGameMinutes) const;
+
 	/** Overrides the current state and pauses generated transitions until GenerateNextWeather is called. */
 	UFUNCTION(BlueprintCallable, Category = "Planet Weather")
 	void SetWeatherImmediately(FPlanetWeatherState NewWeather);
@@ -77,6 +84,21 @@ protected:
 	FPlanetWeatherState TargetWeather;
 
 private:
+	UPROPERTY(Transient) TObjectPtr<class UInstancedStaticMeshComponent> RainStreaks;
+	UPROPERTY(Transient) TObjectPtr<class UDirectionalLightComponent> SunLight;
+	UPROPERTY(Transient) TObjectPtr<class USkyLightComponent> SkyLight;
+	UPROPERTY(Transient) TObjectPtr<class UExponentialHeightFogComponent> Fog;
+	UPROPERTY(Transient) TObjectPtr<class UWindDirectionalSourceComponent> WindSource;
+	TArray<FVector> RainPositions;
+	float ClearSkySunIntensity = 10.0f;
+	float ClearSkyAmbientIntensity = 1.0f;
+	float SolarElevation(double TotalGameMinutes) const;
+	float WetWeatherProbability() const;
+	UPROPERTY(Transient) TObjectPtr<class UInstancedStaticMeshComponent> WindMotes;
+	TArray<FVector> WindPositions;
+	void InitializePresentation();
+	void UpdateRain(float DeltaSeconds);
+	FRandomStream RainRandomStream;
 	FRandomStream WeatherRandomStream;
 	FPlanetWeatherState TransitionStartWeather;
 	float PhaseElapsed = 0.0f;

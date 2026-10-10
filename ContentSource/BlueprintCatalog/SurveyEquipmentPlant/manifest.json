@@ -1,0 +1,16 @@
+{
+  "id": 57,
+  "name": "Survey Equipment Plant",
+  "key": "SurveyEquipmentPlant",
+  "existing_asset": null,
+  "status": "authored",
+  "revision": 3,
+  "motion": "beacon",
+  "pivot_m": [
+    0.7,
+    0.55,
+    2.5
+  ],
+  "triangles": 7492,
+  "source": "C:\\UE5\\SurviveThePlanet 5.8\\ContentSource\\BlueprintCatalog\\SurveyEquipmentPlant\\SurveyEquipmentPlant.blend"
+}

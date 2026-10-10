@@ -1,0 +1,16 @@
+{
+  "id": 54,
+  "name": "Life Support Assembly",
+  "key": "LifeSupportAssembly",
+  "existing_asset": null,
+  "status": "authored",
+  "revision": 3,
+  "motion": "fan",
+  "pivot_m": [
+    0,
+    0.6,
+    2.0
+  ],
+  "triangles": 9944,
+  "source": "C:\\UE5\\SurviveThePlanet 5.8\\ContentSource\\BlueprintCatalog\\LifeSupportAssembly\\LifeSupportAssembly.blend"
+}

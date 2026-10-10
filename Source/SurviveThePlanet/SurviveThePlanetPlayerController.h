@@ -28,6 +28,8 @@ class AResourceManager;
 class APlanetSurfaceManager;
 class UBuildingInfoWidget;
 class UCheatMenuWidget;
+class UTradeScreenWidget;
+class UVisitingMerchantWidget;
 class ABaseBuilding;
 class AExplorerDrone;
 class UExplorerDroneActivationWidget;
@@ -123,6 +125,8 @@ protected:
 	ESTPBuildTool ActiveBuildTool = ESTPBuildTool::None;
 
 public:
+	UFUNCTION(BlueprintCallable, Category = "Trading")
+	void OpenTradeScreen(FName TraderId = TEXT("helix_industrial"));
 	UFUNCTION(BlueprintPure, Category = "Construction")
 	TArray<FResourceCost> GetBuildCosts(ESTPBuildTool Tool, bool bIncludePlacement) const;
 
@@ -184,6 +188,8 @@ protected:
 
 private:
 	UPROPERTY(Transient)
+	TObjectPtr<UTradeScreenWidget> TradeScreenWidget;
+	UPROPERTY(Transient)
 	TObjectPtr<UCheatMenuWidget> CheatMenuWidget;
 
 	UPROPERTY(Transient)
@@ -220,6 +226,9 @@ private:
 	TObjectPtr<UBuildingInfoWidget> BuildingInfoWidget;
 
 	UPROPERTY(Transient)
+	TObjectPtr<UVisitingMerchantWidget> VisitingMerchantWidget;
+
+	UPROPERTY(Transient)
 	TSubclassOf<UBuildingInfoWidget> BuildingInfoWidgetClass;
 
 	UPROPERTY(Transient)
@@ -240,7 +249,9 @@ private:
 	bool TryPlaceConcretePlantAtCursor();
 	bool TryPlaceCommunicationModuleAtCursor();
 	bool TryPlaceCargoBayAtCursor();
+	friend class FSTPBlueprintToolbarTest;
 	bool TryPlaceGenericBuildingAtCursor();
+	bool TryPlaceGenericBuildingAtWorldLocation(const FVector& Target);
 	void UpdateBuildPlacementPreview();
 	void UpdateEnergyModulePlacementPreview();
 	void UpdateEnergyStoragePlacementPreview();

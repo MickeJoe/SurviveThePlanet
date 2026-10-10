@@ -40,7 +40,9 @@ void UMissionConfidenceWidget::Refresh(float Confidence)
 	}
 	if (ConfidenceDecayText && ConfidenceSubsystem)
 	{
-		ConfidenceDecayText->SetText(FText::FromString(FString::Printf(TEXT("-%.1f%% / h"), ConfidenceSubsystem->GetDecayPerGameHour())));
+		ConfidenceDecayText->SetText(ConfidenceSubsystem->IsDecayPaused()
+			? NSLOCTEXT("SurviveThePlanet", "ConfidenceDecayPaused", "Decay paused")
+			: FText::FromString(FString::Printf(TEXT("-%.1f%% / h"), ConfidenceSubsystem->GetDecayPerGameHour())));
 	}
 	BuildSegments(Confidence);
 }

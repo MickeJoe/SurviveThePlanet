@@ -1,0 +1,16 @@
+{
+  "id": 34,
+  "name": "Rare Metal Refinery",
+  "key": "RareMetalRefinery",
+  "existing_asset": null,
+  "status": "authored",
+  "revision": 3,
+  "motion": "fan",
+  "pivot_m": [
+    0,
+    0.4,
+    2.08
+  ],
+  "triangles": 10440,
+  "source": "C:\\UE5\\SurviveThePlanet 5.8\\ContentSource\\BlueprintCatalog\\RareMetalRefinery\\RareMetalRefinery.blend"
+}

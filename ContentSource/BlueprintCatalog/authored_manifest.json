@@ -1,0 +1,786 @@
+[
+  {
+    "id": 5,
+    "name": "Crude Workshop",
+    "key": "CrudeWorkshop",
+    "existing_asset": null,
+    "status": "authored",
+    "revision": 3,
+    "motion": "fan",
+    "pivot_m": [
+      0,
+      0.6,
+      2.4800000000000004
+    ],
+    "triangles": 6828,
+    "source": "C:\\UE5\\SurviveThePlanet 5.8\\ContentSource\\BlueprintCatalog\\CrudeWorkshop\\CrudeWorkshop.blend"
+  },
+  {
+    "id": 7,
+    "name": "Logistics Hub",
+    "key": "LogisticsHub",
+    "existing_asset": null,
+    "status": "authored",
+    "revision": 3,
+    "motion": "fan",
+    "pivot_m": [
+      0,
+      0.5,
+      2.18
+    ],
+    "triangles": 7260,
+    "source": "C:\\UE5\\SurviveThePlanet 5.8\\ContentSource\\BlueprintCatalog\\LogisticsHub\\LogisticsHub.blend"
+  },
+  {
+    "id": 14,
+    "name": "Survey Beacon",
+    "key": "SurveyBeacon",
+    "existing_asset": null,
+    "status": "authored",
+    "revision": 3,
+    "motion": "beacon",
+    "pivot_m": [
+      0,
+      0.45,
+      3.9
+    ],
+    "triangles": 7048,
+    "source": "C:\\UE5\\SurviveThePlanet 5.8\\ContentSource\\BlueprintCatalog\\SurveyBeacon\\SurveyBeacon.blend"
+  },
+  {
+    "id": 15,
+    "name": "Explorer Drone Control Center",
+    "key": "ExplorerDroneControlCenter",
+    "existing_asset": null,
+    "status": "authored",
+    "revision": 3,
+    "motion": "fan",
+    "pivot_m": [
+      0,
+      0.5,
+      2.18
+    ],
+    "triangles": 7196,
+    "source": "C:\\UE5\\SurviveThePlanet 5.8\\ContentSource\\BlueprintCatalog\\ExplorerDroneControlCenter\\ExplorerDroneControlCenter.blend"
+  },
+  {
+    "id": 16,
+    "name": "Trade Beacon",
+    "key": "TradeBeacon",
+    "existing_asset": null,
+    "status": "authored",
+    "revision": 3,
+    "motion": "beacon",
+    "pivot_m": [
+      0,
+      0.45,
+      3.9
+    ],
+    "triangles": 7264,
+    "source": "C:\\UE5\\SurviveThePlanet 5.8\\ContentSource\\BlueprintCatalog\\TradeBeacon\\TradeBeacon.blend"
+  },
+  {
+    "id": 18,
+    "name": "Groundwater Pump",
+    "key": "GroundwaterPump",
+    "existing_asset": null,
+    "status": "authored",
+    "revision": 3,
+    "motion": "fan",
+    "pivot_m": [
+      0,
+      0.6,
+      2.0
+    ],
+    "triangles": 10020,
+    "source": "C:\\UE5\\SurviveThePlanet 5.8\\ContentSource\\BlueprintCatalog\\GroundwaterPump\\GroundwaterPump.blend"
+  },
+  {
+    "id": 22,
+    "name": "Silica Extractor",
+    "key": "SilicaExtractor",
+    "existing_asset": null,
+    "status": "authored",
+    "revision": 3,
+    "motion": "drill",
+    "pivot_m": [
+      0,
+      -1.45,
+      1.7
+    ],
+    "triangles": 8764,
+    "source": "C:\\UE5\\SurviveThePlanet 5.8\\ContentSource\\BlueprintCatalog\\SilicaExtractor\\SilicaExtractor.blend"
+  },
+  {
+    "id": 24,
+    "name": "Rare Mineral Mine",
+    "key": "RareMineralMine",
+    "existing_asset": null,
+    "status": "authored",
+    "revision": 3,
+    "motion": "drill",
+    "pivot_m": [
+      0,
+      -1.45,
+      1.7
+    ],
+    "triangles": 7568,
+    "source": "C:\\UE5\\SurviveThePlanet 5.8\\ContentSource\\BlueprintCatalog\\RareMineralMine\\RareMineralMine.blend"
+  },
+  {
+    "id": 25,
+    "name": "Uranium Mine",
+    "key": "UraniumMine",
+    "existing_asset": null,
+    "status": "authored",
+    "revision": 3,
+    "motion": "drill",
+    "pivot_m": [
+      0,
+      -1.45,
+      1.7
+    ],
+    "triangles": 7568,
+    "source": "C:\\UE5\\SurviveThePlanet 5.8\\ContentSource\\BlueprintCatalog\\UraniumMine\\UraniumMine.blend"
+  },
+  {
+    "id": 26,
+    "name": "Alien Material Harvester",
+    "key": "AlienMaterialHarvester",
+    "existing_asset": null,
+    "status": "authored",
+    "revision": 3,
+    "motion": "drill",
+    "pivot_m": [
+      0,
+      -1.45,
+      1.7
+    ],
+    "triangles": 7568,
+    "source": "C:\\UE5\\SurviveThePlanet 5.8\\ContentSource\\BlueprintCatalog\\AlienMaterialHarvester\\AlienMaterialHarvester.blend"
+  },
+  {
+    "id": 28,
+    "name": "Copper Smelter",
+    "key": "CopperSmelter",
+    "existing_asset": null,
+    "status": "authored",
+    "revision": 3,
+    "motion": "fan",
+    "pivot_m": [
+      0,
+      0.4,
+      2.08
+    ],
+    "triangles": 9272,
+    "source": "C:\\UE5\\SurviveThePlanet 5.8\\ContentSource\\BlueprintCatalog\\CopperSmelter\\CopperSmelter.blend"
+  },
+  {
+    "id": 30,
+    "name": "Glassworks",
+    "key": "Glassworks",
+    "existing_asset": null,
+    "status": "authored",
+    "revision": 3,
+    "motion": "fan",
+    "pivot_m": [
+      0,
+      0.4,
+      2.08
+    ],
+    "triangles": 9596,
+    "source": "C:\\UE5\\SurviveThePlanet 5.8\\ContentSource\\BlueprintCatalog\\Glassworks\\Glassworks.blend"
+  },
+  {
+    "id": 32,
+    "name": "Water Purifier",
+    "key": "WaterPurifier",
+    "existing_asset": null,
+    "status": "authored",
+    "revision": 3,
+    "motion": "fan",
+    "pivot_m": [
+      0,
+      0.6,
+      2.0
+    ],
+    "triangles": 10064,
+    "source": "C:\\UE5\\SurviveThePlanet 5.8\\ContentSource\\BlueprintCatalog\\WaterPurifier\\WaterPurifier.blend"
+  },
+  {
+    "id": 33,
+    "name": "Ceramics Kiln",
+    "key": "CeramicsKiln",
+    "existing_asset": null,
+    "status": "authored",
+    "revision": 3,
+    "motion": "fan",
+    "pivot_m": [
+      0,
+      0.4,
+      2.08
+    ],
+    "triangles": 9392,
+    "source": "C:\\UE5\\SurviveThePlanet 5.8\\ContentSource\\BlueprintCatalog\\CeramicsKiln\\CeramicsKiln.blend"
+  },
+  {
+    "id": 34,
+    "name": "Rare Metal Refinery",
+    "key": "RareMetalRefinery",
+    "existing_asset": null,
+    "status": "authored",
+    "revision": 3,
+    "motion": "fan",
+    "pivot_m": [
+      0,
+      0.4,
+      2.08
+    ],
+    "triangles": 10440,
+    "source": "C:\\UE5\\SurviveThePlanet 5.8\\ContentSource\\BlueprintCatalog\\RareMetalRefinery\\RareMetalRefinery.blend"
+  },
+  {
+    "id": 35,
+    "name": "Fuel Processor",
+    "key": "FuelProcessor",
+    "existing_asset": null,
+    "status": "authored",
+    "revision": 3,
+    "motion": "fan",
+    "pivot_m": [
+      0,
+      0.6,
+      2.0
+    ],
+    "triangles": 10700,
+    "source": "C:\\UE5\\SurviveThePlanet 5.8\\ContentSource\\BlueprintCatalog\\FuelProcessor\\FuelProcessor.blend"
+  },
+  {
+    "id": 36,
+    "name": "Uranium Processor",
+    "key": "UraniumProcessor",
+    "existing_asset": null,
+    "status": "authored",
+    "revision": 3,
+    "motion": "fan",
+    "pivot_m": [
+      0,
+      0.4,
+      2.08
+    ],
+    "triangles": 9544,
+    "source": "C:\\UE5\\SurviveThePlanet 5.8\\ContentSource\\BlueprintCatalog\\UraniumProcessor\\UraniumProcessor.blend"
+  },
+  {
+    "id": 37,
+    "name": "Alien Material Processor",
+    "key": "AlienMaterialProcessor",
+    "existing_asset": null,
+    "status": "authored",
+    "revision": 3,
+    "motion": "fan",
+    "pivot_m": [
+      0,
+      0.4,
+      2.08
+    ],
+    "triangles": 9488,
+    "source": "C:\\UE5\\SurviveThePlanet 5.8\\ContentSource\\BlueprintCatalog\\AlienMaterialProcessor\\AlienMaterialProcessor.blend"
+  },
+  {
+    "id": 39,
+    "name": "Machine Shop",
+    "key": "MachineShop",
+    "existing_asset": null,
+    "status": "authored",
+    "revision": 3,
+    "motion": "fan",
+    "pivot_m": [
+      0,
+      0.6,
+      2.24
+    ],
+    "triangles": 6644,
+    "source": "C:\\UE5\\SurviveThePlanet 5.8\\ContentSource\\BlueprintCatalog\\MachineShop\\MachineShop.blend"
+  },
+  {
+    "id": 40,
+    "name": "Structural Fabricator",
+    "key": "StructuralFabricator",
+    "existing_asset": null,
+    "status": "authored",
+    "revision": 3,
+    "motion": "fan",
+    "pivot_m": [
+      0,
+      0.6,
+      2.3600000000000003
+    ],
+    "triangles": 7228,
+    "source": "C:\\UE5\\SurviveThePlanet 5.8\\ContentSource\\BlueprintCatalog\\StructuralFabricator\\StructuralFabricator.blend"
+  },
+  {
+    "id": 41,
+    "name": "Composite Works",
+    "key": "CompositeWorks",
+    "existing_asset": null,
+    "status": "authored",
+    "revision": 3,
+    "motion": "fan",
+    "pivot_m": [
+      0,
+      0.6,
+      2.4800000000000004
+    ],
+    "triangles": 7540,
+    "source": "C:\\UE5\\SurviveThePlanet 5.8\\ContentSource\\BlueprintCatalog\\CompositeWorks\\CompositeWorks.blend"
+  },
+  {
+    "id": 42,
+    "name": "Battery Factory",
+    "key": "BatteryFactory",
+    "existing_asset": null,
+    "status": "authored",
+    "revision": 3,
+    "motion": "fan",
+    "pivot_m": [
+      0,
+      0.6,
+      2.24
+    ],
+    "triangles": 11044,
+    "source": "C:\\UE5\\SurviveThePlanet 5.8\\ContentSource\\BlueprintCatalog\\BatteryFactory\\BatteryFactory.blend"
+  },
+  {
+    "id": 43,
+    "name": "Optics Factory",
+    "key": "OpticsFactory",
+    "existing_asset": null,
+    "status": "authored",
+    "revision": 3,
+    "motion": "beacon",
+    "pivot_m": [
+      0.7,
+      0.55,
+      2.5
+    ],
+    "triangles": 7628,
+    "source": "C:\\UE5\\SurviveThePlanet 5.8\\ContentSource\\BlueprintCatalog\\OpticsFactory\\OpticsFactory.blend"
+  },
+  {
+    "id": 44,
+    "name": "Cooling Systems Plant",
+    "key": "CoolingSystemsPlant",
+    "existing_asset": null,
+    "status": "authored",
+    "revision": 3,
+    "motion": "fan",
+    "pivot_m": [
+      0,
+      0.6,
+      2.0
+    ],
+    "triangles": 10700,
+    "source": "C:\\UE5\\SurviveThePlanet 5.8\\ContentSource\\BlueprintCatalog\\CoolingSystemsPlant\\CoolingSystemsPlant.blend"
+  },
+  {
+    "id": 45,
+    "name": "Pressure Systems Plant",
+    "key": "PressureSystemsPlant",
+    "existing_asset": null,
+    "status": "authored",
+    "revision": 3,
+    "motion": "fan",
+    "pivot_m": [
+      0,
+      0.6,
+      2.0
+    ],
+    "triangles": 9988,
+    "source": "C:\\UE5\\SurviveThePlanet 5.8\\ContentSource\\BlueprintCatalog\\PressureSystemsPlant\\PressureSystemsPlant.blend"
+  },
+  {
+    "id": 46,
+    "name": "Electronics Assembly",
+    "key": "ElectronicsAssembly",
+    "existing_asset": null,
+    "status": "authored",
+    "revision": 3,
+    "motion": "beacon",
+    "pivot_m": [
+      0.7,
+      0.55,
+      2.5
+    ],
+    "triangles": 7664,
+    "source": "C:\\UE5\\SurviveThePlanet 5.8\\ContentSource\\BlueprintCatalog\\ElectronicsAssembly\\ElectronicsAssembly.blend"
+  },
+  {
+    "id": 47,
+    "name": "Power Systems Factory",
+    "key": "PowerSystemsFactory",
+    "existing_asset": null,
+    "status": "authored",
+    "revision": 3,
+    "motion": "fan",
+    "pivot_m": [
+      0,
+      0.6,
+      2.4800000000000004
+    ],
+    "triangles": 11044,
+    "source": "C:\\UE5\\SurviveThePlanet 5.8\\ContentSource\\BlueprintCatalog\\PowerSystemsFactory\\PowerSystemsFactory.blend"
+  },
+  {
+    "id": 48,
+    "name": "Fuel Cell Plant",
+    "key": "FuelCellPlant",
+    "existing_asset": null,
+    "status": "authored",
+    "revision": 3,
+    "motion": "fan",
+    "pivot_m": [
+      0,
+      0.6,
+      2.0
+    ],
+    "triangles": 10928,
+    "source": "C:\\UE5\\SurviveThePlanet 5.8\\ContentSource\\BlueprintCatalog\\FuelCellPlant\\FuelCellPlant.blend"
+  },
+  {
+    "id": 49,
+    "name": "Tool Factory",
+    "key": "ToolFactory",
+    "existing_asset": null,
+    "status": "authored",
+    "revision": 3,
+    "motion": "fan",
+    "pivot_m": [
+      0,
+      0.6,
+      2.3600000000000003
+    ],
+    "triangles": 6892,
+    "source": "C:\\UE5\\SurviveThePlanet 5.8\\ContentSource\\BlueprintCatalog\\ToolFactory\\ToolFactory.blend"
+  },
+  {
+    "id": 50,
+    "name": "Drone Parts Workshop",
+    "key": "DronePartsWorkshop",
+    "existing_asset": null,
+    "status": "authored",
+    "revision": 3,
+    "motion": "fan",
+    "pivot_m": [
+      0,
+      0.6,
+      2.4800000000000004
+    ],
+    "triangles": 6784,
+    "source": "C:\\UE5\\SurviveThePlanet 5.8\\ContentSource\\BlueprintCatalog\\DronePartsWorkshop\\DronePartsWorkshop.blend"
+  },
+  {
+    "id": 51,
+    "name": "Advanced Alloy Foundry",
+    "key": "AdvancedAlloyFoundry",
+    "existing_asset": null,
+    "status": "authored",
+    "revision": 3,
+    "motion": "fan",
+    "pivot_m": [
+      0,
+      0.4,
+      2.08
+    ],
+    "triangles": 9528,
+    "source": "C:\\UE5\\SurviveThePlanet 5.8\\ContentSource\\BlueprintCatalog\\AdvancedAlloyFoundry\\AdvancedAlloyFoundry.blend"
+  },
+  {
+    "id": 52,
+    "name": "Control Systems Assembly",
+    "key": "ControlSystemsAssembly",
+    "existing_asset": null,
+    "status": "authored",
+    "revision": 3,
+    "motion": "beacon",
+    "pivot_m": [
+      0.7,
+      0.55,
+      2.5
+    ],
+    "triangles": 7556,
+    "source": "C:\\UE5\\SurviveThePlanet 5.8\\ContentSource\\BlueprintCatalog\\ControlSystemsAssembly\\ControlSystemsAssembly.blend"
+  },
+  {
+    "id": 53,
+    "name": "Navigation Systems Plant",
+    "key": "NavigationSystemsPlant",
+    "existing_asset": null,
+    "status": "authored",
+    "revision": 3,
+    "motion": "beacon",
+    "pivot_m": [
+      0.7,
+      0.55,
+      2.5
+    ],
+    "triangles": 8204,
+    "source": "C:\\UE5\\SurviveThePlanet 5.8\\ContentSource\\BlueprintCatalog\\NavigationSystemsPlant\\NavigationSystemsPlant.blend"
+  },
+  {
+    "id": 54,
+    "name": "Life Support Assembly",
+    "key": "LifeSupportAssembly",
+    "existing_asset": null,
+    "status": "authored",
+    "revision": 3,
+    "motion": "fan",
+    "pivot_m": [
+      0,
+      0.6,
+      2.0
+    ],
+    "triangles": 9944,
+    "source": "C:\\UE5\\SurviveThePlanet 5.8\\ContentSource\\BlueprintCatalog\\LifeSupportAssembly\\LifeSupportAssembly.blend"
+  },
+  {
+    "id": 55,
+    "name": "Reactor Components Plant",
+    "key": "ReactorComponentsPlant",
+    "existing_asset": null,
+    "status": "authored",
+    "revision": 3,
+    "motion": "fan",
+    "pivot_m": [
+      0,
+      0.4,
+      2.08
+    ],
+    "triangles": 9348,
+    "source": "C:\\UE5\\SurviveThePlanet 5.8\\ContentSource\\BlueprintCatalog\\ReactorComponentsPlant\\ReactorComponentsPlant.blend"
+  },
+  {
+    "id": 56,
+    "name": "High-Density Power Plant",
+    "key": "HighDensityPowerPlant",
+    "existing_asset": null,
+    "status": "authored",
+    "revision": 3,
+    "motion": "fan",
+    "pivot_m": [
+      0,
+      0.6,
+      2.4800000000000004
+    ],
+    "triangles": 11044,
+    "source": "C:\\UE5\\SurviveThePlanet 5.8\\ContentSource\\BlueprintCatalog\\HighDensityPowerPlant\\HighDensityPowerPlant.blend"
+  },
+  {
+    "id": 57,
+    "name": "Survey Equipment Plant",
+    "key": "SurveyEquipmentPlant",
+    "existing_asset": null,
+    "status": "authored",
+    "revision": 3,
+    "motion": "beacon",
+    "pivot_m": [
+      0.7,
+      0.55,
+      2.5
+    ],
+    "triangles": 7492,
+    "source": "C:\\UE5\\SurviveThePlanet 5.8\\ContentSource\\BlueprintCatalog\\SurveyEquipmentPlant\\SurveyEquipmentPlant.blend"
+  },
+  {
+    "id": 58,
+    "name": "Communication Systems Plant",
+    "key": "CommunicationSystemsPlant",
+    "existing_asset": null,
+    "status": "authored",
+    "revision": 3,
+    "motion": "beacon",
+    "pivot_m": [
+      0.7,
+      0.55,
+      2.5
+    ],
+    "triangles": 7492,
+    "source": "C:\\UE5\\SurviveThePlanet 5.8\\ContentSource\\BlueprintCatalog\\CommunicationSystemsPlant\\CommunicationSystemsPlant.blend"
+  },
+  {
+    "id": 59,
+    "name": "Precision Engineering Plant",
+    "key": "PrecisionEngineeringPlant",
+    "existing_asset": null,
+    "status": "authored",
+    "revision": 3,
+    "motion": "fan",
+    "pivot_m": [
+      0,
+      0.6,
+      2.4800000000000004
+    ],
+    "triangles": 6892,
+    "source": "C:\\UE5\\SurviveThePlanet 5.8\\ContentSource\\BlueprintCatalog\\PrecisionEngineeringPlant\\PrecisionEngineeringPlant.blend"
+  },
+  {
+    "id": 60,
+    "name": "Habitat Systems Plant",
+    "key": "HabitatSystemsPlant",
+    "existing_asset": null,
+    "status": "authored",
+    "revision": 3,
+    "motion": "fan",
+    "pivot_m": [
+      0,
+      0.6,
+      2.24
+    ],
+    "triangles": 7432,
+    "source": "C:\\UE5\\SurviveThePlanet 5.8\\ContentSource\\BlueprintCatalog\\HabitatSystemsPlant\\HabitatSystemsPlant.blend"
+  },
+  {
+    "id": 61,
+    "name": "Xenotech Laboratory",
+    "key": "XenotechLaboratory",
+    "existing_asset": null,
+    "status": "authored",
+    "revision": 3,
+    "motion": "beacon",
+    "pivot_m": [
+      0.7,
+      0.55,
+      2.5
+    ],
+    "triangles": 7664,
+    "source": "C:\\UE5\\SurviveThePlanet 5.8\\ContentSource\\BlueprintCatalog\\XenotechLaboratory\\XenotechLaboratory.blend"
+  },
+  {
+    "id": 62,
+    "name": "Ship Repair Bay",
+    "key": "ShipRepairBay",
+    "existing_asset": null,
+    "status": "authored",
+    "revision": 3,
+    "motion": "slide",
+    "pivot_m": [
+      0,
+      -1.1,
+      3.75
+    ],
+    "triangles": 6256,
+    "source": "C:\\UE5\\SurviveThePlanet 5.8\\ContentSource\\BlueprintCatalog\\ShipRepairBay\\ShipRepairBay.blend"
+  },
+  {
+    "id": 63,
+    "name": "Refueling Station",
+    "key": "RefuelingStation",
+    "existing_asset": null,
+    "status": "authored",
+    "revision": 3,
+    "motion": "fan",
+    "pivot_m": [
+      0,
+      0.6,
+      2.0
+    ],
+    "triangles": 9988,
+    "source": "C:\\UE5\\SurviveThePlanet 5.8\\ContentSource\\BlueprintCatalog\\RefuelingStation\\RefuelingStation.blend"
+  },
+  {
+    "id": 64,
+    "name": "Ship Upgrade Dock",
+    "key": "ShipUpgradeDock",
+    "existing_asset": null,
+    "status": "authored",
+    "revision": 3,
+    "motion": "slide",
+    "pivot_m": [
+      0,
+      -1.1,
+      3.75
+    ],
+    "triangles": 6472,
+    "source": "C:\\UE5\\SurviveThePlanet 5.8\\ContentSource\\BlueprintCatalog\\ShipUpgradeDock\\ShipUpgradeDock.blend"
+  },
+  {
+    "id": 65,
+    "name": "Drone Maintenance Bay",
+    "key": "DroneMaintenanceBay",
+    "existing_asset": null,
+    "status": "authored",
+    "revision": 3,
+    "motion": "slide",
+    "pivot_m": [
+      0,
+      -1.1,
+      3.75
+    ],
+    "triangles": 6616,
+    "source": "C:\\UE5\\SurviveThePlanet 5.8\\ContentSource\\BlueprintCatalog\\DroneMaintenanceBay\\DroneMaintenanceBay.blend"
+  },
+  {
+    "id": 66,
+    "name": "Calibration Center",
+    "key": "CalibrationCenter",
+    "existing_asset": null,
+    "status": "authored",
+    "revision": 3,
+    "motion": "beacon",
+    "pivot_m": [
+      0.7,
+      0.55,
+      2.5
+    ],
+    "triangles": 7568,
+    "source": "C:\\UE5\\SurviveThePlanet 5.8\\ContentSource\\BlueprintCatalog\\CalibrationCenter\\CalibrationCenter.blend"
+  },
+  {
+    "id": 67,
+    "name": "Research Laboratory",
+    "key": "ResearchLaboratory",
+    "existing_asset": null,
+    "status": "authored",
+    "revision": 3,
+    "motion": "beacon",
+    "pivot_m": [
+      0.7,
+      0.55,
+      2.5
+    ],
+    "triangles": 7664,
+    "source": "C:\\UE5\\SurviveThePlanet 5.8\\ContentSource\\BlueprintCatalog\\ResearchLaboratory\\ResearchLaboratory.blend"
+  },
+  {
+    "id": 68,
+    "name": "Custom Fabrication Center",
+    "key": "CustomFabricationCenter",
+    "existing_asset": null,
+    "status": "authored",
+    "revision": 3,
+    "motion": "slide",
+    "pivot_m": [
+      0,
+      -1.1,
+      3.75
+    ],
+    "triangles": 6256,
+    "source": "C:\\UE5\\SurviveThePlanet 5.8\\ContentSource\\BlueprintCatalog\\CustomFabricationCenter\\CustomFabricationCenter.blend"
+  },
+  {
+    "id": 69,
+    "name": "Decontamination Bay",
+    "key": "DecontaminationBay",
+    "existing_asset": null,
+    "status": "authored",
+    "revision": 3,
+    "motion": "fan",
+    "pivot_m": [
+      0,
+      0.6,
+      2.0
+    ],
+    "triangles": 10160,
+    "source": "C:\\UE5\\SurviveThePlanet 5.8\\ContentSource\\BlueprintCatalog\\DecontaminationBay\\DecontaminationBay.blend"
+  }
+]

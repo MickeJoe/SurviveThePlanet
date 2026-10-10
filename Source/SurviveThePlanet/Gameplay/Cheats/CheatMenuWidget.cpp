@@ -13,15 +13,24 @@
 #include "Gameplay/Buildings/BuildingManagerSubsystem.h"
 #include "Gameplay/Base/BuildingDataAsset.h"
 #include "GameFramework/PlayerController.h"
+#include "SurviveThePlanetPlayerController.h"
+#include "Blueprint/WidgetBlueprintLibrary.h"
+#include "Gameplay/UI/ResourceDisplayWidget.h"
+#include "Gameplay/Planet/MissionConfidenceSubsystem.h"
 
 void UCheatMenuWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
+	if (OpenTradeButton) OpenTradeButton->OnClicked.AddUniqueDynamic(this, &UCheatMenuWidget::OpenTrade);
 #if !UE_BUILD_SHIPPING
 	if (!ResourceComboBox || !AmountSpinBox || !GiveButton)
 	{
 		BuildFallbackLayout();
 	}
+	if (Speed10Button) Speed10Button->OnClicked.AddUniqueDynamic(this, &UCheatMenuWidget::EnableSpeed10);
+	if (Speed30Button) Speed30Button->OnClicked.AddUniqueDynamic(this, &UCheatMenuWidget::EnableSpeed30);
+	if (ConfidenceDecayButton) ConfidenceDecayButton->OnClicked.AddUniqueDynamic(this, &UCheatMenuWidget::ToggleConfidenceDecay);
+	RefreshConfidenceDecayLabel();
 	PopulateResources();
 	AmountSpinBox->SetMinValue(1.0f);
 	AmountSpinBox->SetMaxValue(1000000.0f);
@@ -165,6 +174,61 @@ void UCheatMenuWidget::CompleteUplinkObjective()
 		FeedbackText->SetText(bSuccess
 			? NSLOCTEXT("STPCheats", "ObjectiveComplete", "ESTABLISH UPLINK completed; rewards granted.")
 			: NSLOCTEXT("STPCheats", "ObjectiveCompleteFailed", "ESTABLISH UPLINK is not active."));
+	}
+#endif
+}
+
+void UCheatMenuWidget::OpenTrade()
+{
+    if (ASurviveThePlanetPlayerController* Controller = Cast<ASurviveThePlanetPlayerController>(GetOwningPlayer()))
+    {
+        Controller->OpenTradeScreen();
+    }
+}
+
+void UCheatMenuWidget::EnableSpeed10() { EnableCheatSpeed(10.0f); }
+void UCheatMenuWidget::EnableSpeed30() { EnableCheatSpeed(30.0f); }
+
+void UCheatMenuWidget::EnableCheatSpeed(float Speed)
+{
+#if !UE_BUILD_SHIPPING
+	TArray<UUserWidget*> Widgets;
+	UWidgetBlueprintLibrary::GetAllWidgetsOfClass(this, Widgets, UResourceDisplayWidget::StaticClass(), false);
+	for (UUserWidget* Widget : Widgets)
+	{
+		if (Widget->GetOwningPlayer() == GetOwningPlayer())
+		{
+			UResourceDisplayWidget* HUD = CastChecked<UResourceDisplayWidget>(Widget);
+			if (Speed == 30.0f) HUD->SetCheatSpeed30();
+			else HUD->SetCheatSpeed10();
+			if (FeedbackText) FeedbackText->SetText(FText::FromString(FString::Printf(TEXT("Simulation speed: x%.0f"), Speed)));
+			return;
+		}
+	}
+#endif
+}
+
+void UCheatMenuWidget::RefreshConfidenceDecayLabel()
+{
+	const UMissionConfidenceSubsystem* Confidence = GetWorld()->GetSubsystem<UMissionConfidenceSubsystem>();
+	if (ConfidenceDecayButtonLabel && Confidence)
+	{
+		ConfidenceDecayButtonLabel->SetText(Confidence->IsDecayPaused()
+			? NSLOCTEXT("STPCheats", "ResumeConfidenceDecay", "RESUME CONFIDENCE DECAY")
+			: NSLOCTEXT("STPCheats", "PauseConfidenceDecay", "PAUSE CONFIDENCE DECAY"));
+	}
+}
+
+void UCheatMenuWidget::ToggleConfidenceDecay()
+{
+#if !UE_BUILD_SHIPPING
+	if (UMissionConfidenceSubsystem* Confidence = GetWorld()->GetSubsystem<UMissionConfidenceSubsystem>())
+	{
+		Confidence->SetDecayPaused(!Confidence->IsDecayPaused());
+		RefreshConfidenceDecayLabel();
+		if (FeedbackText) FeedbackText->SetText(Confidence->IsDecayPaused()
+			? NSLOCTEXT("STPCheats", "ConfidencePaused", "Mission Confidence decay paused.")
+			: NSLOCTEXT("STPCheats", "ConfidenceResumed", "Mission Confidence decay resumed."));
 	}
 #endif
 }

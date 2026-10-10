@@ -1,5 +1,8 @@
 #include "ResourceManager.h"
 #include "Gameplay/Resources/ResourceCatalog.h"
+#include "Gameplay/Planet/PlanetDefinition.h"
+#include "Gameplay/Planet/PlanetWeatherManager.h"
+#include "EngineUtils.h"
 
 AResourceManager::AResourceManager()
 {
@@ -15,6 +18,17 @@ void AResourceManager::BeginPlay()
 {
 	Super::BeginPlay();
 
+	const UPlanetDefinition* Planet = GetDefault<UPlanetDefinition>();
+	for (TActorIterator<APlanetWeatherManager> It(GetWorld()); It; ++It)
+	{
+		if (const UPlanetDefinition* Definition = It->GetPlanetDefinition())
+		{
+			Planet = Definition;
+			break;
+		}
+	}
+	SetCredits(Planet->StartingCredits);
+
 	ResourceAmounts = InitialResourceAmounts;
 	// Existing Blueprint defaults can contain only the original resource entries.
 	for (const FResourceDefinition& Definition : UResourceCatalog::GetDefinitions())
@@ -26,6 +40,35 @@ void AResourceManager::BeginPlay()
 	{
 		Resource.Value = FMath::Max(0, Resource.Value);
 	}
+}
+
+void AResourceManager::SetCredits(int32 NewCredits)
+{
+	const int32 ClampedCredits = FMath::Max(0, NewCredits);
+	if (Credits == ClampedCredits)
+	{
+		return;
+	}
+
+	Credits = ClampedCredits;
+	OnCreditsChanged.Broadcast(Credits);
+}
+
+void AResourceManager::AddCredits(int32 Amount)
+{
+	const int64 NewCredits = static_cast<int64>(Credits) + Amount;
+	SetCredits(static_cast<int32>(FMath::Clamp<int64>(NewCredits, 0, MAX_int32)));
+}
+
+bool AResourceManager::TrySpendCredits(int32 Amount)
+{
+	if (Amount < 0 || Amount > Credits)
+	{
+		return false;
+	}
+
+	SetCredits(Credits - Amount);
+	return true;
 }
 
 int32 AResourceManager::GetResourceAmount(EResourceType ResourceType) const

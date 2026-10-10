@@ -74,6 +74,8 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
 	EResourceType, ResourceType,
 	int32, NewAmount);
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCreditsChanged, int32, NewCredits);
+
 UCLASS()
 class SURVIVETHEPLANET_API AResourceManager : public AActor
 {
@@ -116,6 +118,23 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Resources|Energy")
 	void SetEnergyStorageCapacity(int32 NewCapacity);
 
+	UFUNCTION(BlueprintPure, Category = "Economy")
+	int32 GetCredits() const { return Credits; }
+
+	UFUNCTION(BlueprintCallable, Category = "Economy")
+	void SetCredits(int32 NewCredits);
+
+	/** Adds income or applies a penalty, clamping to the supported balance range. */
+	UFUNCTION(BlueprintCallable, Category = "Economy")
+	void AddCredits(int32 Amount);
+
+	/** Pays only if the amount is non-negative and the balance covers it. */
+	UFUNCTION(BlueprintCallable, Category = "Economy")
+	bool TrySpendCredits(int32 Amount);
+
+	UPROPERTY(BlueprintAssignable, Category = "Economy")
+	FOnCreditsChanged OnCreditsChanged;
+
 	UPROPERTY(BlueprintAssignable, Category = "Resources")
 	FResourceAmountChangedSignature OnResourceAmountChanged;
 
@@ -132,4 +151,8 @@ protected:
 
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Resources|Energy")
 	int32 EnergyStorageCapacity = 1000;
+
+private:
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Economy", meta = (AllowPrivateAccess = "true"))
+	int32 Credits = 0;
 };

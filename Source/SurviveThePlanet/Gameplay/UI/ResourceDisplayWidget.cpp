@@ -8,6 +8,7 @@
 #include "Blueprint/WidgetTree.h"
 #include "Kismet/GameplayStatics.h"
 #include "EngineUtils.h"
+#include "GameFramework/WorldSettings.h"
 #include "Engine/Texture2D.h"
 #include "Gameplay/Buildings/MiningMachine.h"
 #include "Gameplay/Buildings/WaterCollector.h"
@@ -18,6 +19,7 @@
 #include "Gameplay/Cables/CableNetworkManager.h"
 #include "Gameplay/Resources/BaseResourceSource.h"
 #include "Gameplay/Planet/PlanetWeatherManager.h"
+#include "Gameplay/Planet/PlanetDefinition.h"
 
 namespace
 {
@@ -85,7 +87,7 @@ void UResourceDisplayWidget::NativeTick(const FGeometry& MyGeometry, float InDel
 		RefreshResourceRates();
 	}
 
-	if (!bTimePaused)
+	if (!IsSimulationPaused())
 	{
 		// UMG ticks in UI time, independently of the world's global time
 		// dilation, so apply the selected simulation rate explicitly.
@@ -109,6 +111,8 @@ void UResourceDisplayWidget::NativeDestruct()
 	{
 		ResourceManager->OnResourceAmountChanged.RemoveDynamic(
 			this, &UResourceDisplayWidget::HandleResourceAmountChanged);
+		ResourceManager->OnCreditsChanged.RemoveDynamic(
+			this, &UResourceDisplayWidget::HandleCreditsChanged);
 	}
 
 	if (PlanetWeatherManager)
@@ -198,7 +202,7 @@ void UResourceDisplayWidget::LoadGameTime()
 	if (UGameTimeSaveGame* Save = Cast<UGameTimeSaveGame>(UGameplayStatics::LoadGameFromSlot(GameTimeSaveSlot, 0)))
 	{
 		TotalGameMinutes = FMath::Max(0.0, Save->TotalGameMinutes);
-		TimeScale = FMath::Clamp(Save->TimeScale, 1.0f, 3.0f);
+		TimeScale = FMath::Clamp(Save->TimeScale, 1.0f, 30.0f);
 		bTimePaused = Save->bTimePaused;
 	}
 }
@@ -220,8 +224,11 @@ void UResourceDisplayWidget::SaveGameTime() const
 void UResourceDisplayWidget::RefreshGameTimeDisplay()
 {
 	const int64 WholeMinutes = FMath::Max<int64>(0, FMath::FloorToInt64(TotalGameMinutes));
-	const int32 DayNumber = static_cast<int32>(WholeMinutes / 1440) + 1;
-	const int32 MinuteOfDay = static_cast<int32>(WholeMinutes % 1440);
+	const UPlanetDefinition* Planet = PlanetWeatherManager ? PlanetWeatherManager->GetPlanetDefinition() : nullptr;
+	const int64 DayMinutes = Planet ? FMath::Max<int64>(60, FMath::RoundToInt64(Planet->DayLengthHours * 60.0)) : 1440;
+	const int32 DayNumber = static_cast<int32>(WholeMinutes / DayMinutes) + 1;
+	const int32 MinuteOfDay = static_cast<int32>(WholeMinutes % DayMinutes);
+	if (PlanetWeatherManager) PlanetWeatherManager->UpdatePresentation(TotalGameMinutes);
 	const int32 Hour = MinuteOfDay / 60;
 	const int32 Minute = MinuteOfDay % 60;
 
@@ -236,13 +243,17 @@ void UResourceDisplayWidget::RefreshGameTimeDisplay()
 			: Hour >= 8 && Hour < 18 ? TEXT("Day")
 			: Hour >= 18 && Hour < 21 ? TEXT("Dusk")
 			: TEXT("Night");
-		PhaseText->SetText(FText::FromString(Phase));
+		PhaseText->SetText(PlanetWeatherManager ? PlanetWeatherManager->GetDayPhase(TotalGameMinutes) : FText::FromString(Phase));
 	}
 }
 
 void UResourceDisplayWidget::SetGameTimeScale(float NewTimeScale)
 {
-	TimeScale = FMath::Clamp(NewTimeScale, 1.0f, 3.0f);
+#if !UE_BUILD_SHIPPING
+	// Unreal's default global dilation ceiling is 20; permit the x30 cheat.
+	GetWorld()->GetWorldSettings()->MaxGlobalTimeDilation = 30.0f;
+#endif
+	TimeScale = FMath::Clamp(NewTimeScale, 1.0f, 30.0f);
 	bTimePaused = false;
 	ApplySimulationRate();
 	RefreshTimeControlStyles();
@@ -262,11 +273,11 @@ void UResourceDisplayWidget::RefreshTimeControlStyles()
 		}
 	};
 
-	SetSelected(PauseTimeButton, bTimePaused);
-	SetSelected(Speed1Button, !bTimePaused && FMath::IsNearlyEqual(TimeScale, 1.0f));
-	SetSelected(Speed15Button, !bTimePaused && FMath::IsNearlyEqual(TimeScale, 1.5f));
-	SetSelected(Speed2Button, !bTimePaused && FMath::IsNearlyEqual(TimeScale, 2.0f));
-	SetSelected(Speed3Button, !bTimePaused && FMath::IsNearlyEqual(TimeScale, 3.0f));
+	SetSelected(PauseTimeButton, IsSimulationPaused());
+	SetSelected(Speed1Button, !IsSimulationPaused() && FMath::IsNearlyEqual(TimeScale, 1.0f));
+	SetSelected(Speed15Button, !IsSimulationPaused() && FMath::IsNearlyEqual(TimeScale, 1.5f));
+	SetSelected(Speed2Button, !IsSimulationPaused() && FMath::IsNearlyEqual(TimeScale, 2.0f));
+	SetSelected(Speed3Button, !IsSimulationPaused() && FMath::IsNearlyEqual(TimeScale, 3.0f));
 }
 
 void UResourceDisplayWidget::ApplySimulationRate() const
@@ -278,7 +289,7 @@ void UResourceDisplayWidget::ApplySimulationRate() const
 	constexpr float PausedSimulationDilation = 0.0001f;
 	UGameplayStatics::SetGlobalTimeDilation(
 		this,
-		bTimePaused ? PausedSimulationDilation : TimeScale);
+		IsSimulationPaused() ? PausedSimulationDilation : TimeScale);
 }
 
 void UResourceDisplayWidget::HandlePauseTimeClicked()
@@ -287,6 +298,27 @@ void UResourceDisplayWidget::HandlePauseTimeClicked()
 	ApplySimulationRate();
 	RefreshTimeControlStyles();
 	SaveGameTime();
+}
+
+void UResourceDisplayWidget::SetCheatSpeed10()
+{
+#if !UE_BUILD_SHIPPING
+	SetGameTimeScale(10.0f);
+#endif
+}
+
+void UResourceDisplayWidget::SetCheatSpeed30()
+{
+#if !UE_BUILD_SHIPPING
+	SetGameTimeScale(30.0f);
+#endif
+}
+
+void UResourceDisplayWidget::SetTradingPaused(bool bPaused)
+{
+	bTradingPaused = bPaused;
+	ApplySimulationRate();
+	RefreshTimeControlStyles();
 }
 
 void UResourceDisplayWidget::HandleSpeed1Clicked() { SetGameTimeScale(1.0f); }
@@ -299,6 +331,8 @@ void UResourceDisplayWidget::ResolveResourceManager()
 	{
 		ResourceManager->OnResourceAmountChanged.RemoveDynamic(
 			this, &UResourceDisplayWidget::HandleResourceAmountChanged);
+		ResourceManager->OnCreditsChanged.RemoveDynamic(
+			this, &UResourceDisplayWidget::HandleCreditsChanged);
 	}
 
 	ResourceManager = nullptr;
@@ -315,11 +349,22 @@ void UResourceDisplayWidget::ResolveResourceManager()
 	{
 		ResourceManager->OnResourceAmountChanged.AddUniqueDynamic(
 			this, &UResourceDisplayWidget::HandleResourceAmountChanged);
+		ResourceManager->OnCreditsChanged.AddUniqueDynamic(
+			this, &UResourceDisplayWidget::HandleCreditsChanged);
+	}
+}
+
+void UResourceDisplayWidget::HandleCreditsChanged(int32 NewCredits)
+{
+	if (CreditsAmountText)
+	{
+		CreditsAmountText->SetText(FText::AsNumber(NewCredits));
 	}
 }
 
 void UResourceDisplayWidget::RefreshAllResources()
 {
+	HandleCreditsChanged(ResourceManager ? ResourceManager->GetCredits() : 0);
 	for (const FResourceDefinition& Definition : UResourceCatalog::GetDefinitions())
 	{
 		HandleResourceAmountChanged(Definition.ResourceType,
