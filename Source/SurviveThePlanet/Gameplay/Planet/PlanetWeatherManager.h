@@ -40,8 +40,9 @@ public:
 
 	virtual void Tick(float DeltaSeconds) override;
 
+	/** Available sunlight combines weather transmission with the current solar elevation. */
 	UFUNCTION(BlueprintPure, Category = "Planet Weather")
-	FPlanetWeatherState GetCurrentWeather() const { return CurrentWeather; }
+	FPlanetWeatherState GetCurrentWeather() const;
 
 	UFUNCTION(BlueprintPure, Category = "Planet Weather")
 	UPlanetDefinition* GetPlanetDefinition() const { return PlanetDefinition; }
@@ -78,7 +79,7 @@ protected:
 	bool bSimulateWeather = true;
 
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Planet Weather")
-	FPlanetWeatherState CurrentWeather;
+	FPlanetWeatherState CurrentWeather; // Atmospheric state, independent of the day/night cycle.
 
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Planet Weather")
 	FPlanetWeatherState TargetWeather;
@@ -90,6 +91,7 @@ private:
 	UPROPERTY(Transient) TObjectPtr<class UExponentialHeightFogComponent> Fog;
 	UPROPERTY(Transient) TObjectPtr<class UWindDirectionalSourceComponent> WindSource;
 	TArray<FVector> RainPositions;
+	double LastPresentationMinutes = 480.0;
 	float ClearSkySunIntensity = 10.0f;
 	float ClearSkyAmbientIntensity = 1.0f;
 	float SolarElevation(double TotalGameMinutes) const;

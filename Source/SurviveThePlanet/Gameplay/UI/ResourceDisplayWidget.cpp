@@ -225,7 +225,7 @@ void UResourceDisplayWidget::RefreshGameTimeDisplay()
 {
 	const int64 WholeMinutes = FMath::Max<int64>(0, FMath::FloorToInt64(TotalGameMinutes));
 	const UPlanetDefinition* Planet = PlanetWeatherManager ? PlanetWeatherManager->GetPlanetDefinition() : nullptr;
-	const int64 DayMinutes = Planet ? FMath::Max<int64>(60, FMath::RoundToInt64(Planet->DayLengthHours * 60.0)) : 1440;
+	const int64 DayMinutes = Planet ? static_cast<int64>(Planet->GetDayLengthMinutes()) : 1440;
 	const int32 DayNumber = static_cast<int32>(WholeMinutes / DayMinutes) + 1;
 	const int32 MinuteOfDay = static_cast<int32>(WholeMinutes % DayMinutes);
 	if (PlanetWeatherManager) PlanetWeatherManager->UpdatePresentation(TotalGameMinutes);

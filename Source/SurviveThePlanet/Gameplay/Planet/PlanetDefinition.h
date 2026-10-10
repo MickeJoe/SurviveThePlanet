@@ -84,9 +84,19 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Planet")
 	TSoftObjectPtr<UWorld> LandingMap;
 
-	/** Local rotation period expressed in Earth hours. */
+	/** Rotation period in game hours; shared by the clock, lighting and selection screen. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Planet|Climate", meta = (ClampMin = "1.0"))
 	float DayLengthHours = 24.0f;
+
+	UFUNCTION(BlueprintPure, Category = "Planet|Climate")
+	double GetDayLengthMinutes() const;
+
+	UFUNCTION(BlueprintPure, Category = "Planet|Climate")
+	float GetSolarElevation(double TotalGameMinutes) const;
+
+	/** Hours with the sun above a given elevation; includes polar day/night. */
+	UFUNCTION(BlueprintPure, Category = "Planet|Climate")
+	float GetLightHours(float MinimumSolarElevation = 0.0f) const;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Planet|Climate", meta = (ClampMin = "-89.0", ClampMax = "89.0"))
 	float LandingLatitudeDegrees = 35.0f;

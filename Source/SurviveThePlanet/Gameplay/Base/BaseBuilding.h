@@ -132,6 +132,9 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Base Building|Placement")
 	bool IsPlacementPreview() const { return bPlacementPreview; }
 
+/** Updated by the planet clock; safety lighting also works without grid power. */
+	void UpdateNightLighting(float NightAmount, bool bSectorHasCompletedBase);
+
 protected:
 	virtual void OnConstruction(const FTransform& Transform) override;
 	virtual void BeginPlay() override;
@@ -245,6 +248,8 @@ protected:
 	void GroundBuildingMesh(bool bForce = false);
 
 private:
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<class UPointLightComponent>> NightLights;
 	FTransform LastGroundedTransform;
 	bool bHasGroundedTransform = false;
 	void ConfigureMesh();

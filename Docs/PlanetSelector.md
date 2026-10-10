@@ -12,7 +12,7 @@ Play the default map `L_PlanetSelection`. Click a planet (or its name) to inspec
 | Aridus | Arid | 30 h | 38 C | 8% |
 | Borealis | Cool maritime | 36 h | 6 C | 80% |
 
-Weather remains deterministic by seed, transitions smoothly and permits genuinely dry periods. Rain suppresses direct sunshine. Values remain in mm/h, m/s and percent for existing gameplay consumers. Solar elevation follows latitude, solar declination and rotation period. The existing HUD clock drives light/phase changes and respects pause, trading pause and simulation speed. Local time can exceed 24 hours on longer-day planets.
+Weather remains deterministic by seed, transitions smoothly and permits genuinely dry periods. Rain suppresses direct sunshine. Values remain in mm/h, m/s and percent for existing gameplay consumers. Solar elevation follows latitude, solar declination and rotation period. The existing HUD clock drives light/phase changes and respects pause, trading pause and simulation speed. The HUD rolls over at each planet's rotation period (24/30/36 hours). The selection screen shows daylight (sun above horizon), combined dawn/dusk (sun between 0 and -6 degrees), and dark night (below -6 degrees) at the landing latitude and season. These periods total one rotation. Building lights respond to natural brightness from solar elevation and weather attenuation, including overcast daylight.
 
 Presentation reuses the level's directional light, skylight and fog, adds rain streaks and windborne motes pooled around the camera pawn, and supplies a directional wind source for compatible vegetation. Rain density tracks rainfall and streak angle follows wind. Sun intensity/color, ambient illumination and fog vary with weather and solar elevation.
 

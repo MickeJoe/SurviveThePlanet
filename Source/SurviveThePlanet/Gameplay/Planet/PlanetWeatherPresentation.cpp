@@ -1,5 +1,7 @@
 #include "PlanetWeatherManager.h"
 #include "PlanetDefinition.h"
+#include "Gameplay/Base/BaseBuilding.h"
+#include "Gameplay/World/HexSectorGrid.h"
 #include "Components/InstancedStaticMeshComponent.h"
 #include "Components/DirectionalLightComponent.h"
 #include "Components/SkyLightComponent.h"
@@ -22,18 +24,12 @@ float APlanetWeatherManager::WetWeatherProbability() const
 }
 float APlanetWeatherManager::SolarElevation(double Minutes) const
 {
-	if (!PlanetDefinition) return 0;
-	const double DayMinutes = FMath::Max(PlanetDefinition->DayLengthHours, 1.0f) * 60.0;
-	const double HourAngle = (FMath::Fmod(Minutes, DayMinutes) / DayMinutes - 0.5) * 2.0 * PI;
-	const double Latitude = FMath::DegreesToRadians(PlanetDefinition->LandingLatitudeDegrees);
-	const double Declination = FMath::DegreesToRadians(PlanetDefinition->SolarDeclinationDegrees);
-	return FMath::RadiansToDegrees(FMath::Asin(FMath::Clamp(FMath::Sin(Latitude)*FMath::Sin(Declination)
-		+ FMath::Cos(Latitude)*FMath::Cos(Declination)*FMath::Cos(HourAngle), -1.0, 1.0)));
+	return PlanetDefinition ? PlanetDefinition->GetSolarElevation(Minutes) : 0.0f;
 }
 FText APlanetWeatherManager::GetDayPhase(double Minutes) const
 {
 	const float Elevation = SolarElevation(Minutes);
-	const double DayMinutes = PlanetDefinition ? FMath::Max(PlanetDefinition->DayLengthHours, 1.0f)*60.0 : 1440.0;
+	const double DayMinutes = PlanetDefinition ? PlanetDefinition->GetDayLengthMinutes() : 1440.0;
 	const bool Morning = FMath::Fmod(Minutes, DayMinutes) < DayMinutes*0.5;
 	return FText::FromString(Elevation < -6 ? TEXT("Night") : Elevation < 10 ? (Morning ? TEXT("Dawn") : TEXT("Dusk")) : TEXT("Day"));
 }
@@ -112,11 +108,45 @@ void APlanetWeatherManager::UpdateRain(float DeltaSeconds)
 }
 void APlanetWeatherManager::UpdatePresentation(double Minutes)
 {
+	const float PreviousSunlight = GetCurrentWeather().SunPercent;
+	LastPresentationMinutes = Minutes;
+	if (!FMath::IsNearlyEqual(PreviousSunlight, GetCurrentWeather().SunPercent))
+	{
+		BroadcastWeather();
+	}
 	if (!PlanetDefinition || !SunLight) return;
 	const float Elevation=SolarElevation(Minutes);
-	const float Daylight=FMath::Clamp(Elevation/20.0f,0.0f,1.0f);
-	const float Sunshine=FMath::Clamp(CurrentWeather.SunPercent/100.0f,0.0f,1.0f);
-	const float Yaw=FMath::Fmod(Minutes/(PlanetDefinition->DayLengthHours*60.0)*360.0,360.0);
+	AHexSectorGrid* Grid = nullptr;
+	for (TActorIterator<AHexSectorGrid> It(GetWorld()); It; ++It) { Grid = *It; break; }
+	TSet<int32> LitSectors;
+	TArray<ABaseBuilding*> Buildings;
+	for (TActorIterator<ABaseBuilding> It(GetWorld()); It; ++It)
+	{
+		ABaseBuilding* Building = *It;
+		Buildings.Add(Building);
+		const ESTPBuildingType Type = Building->GetBuildingType();
+		if (Grid && !Building->IsPlacementPreview() && Building->GetConstructionProgress() >= 1.0f
+			&& (Type == ESTPBuildingType::BaseModule || Type == ESTPBuildingType::RemoteBase))
+		{
+			const int32 SectorId = Grid->GetSectorAtWorldLocation(Building->GetActorLocation());
+			if (SectorId != INDEX_NONE) LitSectors.Add(SectorId);
+		}
+	}
+	const float Daylight = FMath::Clamp(Elevation / 20.0f, 0.0f, 1.0f);
+	const float Sunshine = FMath::Clamp(CurrentWeather.SunPercent / 100.0f, 0.0f, 1.0f);
+	// Use the same sunlight and ambient attenuation as the scene. Overcast weather
+	// can require work lights even at noon; no clock-hour threshold is involved.
+	const float DirectBrightness = Daylight * FMath::Lerp(0.08f, 1.0f, Sunshine);
+	const float AmbientBrightness = Daylight * FMath::Lerp(0.35f, 1.0f, Sunshine);
+	const float NaturalBrightness = DirectBrightness * 0.7f + AmbientBrightness * 0.3f;
+	const float NightAmount = 1.0f - FMath::SmoothStep(0.08f, 0.7f, NaturalBrightness);
+	for (ABaseBuilding* Building : Buildings)
+	{
+		const bool bLitSector = Grid && LitSectors.Contains(Grid->GetSectorAtWorldLocation(Building->GetActorLocation()));
+		Building->UpdateNightLighting(NightAmount, bLitSector);
+	}
+
+	const float Yaw=FMath::Fmod(Minutes/PlanetDefinition->GetDayLengthMinutes()*360.0,360.0);
 	SunLight->SetWorldRotation(FRotator(-Elevation,Yaw,0));
 	SunLight->SetIntensity(ClearSkySunIntensity*Daylight*FMath::Lerp(0.08f,1.0f,Sunshine));
 	SunLight->SetLightColor(FLinearColor::LerpUsingHSV(FLinearColor(1,0.35f,0.12f), FLinearColor(1,0.97f,0.88f),Daylight));

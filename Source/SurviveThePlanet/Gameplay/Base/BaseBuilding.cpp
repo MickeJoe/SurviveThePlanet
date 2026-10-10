@@ -3,6 +3,7 @@
 #include "Gameplay/Energy/EnergyCoverageSubsystem.h"
 
 #include "Components/WidgetComponent.h"
+#include "Components/PointLightComponent.h"
 #include "Components/SceneComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "EngineUtils.h"
@@ -597,3 +598,41 @@ void ABaseBuilding::GroundBuildingMesh(bool bForce)
 	}
 }
 
+
+void ABaseBuilding::UpdateNightLighting(float NightAmount, bool bSectorHasCompletedBase)
+{
+	const bool bIsBase = GetBuildingType() == ESTPBuildingType::BaseModule
+		|| GetBuildingType() == ESTPBuildingType::RemoteBase;
+	const bool bEnabled = !IsActorBeingDestroyed() && !IsPlacementPreview()
+		&& GetConstructionProgress() >= 1.0f && (bIsBase || bSectorHasCompletedBase);
+	const float Brightness = bEnabled ? FMath::Clamp(NightAmount, 0.0f, 1.0f) : 0.0f;
+	if (Brightness > 0.0f && NightLights.IsEmpty())
+	{
+		for (int32 Index = 0; Index < 2; ++Index)
+		{
+			UPointLightComponent* Light = NewObject<UPointLightComponent>(this);
+			Light->SetupAttachment(SceneRoot);
+			Light->SetMobility(EComponentMobility::Movable);
+			// Broad work lights use a finite falloff to match the map's fixed exposure.
+			Light->SetUseInverseSquaredFalloff(false);
+			Light->LightFalloffExponent = 2.0f;
+			Light->SetCastShadows(false);
+			Light->SetLightColor(bIsBase ? FLinearColor(1.0f, 0.78f, 0.48f)
+				: FLinearColor(0.65f, 0.82f, 1.0f));
+			Light->SetAttenuationRadius(bIsBase ? 2400.0f : 950.0f);
+			Light->RegisterComponent();
+			NightLights.Add(Light);
+		}
+	}
+	const FBox Bounds = BuildingMesh ? BuildingMesh->Bounds.GetBox() : FBox(GetActorLocation(), GetActorLocation());
+	for (int32 Index = 0; Index < NightLights.Num(); ++Index)
+	{
+		UPointLightComponent* Light = NightLights[Index];
+		const FVector Position(Bounds.GetCenter().X,
+			Index == 0 ? Bounds.Min.Y - 60.0f : Bounds.Max.Y + 60.0f,
+			FMath::Max(Bounds.Max.Z + 80.0f, GetActorLocation().Z + 250.0f));
+		Light->SetWorldLocation(Position);
+		Light->SetIntensity((bIsBase ? 12.0f : 5.0f) * Brightness);
+		Light->SetVisibility(Brightness > 0.0f);
+	}
+}

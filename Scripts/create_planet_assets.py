@@ -60,7 +60,7 @@ def image(bp,name,parent,x,y,w,h,texture):
 profiles=[
     ('Nexaris','Temperate world. Mild winds, alternating clear skies and rain. Suitable for the first colony.',[1,10],[2,10],[25,100],.55,18,24,35,10,71237,unreal.LinearColor(.08,.5,.65,1)),
     ('Aridus','Arid world. Strong sunlight, gusty winds and rare rain. Water collection is unreliable.',[4,22],[.3,2],[75,100],.08,38,30,20,5,98117,unreal.LinearColor(.7,.28,.08,1)),
-    ('Borealis','Cool maritime world. Frequent rain, strong winds and limited direct sunlight. A long local day.',[7,25],[3,16],[10,65],.8,6,36,55,-12,42173,unreal.LinearColor(.3,.5,.75,1)),
+    ('Borealis','Cool maritime world. Frequent rain, strong winds and limited direct sunlight.',[7,25],[3,16],[10,65],.8,6,36,55,-12,42173,unreal.LinearColor(.3,.5,.75,1)),
 ]
 original=library.load_asset('/Game/Data/Planet/DA_PlanetDefinition')
 assert original
@@ -160,13 +160,13 @@ for name,x,y in [('Nexaris',600,150),('Aridus',165,430),('Borealis',720,590)]:
     planet_button=button(bp,name+'Button',canvas,name.upper(),x-5,y,195,240,CYAN)
     props(planet_button.get_content().slot,{'verticalAlignment':'VAlign_Bottom','padding':{'left':0,'top':0,'right':0,'bottom':10}})
     image(bp,name+'Orb',canvas,x,y,185,185,textures[name])
-details=panel(bp,'DetailsPanel',canvas,1100,185,440,575,{'r':.025,'g':.055,'b':.075,'a':.98})
+details=panel(bp,'DetailsPanel',canvas,1100,110,440,740,{'r':.025,'g':.055,'b':.075,'a':.98})
 dc=add(bp,unreal.CanvasPanel,'DetailsCanvas',details)
 text(bp,'PlanetName',dc,'NEXARIS',25,22,390,50,32,CYAN,True)
-info=text(bp,'PlanetDetails',dc,'',25,90,390,395,17,WHITE,True)
+info=text(bp,'PlanetDetails',dc,'',25,90,390,550,16,WHITE,True)
 props(info,{'autoWrapText':True})
-button(bp,'LandButton',dc,'LAND & START COLONY',25,505,390,48,CYAN)
-text(bp,'PrototypeNotice',canvas,'FIRST EXPEDITION / THREE PLAYABLE WORLDS',1100,795,440,60,14)
+button(bp,'LandButton',dc,'LAND & START COLONY',25,670,390,48,CYAN)
+text(bp,'PrototypeNotice',canvas,'FIRST EXPEDITION / THREE PLAYABLE WORLDS',1100,860,440,30,14)
 unreal.BlueprintEditorLibrary.compile_blueprint(bp)
 assert library.save_loaded_asset(bp)
 

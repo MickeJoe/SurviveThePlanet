@@ -126,7 +126,7 @@ void APlanetWeatherManager::RestartSimulation()
 
 void APlanetWeatherManager::BroadcastWeather()
 {
-	OnWeatherChanged.Broadcast(CurrentWeather);
+	OnWeatherChanged.Broadcast(GetCurrentWeather());
 }
 
 void APlanetWeatherManager::ApplyWeatherCoherence(FPlanetWeatherState& Weather) const
@@ -141,4 +141,15 @@ void APlanetWeatherManager::ApplyWeatherCoherence(FPlanetWeatherState& Weather) 
 		0.0f,
 		100.0f);
 	Weather.SunPercent = FMath::Min(Weather.SunPercent, MaximumSunForRain);
+}
+
+FPlanetWeatherState APlanetWeatherManager::GetCurrentWeather() const
+{
+	FPlanetWeatherState AvailableWeather = CurrentWeather;
+	if (PlanetDefinition)
+	{
+		const float Daylight = FMath::Clamp(SolarElevation(LastPresentationMinutes) / 20.0f, 0.0f, 1.0f);
+		AvailableWeather.SunPercent *= Daylight;
+	}
+	return AvailableWeather;
 }
