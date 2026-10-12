@@ -376,6 +376,13 @@ void UBuildingInfoWidget::OpenDroneSelection(int32 SlotIndex)
 		ViewportPosition.X, ViewportPosition.Y, *GetNameSafe(BuildingPopupPanel));
 }
 
+bool UBuildingInfoWidget::CloseDroneSelectionIfOpen()
+{
+	if (!DroneSelectionWidget || !DroneSelectionWidget->IsInViewport()) return false;
+	CloseDroneSelection();
+	return true;
+}
+
 void UBuildingInfoWidget::CloseDroneSelection()
 {
 	if (DroneSelectionWidget)

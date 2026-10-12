@@ -59,6 +59,7 @@ class SURVIVETHEPLANET_API UBuildingInfoWidget : public UUserWidget
 	GENERATED_BODY()
 
 public:
+	bool CloseDroneSelectionIfOpen();
 	UFUNCTION(BlueprintCallable, Category = "Building Info")
 	void SetBuilding(ABaseBuilding* NewBuilding);
 

@@ -39,6 +39,7 @@ class SURVIVETHEPLANET_API UMissionChoiceWidget : public UUserWidget
 
 public:
 	void HandleCandidateClicked(int32 SlotIndex, FName ObjectiveId);
+	bool ClosePopupIfOpen();
 
 protected:
 	virtual void NativeConstruct() override;

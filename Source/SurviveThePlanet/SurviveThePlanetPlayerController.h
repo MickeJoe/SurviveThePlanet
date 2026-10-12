@@ -9,6 +9,8 @@
 #include "Gameplay/Resources/ResourceManager.h"
 #include "SurviveThePlanetPlayerController.generated.h"
 
+class UPauseMenuWidget;
+class UResourceDisplayWidget;
 class UNiagaraSystem;
 class UInputMappingContext;
 class UInputAction;
@@ -45,6 +47,7 @@ class ASurviveThePlanetPlayerController : public APlayerController
 {
 	GENERATED_BODY()
 	friend class FCameraMenuInputTest;
+	friend class FPauseMenuTest;
 
 protected:
 	/** Component used for moving along a NavMesh path. */
@@ -126,6 +129,10 @@ protected:
 	ESTPBuildTool ActiveBuildTool = ESTPBuildTool::None;
 
 public:
+	UFUNCTION(BlueprintCallable, Category = "Pause Menu") void ResumeGame();
+	UFUNCTION(BlueprintCallable, Category = "Pause Menu") void ReturnToPlanetSelector();
+	UFUNCTION(BlueprintCallable, Category = "Pause Menu") void QuitGame();
+
 	UFUNCTION(BlueprintPure, Category = "Camera Controls")
 	bool IsCameraInputBlocked() const;
 	UFUNCTION(BlueprintCallable, Category = "Trading")
@@ -190,6 +197,13 @@ protected:
 	void UpdateCachedDestination();
 
 private:
+	void OpenPauseMenu();
+	UPROPERTY(Transient) TSubclassOf<UPauseMenuWidget> PauseMenuWidgetClass;
+	UPROPERTY(Transient) TObjectPtr<UPauseMenuWidget> PauseMenuWidget;
+	UPROPERTY(Transient) TObjectPtr<UResourceDisplayWidget> PauseMenuHUD;
+	float TimeDilationBeforeMenu = 1.0f;
+	bool bWorldPausedBeforeMenu = false;
+
 	UPROPERTY(Transient)
 	TObjectPtr<UTradeScreenWidget> TradeScreenWidget;
 	UPROPERTY(Transient)

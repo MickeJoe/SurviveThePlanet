@@ -1,4 +1,4 @@
-﻿// Copyright Epic Games, Inc. All Rights Reserved.
+// Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "SurviveThePlanetPlayerController.h"
 #include "Gameplay/Resources/GeothermalSite.h"
@@ -48,6 +48,12 @@
 #include "Gameplay/Cheats/STPCheatManager.h"
 #include "Blueprint/UserWidget.h"
 #include "SurviveThePlanet.h"
+#include "Gameplay/UI/PauseMenuWidget.h"
+#include "Gameplay/UI/ResourceDisplayWidget.h"
+#include "Gameplay/UI/MissionChoiceWidget.h"
+#include "Gameplay/UI/ContractOfferWidget.h"
+#include "Blueprint/WidgetBlueprintLibrary.h"
+#include "Kismet/KismetSystemLibrary.h"
 
 namespace
 {
@@ -86,6 +92,7 @@ ASurviveThePlanetPlayerController::ASurviveThePlanetPlayerController()
 	SetDestinationClickAction = LoadObject<UInputAction>(nullptr, TEXT("/Game/TopDown/Input/Actions/IA_SetDestination_Click"));
 	SetDestinationTouchAction = LoadObject<UInputAction>(nullptr, TEXT("/Game/TopDown/Input/Actions/IA_SetDestination_Touch"));
 	FXCursor = LoadObject<UNiagaraSystem>(nullptr, TEXT("/Game/TopDown/Cursor/FX_Cursor_Success"));
+	PauseMenuWidgetClass = LoadClass<UPauseMenuWidget>(nullptr, TEXT("/Game/UI/WBP_PauseMenu.WBP_PauseMenu_C"));
 	BuildingInfoWidgetClass = LoadClass<UBuildingInfoWidget>(nullptr, TEXT("/Game/UI/WBP_BuildingPopup.WBP_BuildingPopup_C"));
 	ExplorerDroneActivationWidgetClass = LoadClass<UExplorerDroneActivationWidget>(nullptr,
 		TEXT("/Game/UI/WBP_ExplorerDroneActivation.WBP_ExplorerDroneActivation_C"));
@@ -231,7 +238,7 @@ void ASurviveThePlanetPlayerController::SetupInputComponent()
 {
 	// set up gameplay key bindings
 	Super::SetupInputComponent();
-	InputComponent->BindKey(EKeys::Escape, IE_Pressed, this, &ASurviveThePlanetPlayerController::OnCancelBuildToolPressed);
+	InputComponent->BindKey(EKeys::Escape, IE_Pressed, this, &ASurviveThePlanetPlayerController::OnCancelBuildToolPressed).bExecuteWhenPaused = true;
 	InputComponent->BindKey(EKeys::R, IE_Pressed, this, &ASurviveThePlanetPlayerController::OnActivateExplorerDronePressed);
 #if !UE_BUILD_SHIPPING
 	InputComponent->BindKey(EKeys::I, IE_Pressed, this, &ASurviveThePlanetPlayerController::ToggleCheatMenu);
@@ -307,6 +314,7 @@ void ASurviveThePlanetPlayerController::SetupInputComponent()
 
 void ASurviveThePlanetPlayerController::ToggleCheatMenu()
 {
+	if (PauseMenuWidget && PauseMenuWidget->IsInViewport()) return;
 #if !UE_BUILD_SHIPPING
 	if (!IsLocalPlayerController())
 	{
@@ -377,6 +385,7 @@ void ASurviveThePlanetPlayerController::PlayerTick(float DeltaTime)
 
 void ASurviveThePlanetPlayerController::OnInputStarted()
 {
+	if (PauseMenuWidget && PauseMenuWidget->IsInViewport()) return;
 	UE_LOG(LogSurviveThePlanet, Warning, TEXT("STP_SELECT OnInputStarted: bIsTouch=%s Pawn=%s"), bIsTouch ? TEXT("true") : TEXT("false"), *GetNameSafe(GetPawn()));
 
 	StopMovement();
@@ -397,6 +406,7 @@ void ASurviveThePlanetPlayerController::OnInputStarted()
 
 void ASurviveThePlanetPlayerController::OnSetDestinationTriggered()
 {
+	if (PauseMenuWidget && PauseMenuWidget->IsInViewport()) return;
 	// We flag that the input is being pressed
 	FollowTime += GetWorld()->GetDeltaSeconds();
 	
@@ -419,6 +429,7 @@ void ASurviveThePlanetPlayerController::OnSetDestinationTriggered()
 
 void ASurviveThePlanetPlayerController::OnSetDestinationReleased()
 {
+	if (PauseMenuWidget && PauseMenuWidget->IsInViewport()) return;
 	UE_LOG(LogSurviveThePlanet, Warning, TEXT("STP_SELECT OnSetDestinationReleased: FollowTime=%.3f ShortPressThreshold=%.3f"), FollowTime, ShortPressThreshold);
 
 	if (ActiveBuildTool != ESTPBuildTool::None || FollowTime <= ShortPressThreshold)
@@ -450,19 +461,95 @@ void ASurviveThePlanetPlayerController::OnTouchReleased()
 
 void ASurviveThePlanetPlayerController::OnCancelBuildToolPressed()
 {
+	if (PauseMenuWidget && PauseMenuWidget->IsInViewport()) { ResumeGame(); return; }
+	if (TradeScreenWidget && TradeScreenWidget->IsInViewport()) { TradeScreenWidget->CloseTrade(); return; }
+	if (CheatMenuWidget && CheatMenuWidget->IsInViewport()) { ToggleCheatMenu(); return; }
+
+	TArray<UUserWidget*> Widgets;
+	UWidgetBlueprintLibrary::GetAllWidgetsOfClass(this, Widgets, UContractOfferWidget::StaticClass(), false);
+	for (UUserWidget* Widget : Widgets)
+	{
+		if (Widget->GetOwningPlayer() == this && Widget->IsInViewport() && Widget->IsVisible())
+		{
+			Widget->SetVisibility(ESlateVisibility::Collapsed);
+			return;
+		}
+	}
+	UWidgetBlueprintLibrary::GetAllWidgetsOfClass(this, Widgets, UMissionChoiceWidget::StaticClass(), false);
+	for (UUserWidget* Widget : Widgets)
+	{
+		UMissionChoiceWidget* Choices = CastChecked<UMissionChoiceWidget>(Widget);
+		if (Choices->GetOwningPlayer() == this && Choices->ClosePopupIfOpen()) return;
+	}
+	if (BuildingInfoWidget && BuildingInfoWidget->CloseDroneSelectionIfOpen()) return;
+	if (SelectedActor && ((BuildingInfoWidget && BuildingInfoWidget->IsVisible())
+		|| (ExplorerDroneActivationWidget && ExplorerDroneActivationWidget->IsVisible())))
+	{
+		SetSelectedActor(nullptr);
+		return;
+	}
 	if (ActiveBuildTool != ESTPBuildTool::None)
 	{
 		SetActiveBuildTool(ESTPBuildTool::None);
-		UE_LOG(LogSurviveThePlanet, Warning, TEXT("STP_BUILD Placement mode cancelled with Escape."));
+		return;
 	}
+	OpenPauseMenu();
+}
 
-	// Selection owns the building popup state, so clearing a selected building
-	// closes the popup and removes its selection visual in one consistent step.
-	if (SelectedActor && SelectedActor->IsA<ABaseBuilding>())
+void ASurviveThePlanetPlayerController::OpenPauseMenu()
+{
+	if (!IsLocalPlayerController() || (PauseMenuWidget && PauseMenuWidget->IsInViewport())) return;
+	UClass* MenuClass = PauseMenuWidgetClass;
+	if (!MenuClass) { UE_LOG(LogSurviveThePlanet, Error, TEXT("WBP_PauseMenu is missing.")); return; }
+	PauseMenuWidget = CreateWidget<UPauseMenuWidget>(this, MenuClass);
+	if (!PauseMenuWidget) return;
+
+	TimeDilationBeforeMenu = UGameplayStatics::GetGlobalTimeDilation(this);
+	bWorldPausedBeforeMenu = UGameplayStatics::IsGamePaused(this);
+	TArray<UUserWidget*> Widgets;
+	UWidgetBlueprintLibrary::GetAllWidgetsOfClass(this, Widgets, UResourceDisplayWidget::StaticClass(), false);
+	for (UUserWidget* Widget : Widgets)
 	{
-		SetSelectedActor(nullptr);
-		UE_LOG(LogSurviveThePlanet, Log, TEXT("STP_SELECT Building popup closed with Escape."));
+		if (Widget->GetOwningPlayer() == this && Widget->IsInViewport())
+		{
+			PauseMenuHUD = CastChecked<UResourceDisplayWidget>(Widget);
+			PauseMenuHUD->SetMenuPaused(true);
+			break;
+		}
 	}
+	// Freeze world ticks as well as the HUD's real-time simulation clock.
+	SetPause(true);
+	FlushPressedKeys();
+	PauseMenuWidget->AddToViewport(2000);
+	SetInputMode(FInputModeUIOnly().SetWidgetToFocus(PauseMenuWidget->TakeWidget()));
+	bShowMouseCursor = true;
+	PauseMenuWidget->SetKeyboardFocus();
+}
+
+void ASurviveThePlanetPlayerController::ResumeGame()
+{
+	if (!PauseMenuWidget || !PauseMenuWidget->IsInViewport()) return;
+	PauseMenuWidget->RemoveFromParent();
+	PauseMenuWidget = nullptr;
+	if (PauseMenuHUD) PauseMenuHUD->SetMenuPaused(false);
+	PauseMenuHUD = nullptr;
+	UGameplayStatics::SetGlobalTimeDilation(this, TimeDilationBeforeMenu);
+	SetPause(bWorldPausedBeforeMenu);
+	FlushPressedKeys();
+	SetInputMode(FInputModeGameAndUI().SetHideCursorDuringCapture(false));
+}
+
+void ASurviveThePlanetPlayerController::ReturnToPlanetSelector()
+{
+	ResumeGame();
+	UGameplayStatics::SetGlobalTimeDilation(this, 1.0f);
+	SetPause(false);
+	UGameplayStatics::OpenLevel(this, TEXT("/Game/Planet/Maps/L_PlanetSelection"));
+}
+
+void ASurviveThePlanetPlayerController::QuitGame()
+{
+	UKismetSystemLibrary::QuitGame(this, this, EQuitPreference::Quit, false);
 }
 
 bool ASurviveThePlanetPlayerController::TryHandleActiveBuildToolClick()
@@ -2075,7 +2162,8 @@ USpringArmComponent* ASurviveThePlanetPlayerController::GetControlledCameraBoom(
 
 bool ASurviveThePlanetPlayerController::IsCameraInputBlocked() const
 {
-	return (CheatMenuWidget && CheatMenuWidget->IsInViewport())
+	return (PauseMenuWidget && PauseMenuWidget->IsInViewport())
+		|| (CheatMenuWidget && CheatMenuWidget->IsInViewport())
 		|| (TradeScreenWidget && TradeScreenWidget->IsInViewport());
 }
 
@@ -2200,6 +2288,7 @@ void ASurviveThePlanetPlayerController::RotateCamera(float CameraRotationInput, 
 
 void ASurviveThePlanetPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	ResumeGame();
 	if (GetWorld())
 	{
 		if (UEnergyCoverageSubsystem* Coverage = GetWorld()->GetSubsystem<UEnergyCoverageSubsystem>())
@@ -2212,6 +2301,7 @@ void ASurviveThePlanetPlayerController::EndPlay(const EEndPlayReason::Type EndPl
 }
 void ASurviveThePlanetPlayerController::OpenTradeScreen(FName TraderId)
 {
+	if (PauseMenuWidget && PauseMenuWidget->IsInViewport()) return;
     if (!IsLocalPlayerController() || !GetWorld()->GetSubsystem<UTradeSubsystem>()->IsTraderAvailable(TraderId)) return;
     if (TradeScreenWidget && TradeScreenWidget->IsInViewport()) return;
     UClass* WidgetClass = LoadClass<UTradeScreenWidget>(nullptr, TEXT("/Game/UI/Trading/WBP_TradeScreen.WBP_TradeScreen_C"));

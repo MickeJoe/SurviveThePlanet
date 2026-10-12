@@ -317,6 +317,13 @@ void UResourceDisplayWidget::SetCheatSpeed30()
 #endif
 }
 
+void UResourceDisplayWidget::SetMenuPaused(bool bPaused)
+{
+	bMenuPaused = bPaused;
+	ApplySimulationRate();
+	RefreshTimeControlStyles();
+}
+
 void UResourceDisplayWidget::SetTradingPaused(bool bPaused)
 {
 	bTradingPaused = bPaused;

@@ -125,6 +125,13 @@ void UMissionChoiceWidget::OpenPopup()
 	SetPopupVisible(true);
 }
 
+bool UMissionChoiceWidget::ClosePopupIfOpen()
+{
+	if (!ModalOverlay || !ModalOverlay->IsVisible()) return false;
+	ClosePopup();
+	return true;
+}
+
 void UMissionChoiceWidget::ClosePopup() { SetPopupVisible(false); }
 
 void UMissionChoiceWidget::SetPopupVisible(bool bVisible)

@@ -61,7 +61,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Cheats")
 	void SetCheatSpeed30();
 	void SetTradingPaused(bool bPaused);
-	bool IsSimulationPaused() const { return bTimePaused || bTradingPaused; }
+	void SetMenuPaused(bool bPaused);
+	bool IsSimulationPaused() const { return bTimePaused || bTradingPaused || bMenuPaused; }
 
     UFUNCTION(BlueprintCallable, Category = "Resource Display")
     void SelectResourceCategory(EResourceCategory Category);
@@ -211,6 +212,8 @@ private:
 	float TimeScale = 1.0f;
 	bool bTimePaused = true;
 	bool bTradingPaused = false;
+	bool bMenuPaused = false;
+	friend class FPauseMenuTest;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UTextBlock> ClockText;
