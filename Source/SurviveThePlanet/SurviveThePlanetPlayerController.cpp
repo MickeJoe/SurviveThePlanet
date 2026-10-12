@@ -1,6 +1,7 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
+﻿// Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "SurviveThePlanetPlayerController.h"
+#include "Gameplay/Resources/GeothermalSite.h"
 #include "Gameplay/Energy/EnergyConnectionComponent.h"
 #include "Gameplay/Energy/EnergyCoverageSubsystem.h"
 #include "GameFramework/Pawn.h"
@@ -321,6 +322,7 @@ void ASurviveThePlanetPlayerController::ToggleCheatMenu()
 	if (CheatMenuWidget && CheatMenuWidget->IsInViewport())
 	{
 		CheatMenuWidget->RemoveFromParent();
+		FlushPressedKeys();
 		SetInputMode(FInputModeGameAndUI());
 		return;
 	}
@@ -340,6 +342,7 @@ void ASurviveThePlanetPlayerController::ToggleCheatMenu()
 	}
 	if (CheatMenuWidget)
 	{
+		FlushPressedKeys();
 		CheatMenuWidget->AddToViewport(1000);
 		CheatMenuWidget->SetDesiredSizeInViewport(FVector2D(420.0f, 650.0f));
 		CheatMenuWidget->SetPositionInViewport(FVector2D(40.0f, 120.0f), false);
@@ -1409,7 +1412,16 @@ void ASurviveThePlanetPlayerController::UpdateGenericBuildingPlacementPreview()
 {
 	EnsureGenericBuildingPlacementPreview(); if(!IsValid(GenericBuildingPlacementPreview))return; FHitResult Hit;
 	if(!GetHitResultUnderCursor(ECC_Visibility,true,Hit)){GenericBuildingPlacementPreview->SetActorHiddenInGame(true);return;}
-	APlanetSurfaceManager* Surface=FindPlanetSurfaceManager(); const FSTPGridPlacement Placement=Surface?Surface->GetBuildingPlacementForWorldLocation(Hit.Location,GenericBuildingPlacementPreview->GetGridFootprint()):FSTPGridPlacement();
+ APlanetSurfaceManager* Surface = FindPlanetSurfaceManager();
+ FVector PlacementTarget = Hit.Location;
+ if (ActiveBuildTool == ESTPBuildTool::GeothermalPlant)
+ {
+  if (const AGeothermalSite* Site = AGeothermalSite::FindAt(GetWorld(), Hit.Location))
+   PlacementTarget = Site->GetActorLocation();
+ }
+ const FSTPGridPlacement Placement = Surface
+  ? Surface->GetBuildingPlacementForWorldLocation(PlacementTarget, GenericBuildingPlacementPreview->GetGridFootprint())
+  : FSTPGridPlacement();
 	GenericBuildingPlacementPreview->SetActorLocation(Surface?Placement.WorldLocation:Hit.Location,false); if(Surface)GenericBuildingPlacementPreview->SetActorRotation(Placement.WorldRotation);
 	if (auto* Connection = GenericBuildingPlacementPreview->FindComponentByClass<UEnergyConnectionComponent>())
   Connection->UpdateRoute(true, true);
@@ -1439,7 +1451,14 @@ bool ASurviveThePlanetPlayerController::TryPlaceGenericBuildingAtWorldLocation(c
 	EnsureGenericBuildingPlacementPreview();
 	if (!IsValid(GenericBuildingPlacementPreview)) return true;
 	const FIntPoint Footprint = GenericBuildingPlacementPreview->GetGridFootprint();
- const FSTPGridPlacement Placement = Surface->GetBuildingPlacementForWorldLocation(Target, Footprint);
+ FVector PlacementTarget = Target;
+ if (ActiveBuildTool == ESTPBuildTool::GeothermalPlant)
+ {
+  AGeothermalSite* Site = AGeothermalSite::FindAt(World,Target);
+  if (!Site || !Site->IsAvailable()) return true;
+  PlacementTarget = Site->GetActorLocation();
+ }
+ const FSTPGridPlacement Placement = Surface->GetBuildingPlacementForWorldLocation(PlacementTarget, Footprint);
  if (!Placement.bValid || !Surface->CanBuildInSector(GenericBuildingPlacementPreview, Placement.WorldLocation)) return true;
  GenericBuildingPlacementPreview->SetActorLocation(Placement.WorldLocation);
  GenericBuildingPlacementPreview->SetActorRotation(Placement.WorldRotation);
@@ -2054,9 +2073,15 @@ USpringArmComponent* ASurviveThePlanetPlayerController::GetControlledCameraBoom(
 	return nullptr;
 }
 
+bool ASurviveThePlanetPlayerController::IsCameraInputBlocked() const
+{
+	return (CheatMenuWidget && CheatMenuWidget->IsInViewport())
+		|| (TradeScreenWidget && TradeScreenWidget->IsInViewport());
+}
+
 void ASurviveThePlanetPlayerController::UpdateCameraControls(float DeltaTime)
 {
-	if (TradeScreenWidget && TradeScreenWidget->IsInViewport()) return;
+	if (IsCameraInputBlocked()) return;
 	FVector2D PanInput = FVector2D::ZeroVector;
 
 	if (IsInputKeyDown(EKeys::W))

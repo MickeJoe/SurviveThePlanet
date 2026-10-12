@@ -16,6 +16,7 @@ public:
 
 	bool UpdateProduction(float DeltaSeconds, bool bCanRun, const TArray<FResourceCost>& Inputs,
 		EResourceType OutputResource, int32 OutputPerCycle, float CycleSeconds);
+	float GetCycleProgressSeconds() const { return CycleProgressSeconds; }
 	void StopProduction() { bIsProducing = false; }
 
 private:

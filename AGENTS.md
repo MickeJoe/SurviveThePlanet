@@ -31,6 +31,21 @@
 - Start Unreal Editor when needed if it is not already running.
 - Do not ask the user to manually perform Blender or Unreal Editor steps that can reasonably be performed through the available MCP tools.
 
+## 3D Asset Visual Quality
+
+- Do not deliver 3D models with mostly flat, single-color materials unless the user explicitly requests a blockout or that visual style.
+- Match the project's established art style and approved concept references. Reducing an asset's size must not remove its defining silhouette, material variation, or readable details.
+- Give materials appropriate surface structure and variation using textures or procedural shading: roughness variation, normal detail, ambient occlusion, and restrained dirt or wear where suitable for the asset.
+- Buildings and machinery must have readable panel seams, joints, and mechanical details where appropriate. Distinguish painted surfaces, metal, rubber, stone, and emissive elements through their material response, rather than color alone.
+- Choose detail sizes for the normal gameplay camera distance; do not rely on tiny geometry that only reads in close-up renders.
+- Verify imported assets in Unreal from the normal gameplay camera under representative daylight and nighttime lighting. Compare against the approved reference before considering the visual work complete.
+
+## Shared Materials
+
+- Share existing materials and textures between buildings and other assets whenever their surface type and visual style make reuse appropriate.
+- Prefer material instances of shared base materials for differences in color, roughness, wear or emissive intensity instead of duplicating complete material graphs.
+- Create a unique material only when the asset needs a distinct surface or rendering behavior that the existing shared materials cannot reasonably provide. Preserve the established art style when introducing variations.
+
 ## UI
 
 - Use Unreal Motion Graphics (UMG) Widget Blueprints (`WBP`) for all game UI components.

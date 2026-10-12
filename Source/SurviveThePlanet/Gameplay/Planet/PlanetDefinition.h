@@ -1,9 +1,36 @@
-#pragma once
+﻿#pragma once
 
 #include "CoreMinimal.h"
 #include "Engine/DataAsset.h"
 #include "Gameplay/Trading/MerchantDefinition.h"
+#include "Gameplay/World/PlanetResourcePlacement.h"
 #include "PlanetDefinition.generated.h"
+
+class ABaseResourceSource;
+
+/** A planet-specific surface deposit, planned once and spawned when its sector is discovered. */
+USTRUCT(BlueprintType)
+struct SURVIVETHEPLANET_API FPlanetSurfaceDepositSettings
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Resources")
+	FPlanetResourceRule Deposit;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Resources")
+	TSoftClassPtr<ABaseResourceSource> SourceClass;
+
+	/** Probability of a deposit in each non-start sector. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Resources", meta=(ClampMin="0.0", ClampMax="1.0"))
+	float SectorFrequency = 0.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Resources")
+	bool bGuaranteeStartingDeposit = true;
+
+	/** Preferred landing-sector position; terrain clearance can move it nearby. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Resources")
+	FVector StartingOffset = FVector(-950.0f, 850.0f, 0.0f);
+};
 
 /** A numeric range used when generating a global weather value. */
 USTRUCT(BlueprintType)
@@ -114,6 +141,27 @@ public:
 	/** Makes the generated weather sequence reproducible. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Planet")
 	int32 Seed = 12345;
+
+ /** Probability of one geothermal site in each non-start sector (0-1). */
+ UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Planet|Resources", meta=(ClampMin="0.0", ClampMax="1.0"))
+ float GeothermalSiteFrequency = 0.0f;
+
+ /** Guarantees a accessible test resource in the landing sector. */
+ UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Planet|Resources")
+ bool bGuaranteeStartingGeothermalSite = false;
+
+ /** Probability of one uranium deposit in each non-start sector (0-1). */
+ UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Planet|Resources", meta=(ClampMin="0.0", ClampMax="1.0"))
+ float UraniumDepositFrequency = 0.0f;
+ UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Planet|Resources")
+ bool bGuaranteeStartingUraniumDeposit = false;
+ UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Planet|Resources", meta=(ClampMin="1"))
+ int32 UraniumDepositMinQuantity = 3000;
+ UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Planet|Resources", meta=(ClampMin="1"))
+ int32 UraniumDepositMaxQuantity = 5000;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Planet|Resources")
+	TArray<FPlanetSurfaceDepositSettings> SurfaceDeposits;
 
 	/** Credits granted when a new game starts on this planet. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Planet|Economy", meta = (ClampMin = "0", UIMin = "0"))

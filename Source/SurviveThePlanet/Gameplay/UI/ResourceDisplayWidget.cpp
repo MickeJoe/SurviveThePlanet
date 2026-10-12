@@ -1,4 +1,7 @@
 #include "Gameplay/UI/ResourceDisplayWidget.h"
+#include "Gameplay/Buildings/NuclearReactor.h"
+#include "Gameplay/Buildings/UraniumProcessor.h"
+#include "Gameplay/Buildings/ThermalProcessingBuilding.h"
 
 #include "Components/Image.h"
 #include "Components/Button.h"
@@ -464,7 +467,7 @@ void UResourceDisplayWidget::RefreshResourceRates()
 		}
 	}
 
-	const TMap<EResourceType, float> Rates = {
+	TMap<EResourceType, float> Rates = {
         {EResourceType::Energy, EnergyRatePerMinute},
         {EResourceType::Iron, IronRatePerMinute},
         {EResourceType::Copper, CopperRatePerMinute},
@@ -476,6 +479,40 @@ void UResourceDisplayWidget::RefreshResourceRates()
         {EResourceType::Connector, ConnectorRatePerMinute},
         {EResourceType::Steel, SteelRatePerMinute}
     };
+    if (UWorld* World = GetWorld())
+    {
+        for (TActorIterator<ANuclearReactor> It(World); It; ++It)
+        {
+            if (!It->IsProducing()) continue;
+            const float CyclesPerMinute = 60.0f * It->GetCombinedDroneEfficiency() / FMath::Max(0.1f, It->CycleSeconds);
+            Rates.FindOrAdd(EResourceType::FuelRods) -= FMath::Max(1, It->FuelRodsPerCycle) * CyclesPerMinute;
+            Rates.FindOrAdd(EResourceType::CoolingUnits) -= FMath::Max(1, It->CoolingUnitsPerCycle) * CyclesPerMinute;
+        }
+        for (TActorIterator<AThermalProcessingBuilding> It(World); It; ++It)
+        {
+            if (!It->IsProducing()) continue;
+            const float CyclesPerMinute = 60.0f * It->GetCombinedDroneEfficiency() / FMath::Max(0.1f, It->CycleSeconds);
+            for (const FResourceCost& Input : It->GetRecipeInputs())
+                Rates.FindOrAdd(Input.Resource) -= Input.Cost * CyclesPerMinute;
+            Rates.FindOrAdd(It->GetRecipeOutput()) += FMath::Max(1, It->OutputPerCycle) * CyclesPerMinute;
+        }
+        for (TActorIterator<AUraniumProcessor> It(World); It; ++It)
+        {
+            if (!It->IsProducing()) continue;
+            const float CyclesPerMinute = 60.0f * It->GetCombinedDroneEfficiency() / FMath::Max(0.1f, It->CycleSeconds);
+            Rates.FindOrAdd(EResourceType::UraniumOre) -= FMath::Max(1, It->OrePerCycle) * CyclesPerMinute;
+            Rates.FindOrAdd(EResourceType::FuelRods) += FMath::Max(1, It->FuelRodsPerCycle) * CyclesPerMinute;
+        }
+        for (TActorIterator<AMiningMachine> It(World); It; ++It)
+        {
+            if (!It->GetResourceSource()) continue;
+            const EResourceType Type = It->GetResourceSource()->GetResourceType();
+            // The four original ores were accumulated above.
+            if (Type != EResourceType::Iron && Type != EResourceType::Copper
+                && Type != EResourceType::Coal && Type != EResourceType::Stone)
+                Rates.FindOrAdd(Type) += It->GetCurrentOutputPerMinute();
+        }
+    }
     for (const FResourceDefinition& Definition : UResourceCatalog::GetDefinitions())
     {
         if (UTextBlock* RateText = GetResourceRateText(Definition.ResourceType))

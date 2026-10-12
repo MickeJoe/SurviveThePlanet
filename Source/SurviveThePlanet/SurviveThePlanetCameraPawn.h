@@ -94,22 +94,8 @@ private:
 
 	uint32 SectorFogMaskHash = 0;
 
-	FVector2D KeyboardPanInput = FVector2D::ZeroVector;
-	float KeyboardRotationInput = 0.0f;
 	TObjectPtr<AActor> SelectedActor;
 
-	void MoveForwardPressed();
-	void MoveForwardReleased();
-	void MoveBackwardPressed();
-	void MoveBackwardReleased();
-	void MoveRightPressed();
-	void MoveRightReleased();
-	void MoveLeftPressed();
-	void MoveLeftReleased();
-	void RotateClockwisePressed();
-	void RotateClockwiseReleased();
-	void RotateCounterClockwisePressed();
-	void RotateCounterClockwiseReleased();
 	void ZoomCamera(float ZoomInput);
 	void SelectUnderCursor();
 

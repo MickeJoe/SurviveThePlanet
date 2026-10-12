@@ -88,7 +88,7 @@ void UBuildingInfoWidget::SetBuilding(ABaseBuilding* NewBuilding)
 	}
 
 	BuildingNameText->SetText(Building->GetBuildingDisplayName());
-	BuildingDescriptionText->SetText(Building->GetBuildingDescription());
+	BuildingDescriptionText->SetVisibility(ESlateVisibility::Collapsed);
 
 	if (UTexture2D* Thumbnail = Building->GetBuildingThumbnail())
 	{
@@ -101,6 +101,7 @@ void UBuildingInfoWidget::SetBuilding(ABaseBuilding* NewBuilding)
 	}
 
 	RefreshDroneSlots();
+	BuildProductionFlow();
 	RefreshPowerStatus();
 }
 
@@ -112,16 +113,16 @@ void UBuildingInfoWidget::RefreshPowerStatus()
 	}
 	const bool bConnected = IsValid(Building) && Building->IsConnectedToPowerGrid();
 	const bool bOperational = bConnected && Building->IsOperational();
-	PowerStatusText->SetText(!bConnected
-		? NSLOCTEXT("SurviveThePlanet", "PowerDisconnected", "POWER GRID: DISCONNECTED")
-		: (bOperational
-			? NSLOCTEXT("SurviveThePlanet", "PowerOperational", "POWER GRID: CONNECTED — POWERED")
-			: NSLOCTEXT("SurviveThePlanet", "PowerUnavailable", "POWER GRID: CONNECTED — NO POWER")));
-	PowerStatusText->SetColorAndOpacity(FSlateColor(!bConnected
-		? FLinearColor(1.0f, 0.28f, 0.18f, 1.0f)
-		: (bOperational
-			? FLinearColor(0.25f, 0.9f, 0.4f, 1.0f)
-			: FLinearColor(1.0f, 0.65f, 0.1f, 1.0f))));
+	PowerStatusText->SetVisibility(ESlateVisibility::Collapsed);
+	if (PowerStatusImage)
+	{
+		const TCHAR* Path = !bConnected ? TEXT("/Game/UI/BuildingFlow/T_PowerDisconnected")
+			: bOperational ? TEXT("/Game/UI/BuildingFlow/T_PowerConnected") : TEXT("/Game/UI/BuildingFlow/T_PowerWaiting");
+		PowerStatusImage->SetBrushFromTexture(LoadObject<UTexture2D>(nullptr, Path));
+		PowerStatusImage->SetToolTipText(FText::FromString(!bConnected ? TEXT("Power grid disconnected")
+			: bOperational ? TEXT("Connected and powered") : TEXT("Connected; waiting for power")));
+	}
+	RefreshProductionFlow();
 }
 
 void UBuildingInfoWidget::NativeDestruct()
@@ -364,6 +365,7 @@ void UBuildingInfoWidget::OpenDroneSelection(int32 SlotIndex)
 	// geometry always returns x=0 and places a right-aligned selector off-screen.
 	// Position from the visible panel itself instead.
 	UWidget* BuildingPopupPanel = GetWidgetFromName(TEXT("PopupPanel"));
+	if (!BuildingPopupPanel) BuildingPopupPanel = GetWidgetFromName(TEXT("PopupWidth"));
 	const FGeometry& AnchorGeometry = BuildingPopupPanel
 		? BuildingPopupPanel->GetCachedGeometry()
 		: GetCachedGeometry();

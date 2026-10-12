@@ -59,7 +59,7 @@ public:
 	virtual float GetEnergyConsumptionPerMinute() const;
 
 	UFUNCTION(BlueprintPure, Category = "Base Building|Power")
-	float GetEnergyProductionPerMinute() const;
+	virtual float GetEnergyProductionPerMinute() const;
 
 	UFUNCTION(BlueprintPure, Category = "Base Building|Power")
 	float GetEnergyStorageCapacity() const;

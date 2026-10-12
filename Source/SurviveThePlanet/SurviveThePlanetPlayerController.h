@@ -44,6 +44,7 @@ UCLASS()
 class ASurviveThePlanetPlayerController : public APlayerController
 {
 	GENERATED_BODY()
+	friend class FCameraMenuInputTest;
 
 protected:
 	/** Component used for moving along a NavMesh path. */
@@ -125,6 +126,8 @@ protected:
 	ESTPBuildTool ActiveBuildTool = ESTPBuildTool::None;
 
 public:
+	UFUNCTION(BlueprintPure, Category = "Camera Controls")
+	bool IsCameraInputBlocked() const;
 	UFUNCTION(BlueprintCallable, Category = "Trading")
 	void OpenTradeScreen(FName TraderId = TEXT("helix_industrial"));
 	UFUNCTION(BlueprintPure, Category = "Construction")

@@ -1,4 +1,5 @@
-#include "PlanetSurfaceManager.h"
+﻿#include "PlanetSurfaceManager.h"
+#include "Gameplay/Resources/GeothermalSite.h"
 #include "TimerManager.h"
 #include "SurviveThePlanet.h"
 
@@ -864,8 +865,26 @@ bool APlanetSurfaceManager::FindOccupiedCellsForActor(AActor* Actor, TArray<FSTP
 
 bool APlanetSurfaceManager::CanBuildInSector(const ABaseBuilding* Building, const FVector& WorldLocation) const
 {
-	if (!Building) return false;
-	for (TActorIterator<AHexSectorGrid> It(GetWorld()); It; ++It)
+ if (!Building) return false;
+ const UBuildingDataAsset* Definition = Building->GetBuildingData();
+ const bool bGeothermal = Definition && Definition->BuildTool == ESTPBuildTool::GeothermalPlant;
+ if (bGeothermal)
+ {
+  const AGeothermalSite* Site = AGeothermalSite::FindAt(GetWorld(),WorldLocation,40.0f);
+  if (!Site || (!Site->IsAvailable() && Site->GetOccupant() != Building)) return false;
+ }
+ else
+ {
+  const FIntPoint Footprint = Building->GetGridFootprint();
+  const float HalfX = Footprint.X * TileSpacing * 0.5f;
+  const float HalfY = Footprint.Y * TileSpacing * 0.5f;
+  for (TActorIterator<AGeothermalSite> Site(GetWorld()); Site; ++Site)
+  {
+   const FVector Delta = GetActorTransform().InverseTransformVector(Site->GetActorLocation() - WorldLocation);
+   if (FMath::Abs(Delta.X) < HalfX + 180 && FMath::Abs(Delta.Y) < HalfY + 180) return false;
+  }
+ }
+ for (TActorIterator<AHexSectorGrid> It(GetWorld()); It; ++It)
 	{
 		const FIntPoint Footprint = Building->GetGridFootprint();
 		const FVector HalfX = GetActorTransform().TransformVector(FVector(Footprint.X * TileSpacing * 0.5f, 0, 0));

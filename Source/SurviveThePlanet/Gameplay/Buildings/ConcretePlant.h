@@ -13,6 +13,7 @@ class SURVIVETHEPLANET_API AConcretePlant : public ABaseBuilding
 public:
 	AConcretePlant();
 	virtual void Tick(float DeltaSeconds) override;
+	float GetCycleProgressSeconds() const { return CycleProgressSeconds; }
 
 	UFUNCTION(BlueprintCallable, Category = "Concrete Plant|Placement")
 	void SetPlacementPreview(bool bPreview);

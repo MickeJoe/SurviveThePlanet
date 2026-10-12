@@ -22,6 +22,7 @@ class SURVIVETHEPLANET_API ASteelworks : public ABaseBuilding
 public:
 	ASteelworks();
 	virtual void Tick(float DeltaSeconds) override;
+	float GetCycleProgressSeconds() const { return CycleProgressSeconds; }
 	virtual void SetPlacementPreview(bool bPreview) override;
 	virtual void SetPlacementPreviewValid(bool bValidPlacement) override;
 

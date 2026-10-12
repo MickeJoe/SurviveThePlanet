@@ -1,6 +1,7 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "SurviveThePlanetCameraPawn.h"
+#include "SurviveThePlanetPlayerController.h"
 
 #include "Camera/CameraComponent.h"
 #include "Components/InputComponent.h"
@@ -69,15 +70,24 @@ void ASurviveThePlanetCameraPawn::Tick(float DeltaSeconds)
 		? DeltaSeconds / GlobalDilation
 		: DeltaSeconds;
 
-    const APlayerController* PlayerController = Cast<APlayerController>(GetController());
-    if (!PlayerController || !PlayerController->IsMoveInputIgnored())
-    {
-        PanCamera(KeyboardPanInput + GetEdgeScrollInput(), NavigationDeltaSeconds);
-    }
-    if (!PlayerController || !PlayerController->IsLookInputIgnored())
-    {
-        RotateCamera(KeyboardRotationInput, NavigationDeltaSeconds);
-    }
+	const APlayerController* PlayerController = Cast<APlayerController>(GetController());
+	const ASurviveThePlanetPlayerController* STPController = Cast<ASurviveThePlanetPlayerController>(PlayerController);
+	if (PlayerController && (!STPController || !STPController->IsCameraInputBlocked()))
+	{
+		// UI focus can consume key releases. Do not accumulate pressed/released deltas.
+		if (!PlayerController->IsMoveInputIgnored())
+		{
+			const FVector2D PanInput(
+				float(PlayerController->IsInputKeyDown(EKeys::D)) - float(PlayerController->IsInputKeyDown(EKeys::A)),
+				float(PlayerController->IsInputKeyDown(EKeys::W)) - float(PlayerController->IsInputKeyDown(EKeys::S)));
+			PanCamera(PanInput + GetEdgeScrollInput(), NavigationDeltaSeconds);
+		}
+		if (!PlayerController->IsLookInputIgnored())
+		{
+			const float RotationInput = float(PlayerController->IsInputKeyDown(EKeys::E)) - float(PlayerController->IsInputKeyDown(EKeys::Q));
+			RotateCamera(RotationInput, NavigationDeltaSeconds);
+		}
+	}
 	RefreshFogOfWarVisual();
 }
 
@@ -176,20 +186,6 @@ void ASurviveThePlanetCameraPawn::SetupPlayerInputComponent(UInputComponent* Pla
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
 
-	PlayerInputComponent->BindKey(EKeys::W, IE_Pressed, this, &ASurviveThePlanetCameraPawn::MoveForwardPressed);
-	PlayerInputComponent->BindKey(EKeys::W, IE_Released, this, &ASurviveThePlanetCameraPawn::MoveForwardReleased);
-	PlayerInputComponent->BindKey(EKeys::S, IE_Pressed, this, &ASurviveThePlanetCameraPawn::MoveBackwardPressed);
-	PlayerInputComponent->BindKey(EKeys::S, IE_Released, this, &ASurviveThePlanetCameraPawn::MoveBackwardReleased);
-	PlayerInputComponent->BindKey(EKeys::D, IE_Pressed, this, &ASurviveThePlanetCameraPawn::MoveRightPressed);
-	PlayerInputComponent->BindKey(EKeys::D, IE_Released, this, &ASurviveThePlanetCameraPawn::MoveRightReleased);
-	PlayerInputComponent->BindKey(EKeys::A, IE_Pressed, this, &ASurviveThePlanetCameraPawn::MoveLeftPressed);
-	PlayerInputComponent->BindKey(EKeys::A, IE_Released, this, &ASurviveThePlanetCameraPawn::MoveLeftReleased);
-
-	PlayerInputComponent->BindKey(EKeys::E, IE_Pressed, this, &ASurviveThePlanetCameraPawn::RotateClockwisePressed);
-	PlayerInputComponent->BindKey(EKeys::E, IE_Released, this, &ASurviveThePlanetCameraPawn::RotateClockwiseReleased);
-	PlayerInputComponent->BindKey(EKeys::Q, IE_Pressed, this, &ASurviveThePlanetCameraPawn::RotateCounterClockwisePressed);
-	PlayerInputComponent->BindKey(EKeys::Q, IE_Released, this, &ASurviveThePlanetCameraPawn::RotateCounterClockwiseReleased);
-
 	PlayerInputComponent->BindAxisKey(EKeys::MouseWheelAxis, this, &ASurviveThePlanetCameraPawn::ZoomCamera);
 
 	UE_LOG(LogSurviveThePlanet, Warning, TEXT("STP_SELECT CameraPawn input bound: Pawn=%s Controller=%s InputComponent=%s"),
@@ -198,68 +194,12 @@ void ASurviveThePlanetCameraPawn::SetupPlayerInputComponent(UInputComponent* Pla
 		*GetNameSafe(PlayerInputComponent));
 }
 
-void ASurviveThePlanetCameraPawn::MoveForwardPressed()
-{
-	KeyboardPanInput.Y += 1.0f;
-}
-
-void ASurviveThePlanetCameraPawn::MoveForwardReleased()
-{
-	KeyboardPanInput.Y -= 1.0f;
-}
-
-void ASurviveThePlanetCameraPawn::MoveBackwardPressed()
-{
-	KeyboardPanInput.Y -= 1.0f;
-}
-
-void ASurviveThePlanetCameraPawn::MoveBackwardReleased()
-{
-	KeyboardPanInput.Y += 1.0f;
-}
-
-void ASurviveThePlanetCameraPawn::MoveRightPressed()
-{
-	KeyboardPanInput.X += 1.0f;
-}
-
-void ASurviveThePlanetCameraPawn::MoveRightReleased()
-{
-	KeyboardPanInput.X -= 1.0f;
-}
-
-void ASurviveThePlanetCameraPawn::MoveLeftPressed()
-{
-	KeyboardPanInput.X -= 1.0f;
-}
-
-void ASurviveThePlanetCameraPawn::MoveLeftReleased()
-{
-	KeyboardPanInput.X += 1.0f;
-}
-
-void ASurviveThePlanetCameraPawn::RotateClockwisePressed()
-{
-	KeyboardRotationInput += 1.0f;
-}
-
-void ASurviveThePlanetCameraPawn::RotateClockwiseReleased()
-{
-	KeyboardRotationInput -= 1.0f;
-}
-
-void ASurviveThePlanetCameraPawn::RotateCounterClockwisePressed()
-{
-	KeyboardRotationInput -= 1.0f;
-}
-
-void ASurviveThePlanetCameraPawn::RotateCounterClockwiseReleased()
-{
-	KeyboardRotationInput += 1.0f;
-}
-
 void ASurviveThePlanetCameraPawn::ZoomCamera(float ZoomInput)
 {
+	const APlayerController* PlayerController = Cast<APlayerController>(GetController());
+	const ASurviveThePlanetPlayerController* STPController = Cast<ASurviveThePlanetPlayerController>(PlayerController);
+	if ((PlayerController && PlayerController->IsLookInputIgnored()) || (STPController && STPController->IsCameraInputBlocked())) return;
+
 	if (FMath::IsNearlyZero(ZoomInput))
 	{
 		return;

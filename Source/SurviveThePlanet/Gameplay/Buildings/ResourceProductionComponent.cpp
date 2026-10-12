@@ -21,7 +21,7 @@ bool UResourceProductionComponent::UpdateProduction(float DeltaSeconds, bool bCa
 		}
 	}
 
-	bIsProducing = bCanRun && IsValid(ResourceManager) && OutputPerCycle > 0
+	bIsProducing = bCanRun && IsValid(ResourceManager) && OutputPerCycle >= 0 && (OutputPerCycle > 0 || !Inputs.IsEmpty())
 		&& ResourceManager->CanAffordCosts(Inputs);
 	if (!bIsProducing) return false;
 
@@ -35,7 +35,7 @@ bool UResourceProductionComponent::UpdateProduction(float DeltaSeconds, bool bCa
 			bIsProducing = false;
 			break;
 		}
-		ResourceManager->AddResource(OutputResource, OutputPerCycle);
+		if (OutputPerCycle > 0) ResourceManager->AddResource(OutputResource, OutputPerCycle);
 		CycleProgressSeconds -= Duration;
 	}
 	bIsProducing = ResourceManager->CanAffordCosts(Inputs);

@@ -1,4 +1,5 @@
 #include "Gameplay/Base/BaseBuilding.h"
+#include "Gameplay/Resources/BaseResourceSource.h"
 #include "Gameplay/Energy/EnergyCoverageComponent.h"
 #include "Gameplay/Energy/EnergyCoverageSubsystem.h"
 
@@ -583,6 +584,11 @@ void ABaseBuilding::GroundBuildingMesh(bool bForce)
 	// Keep the grid actor fixed and seat the ground-pivot mesh on an actual hit.
 	FCollisionQueryParams Params(SCENE_QUERY_STAT(BuildingGround), true, this);
 	for (TActorIterator<ABaseBuilding> It(GetWorld()); It; ++It)
+	{
+		Params.AddIgnoredActor(*It);
+	}
+	// Mines replace resource meshes; their foundations must sit on terrain.
+	for (TActorIterator<ABaseResourceSource> It(GetWorld()); It; ++It)
 	{
 		Params.AddIgnoredActor(*It);
 	}

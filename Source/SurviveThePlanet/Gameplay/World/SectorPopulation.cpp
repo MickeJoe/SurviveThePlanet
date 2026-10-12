@@ -1,4 +1,7 @@
-#include "Gameplay/World/SectorPopulation.h"
+﻿#include "Gameplay/World/SectorPopulation.h"
+#include "Gameplay/Resources/GeothermalSite.h"
+#include "Gameplay/Planet/PlanetDefinition.h"
+#include "Gameplay/Planet/PlanetWeatherManager.h"
 #include "Gameplay/Resources/BaseResourceSource.h"
 #include "Gameplay/Buildings/MiningMachine.h"
 #include "Gameplay/Planet/PlanetSurfaceManager.h"
@@ -110,6 +113,9 @@ void ASectorPopulation::InitializePopulation()
 		}
 	}
 	else if (!GenerateLegacyDecorations()) return;
+	GenerateUraniumDeposits();
+	GenerateSurfaceDeposits();
+	GenerateGeothermalSites();
 	bInitialized = true;
 	Grid->OnSectorStateChanged.AddDynamic(this, &ASectorPopulation::OnSectorChanged);
 	for (const auto& Sector : Grid->Sectors) if (Sector.State != ESectorState::Undiscovered) RevealSector(Sector.Id);
@@ -344,7 +350,9 @@ bool ASectorPopulation::GenerateAuthoredClusters()
 		if (!Generated)
 		{
 			for (auto& Pair : GeneratedClusters) if (IsValid(Pair.Value)) Pair.Value->Destroy();
-			GeneratedClusters.Reset();
+			for (AActor* Site : SpawnedGeothermalSites) if (IsValid(Site)) Site->Destroy();
+	SpawnedGeothermalSites.Reset();
+	GeneratedClusters.Reset();
 			Diagnostics.Add(TEXT("Failed to spawn an authored sector."));
 			return false;
 		}
@@ -613,7 +621,16 @@ void ASectorPopulation::OnSectorChanged(int32 SectorId, ESectorState State)
 void ASectorPopulation::RevealSector(int32 SectorId)
 {
 	if (!bInitialized || LoadedSectors.Contains(SectorId)) return;
-	LoadedSectors.Add(SectorId);
+ LoadedSectors.Add(SectorId);
+ if (const FVector* SiteLocation = GeothermalLocations.Find(SectorId))
+ {
+  FActorSpawnParameters Parameters;
+  Parameters.Owner = this;
+  Parameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+  if (AActor* Site = GetWorld()->SpawnActor<AGeothermalSite>(*SiteLocation, FRotator::ZeroRotator, Parameters))
+   SpawnedGeothermalSites.Add(Site);
+ }
+
 	for (const auto& Deposit : Resources.Deposits)
 	{
 		if (Deposit.SectorId != SectorId) continue;
@@ -657,4 +674,125 @@ void ASectorPopulation::EndPlay(const EEndPlayReason::Type Reason)
 	for (auto& Pair : GeneratedClusters) if (IsValid(Pair.Value)) Pair.Value->Destroy();
 	GeneratedClusters.Reset();
 	Super::EndPlay(Reason);
+}
+
+bool ASectorPopulation::FindSpecialResourceLocation(const FHexSector& Sector, FRandomStream& Random,
+ APlanetSurfaceManager* Surface, FIntPoint Footprint, FVector StartingOffset, FVector& OutLocation) const
+{
+ for (int32 Attempt = 0; Attempt < 250; ++Attempt)
+ {
+  const float Radius = Grid->ExplorationSectorRadius * 0.65f;
+  FVector Candidate = Sector.WorldCenter + FVector(Random.FRandRange(-Radius,Radius),Random.FRandRange(-Radius,Radius),0);
+  if (Sector.Id == Grid->StartingSectorId && Attempt == 0) Candidate = Sector.WorldCenter + StartingOffset;
+  const FSTPGridPlacement Placement = Surface->GetBuildingPlacementForWorldLocation(Candidate,Footprint);
+  if (!Placement.bValid || Grid->GetSectorAtWorldLocation(Placement.WorldLocation) != Sector.Id
+   || !Surface->HasTerrainClearance(Placement.OriginCell,Footprint,3)) continue;
+  bool bNearDeposit = false;
+  for (const FPlanetPlacedDeposit& Deposit : Resources.Deposits)
+   if (FVector::DistSquared2D(Deposit.Location,Placement.WorldLocation) < FMath::Square(Deposit.Radius + 450)) { bNearDeposit = true; break; }
+  FVector Ground;
+  if (bNearDeposit || !GroundPosition(Placement.WorldLocation,Ground)) continue;
+  Ground.X = Placement.WorldLocation.X; Ground.Y = Placement.WorldLocation.Y;
+  OutLocation = Ground;
+  return true;
+ }
+ return false;
+}
+
+void ASectorPopulation::GenerateUraniumDeposits()
+{
+ const UPlanetDefinition* Planet = nullptr;
+ for (TActorIterator<APlanetWeatherManager> It(GetWorld()); It; ++It) { Planet = It->GetPlanetDefinition(); break; }
+ if (!Planet) return;
+ FPlanetSurfaceDepositSettings Settings;
+ Settings.Deposit.Id = TEXT("Uranium");
+ Settings.Deposit.ResourceType = EResourceType::UraniumOre;
+ Settings.Deposit.Radius = 135.0f;
+ Settings.Deposit.MinimumSpacing = 450.0f;
+ Settings.Deposit.MinQuantity = Planet->UraniumDepositMinQuantity;
+ Settings.Deposit.MaxQuantity = Planet->UraniumDepositMaxQuantity;
+ Settings.SourceClass = TSoftClassPtr<ABaseResourceSource>(FSoftObjectPath(TEXT("/Game/Uranium/BP_UraniumResource.BP_UraniumResource_C")));
+ Settings.SectorFrequency = Planet->UraniumDepositFrequency;
+ Settings.bGuaranteeStartingDeposit = Planet->bGuaranteeStartingUraniumDeposit;
+ Settings.StartingOffset = FVector(950,-850,0);
+ GenerateSurfaceDeposit(Settings, Planet->Seed, 0x555241);
+}
+
+void ASectorPopulation::GenerateSurfaceDeposits()
+{
+ const UPlanetDefinition* Planet = nullptr;
+ for (TActorIterator<APlanetWeatherManager> It(GetWorld()); It; ++It) { Planet = It->GetPlanetDefinition(); break; }
+ if (!Planet) return;
+ TSet<EResourceType> PlannedTypes;
+ for (const FPlanetSurfaceDepositSettings& Settings : Planet->SurfaceDeposits)
+ {
+  const EResourceType Type = Settings.Deposit.ResourceType;
+  if (PlannedTypes.Contains(Type))
+  {
+   Diagnostics.Add(FString::Printf(TEXT("Duplicate planet deposit settings for resource %d ignored."), static_cast<int32>(Type)));
+   continue;
+  }
+  PlannedTypes.Add(Type);
+  GenerateSurfaceDeposit(Settings, Planet->Seed, 0x535552 ^ (static_cast<int32>(Type) * 104729));
+ }
+}
+
+void ASectorPopulation::GenerateSurfaceDeposit(const FPlanetSurfaceDepositSettings& Settings, int32 PlanetSeed, int32 SeedSalt)
+{
+ const float Frequency = FMath::Clamp(Settings.SectorFrequency, 0.0f, 1.0f);
+ if (!Grid || (Frequency <= 0.0f && !Settings.bGuaranteeStartingDeposit)) return;
+ APlanetSurfaceManager* Surface = nullptr;
+ for (TActorIterator<APlanetSurfaceManager> It(GetWorld()); It; ++It) { Surface = *It; break; }
+ if (!Surface) return;
+ UClass* SourceClass = Settings.SourceClass.LoadSynchronous();
+ const ABaseResourceSource* SourceDefaults = SourceClass ? SourceClass->GetDefaultObject<ABaseResourceSource>() : nullptr;
+ const TSubclassOf<AMiningMachine> MineClass = SourceDefaults ? SourceDefaults->GetMineBlueprint() : nullptr;
+ if (!MineClass || SourceDefaults->GetResourceType() != Settings.Deposit.ResourceType)
+ {
+  Diagnostics.Add(FString::Printf(TEXT("Planet deposit %s requires a matching resource and mining Blueprint."), *Settings.Deposit.Id.ToString()));
+  return;
+ }
+ DepositClasses.Add(Settings.Deposit.ResourceType, SourceClass);
+ const FIntPoint Footprint = MineClass->GetDefaultObject<AMiningMachine>()->GetGridFootprint();
+ for (const FHexSector& Sector : Grid->Sectors)
+ {
+  FRandomStream Random(PlanetSeed ^ (Sector.Id * 7919) ^ SeedSalt);
+  const bool bStarting = Sector.Id == Grid->StartingSectorId;
+  if (bStarting ? !Settings.bGuaranteeStartingDeposit : Random.FRand() >= Frequency) continue;
+  FVector Ground;
+  if (!FindSpecialResourceLocation(Sector, Random, Surface, Footprint, Settings.StartingOffset, Ground))
+  {
+   Diagnostics.Add(FString::Printf(TEXT("Sector %d: no clear %s deposit position found."), Sector.Id, *Settings.Deposit.Id.ToString()));
+   continue;
+  }
+  FPlanetPlacedDeposit Deposit;
+  Deposit.RuleId = FName(*FString::Printf(TEXT("Sector_%d_%s"), Sector.Id, *Settings.Deposit.Id.ToString()));
+  Deposit.ResourceType = Settings.Deposit.ResourceType;
+  Deposit.SectorId = Sector.Id;
+  Deposit.Location = Ground;
+  Deposit.Radius = FMath::Max(1.0f, Settings.Deposit.Radius);
+  Deposit.MinimumSpacing = FMath::Max(0.0f, Settings.Deposit.MinimumSpacing);
+  const int32 Minimum = FMath::Max(1, Settings.Deposit.MinQuantity);
+  Deposit.Quantity = Random.RandRange(Minimum, FMath::Max(Minimum, Settings.Deposit.MaxQuantity));
+  Resources.Deposits.Add(Deposit);
+ }
+}
+
+void ASectorPopulation::GenerateGeothermalSites()
+{
+ const UPlanetDefinition* Planet = nullptr;
+ for (TActorIterator<APlanetWeatherManager> It(GetWorld()); It; ++It) { Planet = It->GetPlanetDefinition(); break; }
+ APlanetSurfaceManager* Surface = nullptr;
+ for (TActorIterator<APlanetSurfaceManager> It(GetWorld()); It; ++It) { Surface = *It; break; }
+ if (!Planet || !Surface || !Grid) return;
+ for (const FHexSector& Sector : Grid->Sectors)
+ {
+  const bool bStarting = Sector.Id == Grid->StartingSectorId;
+  FRandomStream Random(Planet->Seed ^ (Sector.Id * 7919) ^ 0x47454F);
+  if (bStarting ? !Planet->bGuaranteeStartingGeothermalSite : Random.FRand() >= Planet->GeothermalSiteFrequency) continue;
+  FVector Ground;
+  if (FindSpecialResourceLocation(Sector,Random,Surface,FIntPoint(3,3),FVector(850,650,0),Ground))
+   GeothermalLocations.Add(Sector.Id,Ground + FVector(0,0,2));
+  else Diagnostics.Add(FString::Printf(TEXT("Sector %d: no clear geothermal site position found."),Sector.Id));
+ }
 }

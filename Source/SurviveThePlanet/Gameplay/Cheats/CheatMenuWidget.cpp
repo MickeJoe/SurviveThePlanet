@@ -4,6 +4,7 @@
 #include "Components/Border.h"
 #include "Components/Button.h"
 #include "Components/ComboBoxString.h"
+#include "Components/EditableTextBox.h"
 #include "Components/SpinBox.h"
 #include "Components/TextBlock.h"
 #include "Components/VerticalBox.h"
@@ -51,6 +52,13 @@ void UCheatMenuWidget::EnsureBlueprintCheatControls()
 	UVerticalBox* Column = nullptr;
 	for (UWidget* Widget : Widgets) if ((Column = Cast<UVerticalBox>(Widget))) break;
 	if (!Column) return;
+	if (!BlueprintSearchBox)
+	{
+		BlueprintSearchBox = WidgetTree->ConstructWidget<UEditableTextBox>(UEditableTextBox::StaticClass(), TEXT("BlueprintSearchBox"));
+		BlueprintSearchBox->SetHintText(NSLOCTEXT("STPCheats", "SearchBlueprints", "Search blueprints..."));
+		Column->AddChildToVerticalBox(BlueprintSearchBox)->SetPadding(FMargin(0, 10, 0, 4));
+	}
+	BlueprintSearchBox->OnTextChanged.AddUniqueDynamic(this, &UCheatMenuWidget::FilterBlueprints);
 	if (!BlueprintComboBox)
 	{
 		BlueprintComboBox = WidgetTree->ConstructWidget<UComboBoxString>(UComboBoxString::StaticClass(), TEXT("BlueprintComboBox"));
@@ -63,17 +71,44 @@ void UCheatMenuWidget::EnsureBlueprintCheatControls()
 		Label->SetText(NSLOCTEXT("STPCheats", "GrantBlueprint", "OWN BUILDING BLUEPRINT"));
 		GrantBlueprintButton->SetContent(Label); Column->AddChildToVerticalBox(GrantBlueprintButton);
 	}
-	BlueprintComboBox->ClearOptions(); BlueprintTools.Reset();
-	UWorld* World = GetWorld(); UBuildingManagerSubsystem* Manager = World ? World->GetSubsystem<UBuildingManagerSubsystem>() : nullptr;
+	FilterBlueprints(BlueprintSearchBox->GetText());
+}
+
+void UCheatMenuWidget::FilterBlueprints(const FText& SearchText)
+{
+	if (!BlueprintComboBox) return;
+	// Preserve identity when options shift, rather than granting the old index's tool.
+	const int32 PreviousIndex = BlueprintComboBox->GetSelectedIndex();
+	const ESTPBuildTool PreviousTool = BlueprintTools.IsValidIndex(PreviousIndex) ? BlueprintTools[PreviousIndex] : ESTPBuildTool::None;
+	BlueprintComboBox->ClearOptions();
+	BlueprintTools.Reset();
+	const FString Query = SearchText.ToString().TrimStartAndEnd();
+	UWorld* World = GetWorld();
+	UBuildingManagerSubsystem* Manager = World ? World->GetSubsystem<UBuildingManagerSubsystem>() : nullptr;
+	TArray<UBuildingDataAsset*> Matches;
 	if (Manager)
 	{
 		for (UBuildingDataAsset* Definition : Manager->GetAllDefinitions())
 		{
-			if (!Definition || Definition->BuildTool == ESTPBuildTool::None) continue;
-			BlueprintTools.Add(Definition->BuildTool); BlueprintComboBox->AddOption(Definition->DisplayName.ToString());
+			if (Definition && Definition->BuildTool != ESTPBuildTool::None
+				&& Definition->DisplayName.ToString().Contains(Query, ESearchCase::IgnoreCase))
+			{
+				Matches.Add(Definition);
+			}
 		}
 	}
-	if (BlueprintComboBox->GetOptionCount() > 0) BlueprintComboBox->SetSelectedIndex(0);
+	Matches.Sort([](const UBuildingDataAsset& A, const UBuildingDataAsset& B)
+	{
+		return A.DisplayName.CompareToCaseIgnored(B.DisplayName) < 0;
+	});
+	for (const UBuildingDataAsset* Definition : Matches)
+	{
+		BlueprintTools.Add(Definition->BuildTool);
+		BlueprintComboBox->AddOption(Definition->DisplayName.ToString());
+	}
+	const int32 RetainedIndex = BlueprintTools.IndexOfByKey(PreviousTool);
+	if (!BlueprintTools.IsEmpty()) BlueprintComboBox->SetSelectedIndex(RetainedIndex != INDEX_NONE ? RetainedIndex : 0);
+	if (GrantBlueprintButton) GrantBlueprintButton->SetIsEnabled(!BlueprintTools.IsEmpty());
 }
 
 void UCheatMenuWidget::GrantSelectedBlueprint()

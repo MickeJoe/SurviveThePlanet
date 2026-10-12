@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "Gameplay/World/HexSectorGrid.h"
@@ -6,6 +6,7 @@
 #include "SectorPopulation.generated.h"
 
 class ABaseResourceSource;
+class APlanetSurfaceManager;
 class UInstancedStaticMeshComponent;
 class UStaticMesh;
 class UMaterialInterface;
@@ -84,6 +85,14 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Population") void RevealSector(int32 SectorId);
 private:
 	UFUNCTION() void OnSectorChanged(int32 SectorId, ESectorState State);
+ void GenerateGeothermalSites();
+ void GenerateUraniumDeposits();
+ void GenerateSurfaceDeposits();
+ void GenerateSurfaceDeposit(const struct FPlanetSurfaceDepositSettings& Settings, int32 PlanetSeed, int32 SeedSalt);
+ bool FindSpecialResourceLocation(const FHexSector& Sector, FRandomStream& Random, APlanetSurfaceManager* Surface,
+  FIntPoint Footprint, FVector StartingOffset, FVector& OutLocation) const;
+ UPROPERTY(Transient) TMap<int32, FVector> GeothermalLocations;
+ UPROPERTY(Transient) TArray<TObjectPtr<AActor>> SpawnedGeothermalSites;
 	bool GroundPosition(FVector Position, FVector& Ground) const;
 	bool EnsureMineableDepositLocations();
 	bool GenerateAuthoredClusters();

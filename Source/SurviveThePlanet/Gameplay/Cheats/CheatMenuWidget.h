@@ -6,6 +6,7 @@
 #include "Gameplay/BuildTools/BuildToolTypes.h"
 #include "CheatMenuWidget.generated.h"
 
+class UEditableTextBox;
 class UButton;
 class UComboBoxString;
 class USpinBox;
@@ -38,6 +39,9 @@ protected:
 
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional))
 	TObjectPtr<UComboBoxString> BlueprintComboBox;
+
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional))
+	TObjectPtr<UEditableTextBox> BlueprintSearchBox;
 
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional))
 	TObjectPtr<UButton> GrantBlueprintButton;
@@ -77,6 +81,8 @@ private:
 	void PopulateResources();
 	void EnsureObjectiveCheatButton();
 	void EnsureBlueprintCheatControls();
+	UFUNCTION()
+	void FilterBlueprints(const FText& SearchText);
 	TArray<EResourceType> ResourceTypes;
 	TArray<ESTPBuildTool> BlueprintTools;
 };

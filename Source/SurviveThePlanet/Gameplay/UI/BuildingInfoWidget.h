@@ -67,6 +67,7 @@ public:
 
 protected:
 	virtual void NativeDestruct() override;
+	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidget), Category = "Building Info")
 	TObjectPtr<UImage> BuildingImage;
@@ -76,6 +77,16 @@ protected:
 
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidget), Category = "Building Info")
 	TObjectPtr<UTextBlock> BuildingDescriptionText;
+
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Building Info") TObjectPtr<UHorizontalBox> InputsBox;
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Building Info") TObjectPtr<UHorizontalBox> OutputsBox;
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Building Info") TObjectPtr<UTextBlock> CycleText;
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Building Info") TObjectPtr<class UProgressBar> CycleProgress;
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Building Info") TObjectPtr<UImage> PowerStatusImage;
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Building Info") TObjectPtr<UImage> ConsumptionIcon;
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Building Info") TObjectPtr<UImage> GenerationIcon;
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Building Info") TObjectPtr<UTextBlock> ConsumptionText;
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Building Info") TObjectPtr<UTextBlock> GenerationText;
 
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Building Info")
 	TObjectPtr<UTextBlock> PowerStatusText;
@@ -108,6 +119,14 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<AResourceManager> ResourceManager;
 
+	void BuildProductionFlow();
+	void RefreshProductionFlow();
+	UUserWidget* AddResourceCard(UHorizontalBox* Box, EResourceType Resource, float Amount, bool bPerMinute);
+	TArray<FResourceCost> DisplayedInputs;
+	UPROPERTY(Transient) TArray<TObjectPtr<UUserWidget>> InputCards;
+	UPROPERTY(Transient) TObjectPtr<UUserWidget> LiveOutputCard;
+	float DisplayedCycleSeconds = 0.0f;
+	float FlowRefreshSeconds = 0.0f;
 	void RefreshDroneSlots();
 	void RefreshPowerStatus();
 	void OpenDroneSelection(int32 SlotIndex);
