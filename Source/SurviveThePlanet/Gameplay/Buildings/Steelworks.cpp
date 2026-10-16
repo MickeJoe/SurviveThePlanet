@@ -90,7 +90,7 @@ void ASteelworks::Tick(float DeltaSeconds)
 	const int32 SteelPerCycle = FMath::FloorToInt(Data ? Data->SteelPerCycle : DefaultSteelPerCycle);
 	const bool bCanProduce = !bPlacementPreview
 		&& GetConstructionProgress() >= 1.0f
-		&& IsOperational()
+		&& CanProduce()
 		&& Manager
 		&& SteelPerCycle > 0
 		&& (IronPerCycle <= 0 || Manager->HasResource(EResourceType::Iron, IronPerCycle));

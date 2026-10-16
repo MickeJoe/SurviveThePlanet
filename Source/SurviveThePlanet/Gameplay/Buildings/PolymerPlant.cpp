@@ -71,7 +71,7 @@ void APolymerPlant::Tick(float DeltaSeconds)
 	const float CycleSeconds = FMath::Max(0.1f, Recipe ? Recipe->CycleSeconds : 20.0f);
 	const int32 Output = FMath::Max(1, Recipe ? Recipe->PolymerPerCycle : 3);
 	bIsProducing = Production->UpdateProduction(DeltaSeconds,
-		!bPlacementPreview && IsOperational(), Inputs, EResourceType::Polymer, Output, CycleSeconds);
+		!bPlacementPreview && CanProduce(), Inputs, EResourceType::Polymer, Output, CycleSeconds);
 	if (bIsProducing)
 	{
 		const float Step = FMath::Max(0.0f, DeltaSeconds);

@@ -223,7 +223,7 @@ void ASurviveThePlanetPlayerController::BeginPlay()
 		BuildingInfoWidget = CreateWidget<UBuildingInfoWidget>(this, BuildingInfoWidgetClass);
 		if (BuildingInfoWidget)
 		{
-			BuildingInfoWidget->AddToViewport(10);
+			BuildingInfoWidget->AddToViewport(40);
 			BuildingInfoWidget->SetBuilding(nullptr);
 		}
 	}

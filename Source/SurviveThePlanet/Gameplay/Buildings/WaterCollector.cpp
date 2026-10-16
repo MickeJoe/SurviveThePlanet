@@ -26,7 +26,7 @@ void AWaterCollector::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 
-	if (bPlacementPreview || GetConstructionProgress() < 1.0f || !IsOperational())
+	if (bPlacementPreview || GetConstructionProgress() < 1.0f || !CanProduce())
 	{
 		return;
 	}
@@ -69,7 +69,7 @@ float AWaterCollector::GetCurrentRainfallMmPerHour() const
 
 float AWaterCollector::GetCurrentWaterProductionPerMinute() const
 {
-	return GetConstructionProgress() >= 1.0f
+	return IsProductionEnabled() && GetConstructionProgress() >= 1.0f
 		? GetCurrentRainfallMmPerHour() * GetWaterPerMinutePerMmOfRain()
 		: 0.0f;
 }

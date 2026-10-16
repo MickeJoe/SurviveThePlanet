@@ -85,7 +85,7 @@ void AConnectorPlant::Tick(float DeltaSeconds)
 		{EResourceType::Polymer, FMath::Max(0, Recipe ? Recipe->PolymerPerCycle : 1)}
 	};
 	bIsProducing = Production->UpdateProduction(DeltaSeconds,
-		!bPlacementPreview && IsOperational(), Inputs, EResourceType::Connector,
+		!bPlacementPreview && CanProduce(), Inputs, EResourceType::Connector,
 		FMath::Max(1, Recipe ? Recipe->ConnectorsPerCycle : 3),
 		Recipe ? Recipe->CycleSeconds : 20.0f);
 	if (bIsProducing)

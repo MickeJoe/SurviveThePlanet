@@ -52,6 +52,19 @@ private:
 	void HandleClicked();
 };
 
+/** Recipe buttons retain a stable choice while their WBP cards are refreshed. */
+UCLASS()
+class SURVIVETHEPLANET_API UWorkshopRecipeButton : public UButton
+{
+	GENERATED_BODY()
+public:
+	void Configure(UBuildingInfoWidget* InOwner, int32 InRecipeIndex);
+private:
+	TWeakObjectPtr<UBuildingInfoWidget> OwnerWidget;
+	int32 RecipeIndex = 0;
+	UFUNCTION() void HandleClicked();
+};
+
 /** UMG-backed building popup. Visual layout lives in WBP_BuildingInfoPopup. */
 UCLASS(Blueprintable)
 class SURVIVETHEPLANET_API UBuildingInfoWidget : public UUserWidget
@@ -60,6 +73,7 @@ class SURVIVETHEPLANET_API UBuildingInfoWidget : public UUserWidget
 
 public:
 	bool CloseDroneSelectionIfOpen();
+	void SelectWorkshopRecipe(int32 RecipeIndex);
 	UFUNCTION(BlueprintCallable, Category = "Building Info")
 	void SetBuilding(ABaseBuilding* NewBuilding);
 
@@ -67,6 +81,7 @@ public:
 	void AssignDroneOfClass(TSubclassOf<class ABaseDrone> DroneClass, int32 SlotIndex);
 
 protected:
+	virtual void NativeConstruct() override;
 	virtual void NativeDestruct() override;
 	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 
@@ -98,6 +113,16 @@ protected:
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidget), Category = "Building Info")
 	TObjectPtr<UHorizontalBox> DroneSlotsBox;
 
+	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UHorizontalBox> RecipeButtonsBox;
+	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<class UWidget> RecipeSelectionSection;
+	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<class UWidget> ProductionControls;
+	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UButton> StartProductionButton;
+	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UButton> PauseProductionButton;
+	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UButton> ClosePopupButton;
+	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UTextBlock> DroneCountText;
+	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UTextBlock> CycleProgressText;
+	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UTextBlock> SelectedRecipeText;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Building Info|Drone Slots")
 	TObjectPtr<UTexture2D> LockedDroneSlotIcon;
 
@@ -120,6 +145,12 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<AResourceManager> ResourceManager;
 
+	UFUNCTION() void HandleStartProduction();
+	UFUNCTION() void HandlePauseProduction();
+	UFUNCTION() void HandleClosePopup();
+	void BuildRecipeSelection();
+	void RefreshRecipeSelection();
+	UPROPERTY(Transient) TArray<TObjectPtr<UUserWidget>> RecipeCards;
 	void BuildProductionFlow();
 	void RefreshProductionFlow();
 	UUserWidget* AddResourceCard(UHorizontalBox* Box, EResourceType Resource, float Amount, bool bPerMinute);

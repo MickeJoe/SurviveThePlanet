@@ -18,7 +18,7 @@ void ANuclearReactor::Tick(float DeltaSeconds)
   {EResourceType::CoolingUnits, FMath::Max(1, CoolingUnitsPerCycle)}};
  // Electricity is supplied through the grid; the shared component pays only fuel/coolant.
  bIsProducing = Production->UpdateProduction(DeltaSeconds * Efficiency,
-  !IsPlacementPreview() && IsOperational() && Efficiency > 0.0f,
+  !IsPlacementPreview() && CanProduce() && Efficiency > 0.0f,
   Inputs, EResourceType::Energy, 0, FMath::Max(0.1f, CycleSeconds));
 }
 float ANuclearReactor::GetEnergyProductionPerMinute() const

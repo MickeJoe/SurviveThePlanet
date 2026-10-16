@@ -32,5 +32,5 @@ void AGeothermalPlant::Tick(float DeltaSeconds)
 {
  Super::Tick(DeltaSeconds);
  TurbineRotor->SetVisibility(!IsPlacementPreview() && GetConstructionProgress() >= 1.0f);
- if (IsOperational()) TurbineRotor->AddLocalRotation(FRotator(0,0,DeltaSeconds * 180.0f));
+ if (CanProduce()) TurbineRotor->AddLocalRotation(FRotator(0,0,DeltaSeconds * 180.0f));
 }

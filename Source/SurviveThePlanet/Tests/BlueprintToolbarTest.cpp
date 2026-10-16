@@ -139,8 +139,13 @@ bool FSTPBlueprintToolbarTest::RunTest(const FString& Parameters)
         {
             if (static_cast<uint8>(Entry->BuildTool) < static_cast<uint8>(ESTPBuildTool::CrudeWorkshop)) continue;
             const FString Name = Entry->DisplayName.ToString();
-            TestFalse(Name + TEXT(" starts locked"), Entry->bBlueprintInitiallyOwned);
+            const bool bStarterWorkshop = Entry->BuildTool == ESTPBuildTool::CrudeWorkshop;
+            TestEqual(Name + TEXT(" initial ownership"), Entry->bBlueprintInitiallyOwned, bStarterWorkshop);
+            if (bStarterWorkshop) TestTrue(TEXT("Workshop known in a fresh colony"), Inventory->OwnsBlueprint(Entry->BuildTool));
+            const bool bInitiallyOwned = Entry->bBlueprintInitiallyOwned;
+            Entry->bBlueprintInitiallyOwned = false;
             Inventory->RevokeBlueprint(Entry->BuildTool);
+            Toolbar->RefreshToolbarVisibility();
             UWidget* ToolWidget = Toolbar->ToolWidgets.FindRef(Entry->BuildTool);
             UButton* Button = Toolbar->ToolButtons.FindRef(Entry->BuildTool);
             if (!TestNotNull(Name + TEXT(" button"), Button) || !TestNotNull(Name + TEXT(" icon widget"), ToolWidget)) continue;
@@ -194,6 +199,7 @@ bool FSTPBlueprintToolbarTest::RunTest(const FString& Parameters)
             }
             Controller->SetActiveBuildTool(ESTPBuildTool::None);
             Inventory->RevokeBlueprint(Entry->BuildTool);
+            Entry->bBlueprintInitiallyOwned = bInitiallyOwned;
             ++CatalogBuildingsTested;
         }
         TestEqual(TEXT("All 49 new catalog buildings covered"),CatalogBuildingsTested,49);

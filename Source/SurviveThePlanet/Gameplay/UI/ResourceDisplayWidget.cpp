@@ -19,6 +19,7 @@
 #include "Gameplay/Buildings/Steelworks.h"
 #include "Gameplay/Buildings/PolymerPlant.h"
 #include "Gameplay/Buildings/ConnectorPlant.h"
+#include "Gameplay/Buildings/CrudeWorkshop.h"
 #include "Gameplay/Cables/CableNetworkManager.h"
 #include "Gameplay/Resources/BaseResourceSource.h"
 #include "Gameplay/Planet/PlanetWeatherManager.h"
@@ -432,7 +433,7 @@ void UResourceDisplayWidget::RefreshResourceRates()
 
 		for (TActorIterator<AWaterCollector> It(World); It; ++It)
 		{
-			if (It->IsOperational())
+			if (It->CanProduce())
 			{
 				WaterRatePerMinute += It->GetCurrentWaterProductionPerMinute();
 			}
@@ -440,7 +441,7 @@ void UResourceDisplayWidget::RefreshResourceRates()
 
 		for (TActorIterator<AConcretePlant> It(World); It; ++It)
 		{
-			if (It->IsOperational() && It->GetConstructionProgress() >= 1.0f)
+			if (It->CanProduce() && It->GetConstructionProgress() >= 1.0f)
 			{
 				ConcreteRatePerMinute += It->GetConcreteProductionPerMinute();
 			}
@@ -494,6 +495,14 @@ void UResourceDisplayWidget::RefreshResourceRates()
             const float CyclesPerMinute = 60.0f * It->GetCombinedDroneEfficiency() / FMath::Max(0.1f, It->CycleSeconds);
             Rates.FindOrAdd(EResourceType::FuelRods) -= FMath::Max(1, It->FuelRodsPerCycle) * CyclesPerMinute;
             Rates.FindOrAdd(EResourceType::CoolingUnits) -= FMath::Max(1, It->CoolingUnitsPerCycle) * CyclesPerMinute;
+        }
+        for (TActorIterator<ACrudeWorkshop> It(World); It; ++It)
+        {
+            if (!It->IsProducing()) continue;
+            const float CyclesPerMinute = 60.0f * It->GetCombinedDroneEfficiency() / FMath::Max(0.1f, It->GetCycleSeconds());
+            for (const FResourceCost& Input : It->GetRecipeInputs())
+                Rates.FindOrAdd(Input.Resource) -= Input.Cost * CyclesPerMinute;
+            Rates.FindOrAdd(It->GetRecipeOutput()) += CyclesPerMinute;
         }
         for (TActorIterator<AThermalProcessingBuilding> It(World); It; ++It)
         {

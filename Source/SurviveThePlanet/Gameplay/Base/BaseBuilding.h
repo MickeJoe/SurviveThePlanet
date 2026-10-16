@@ -49,6 +49,14 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Base Building|Power")
 	bool IsOperational() const;
 
+	UFUNCTION(BlueprintPure, Category = "Production")
+	bool IsProductionEnabled() const { return bProductionEnabled; }
+	UFUNCTION(BlueprintCallable, Category = "Production")
+	virtual void SetProductionEnabled(bool bEnabled);
+	bool CanProduce() const { return bProductionEnabled && IsOperational(); }
+
+
+
 	UFUNCTION(BlueprintPure, Category = "Base Building|Exploration")
 	bool ProvidesVision() const;
 
@@ -235,6 +243,9 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Construction", meta = (ClampMin = "0.0", ClampMax = "1.0", UIMin = "0.0", UIMax = "1.0"))
 	float ConstructionProgress = 1.0f;
+
+	UPROPERTY(VisibleInstanceOnly, SaveGame, Category = "Production")
+	bool bProductionEnabled = true;
 
 	bool bPlacementPreview = false;
 	bool bPlacementPreviewValid = false;

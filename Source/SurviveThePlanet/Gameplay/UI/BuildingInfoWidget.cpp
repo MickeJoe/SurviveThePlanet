@@ -3,6 +3,7 @@
 #include "Blueprint/WidgetTree.h"
 #include "Blueprint/SlateBlueprintLibrary.h"
 #include "Components/Border.h"
+#include "Components/CanvasPanelSlot.h"
 #include "Components/HorizontalBox.h"
 #include "Components/HorizontalBoxSlot.h"
 #include "Components/Image.h"
@@ -15,6 +16,9 @@
 #include "Gameplay/Cables/CableNetworkManager.h"
 #include "Gameplay/Resources/ResourceManager.h"
 #include "Gameplay/Drones/BaseDrone.h"
+#include "Gameplay/Buildings/CrudeWorkshop.h"
+#include "Gameplay/Resources/ResourceCatalog.h"
+#include "SurviveThePlanetPlayerController.h"
 
 void UDroneTypeSelectionButton::Configure(UBuildingInfoWidget* InOwnerWidget, TSubclassOf<ABaseDrone> InDroneClass, int32 InSlotIndex)
 {
@@ -101,6 +105,7 @@ void UBuildingInfoWidget::SetBuilding(ABaseBuilding* NewBuilding)
 	}
 
 	RefreshDroneSlots();
+	BuildRecipeSelection();
 	BuildProductionFlow();
 	RefreshPowerStatus();
 }
@@ -147,48 +152,33 @@ void UBuildingInfoWidget::RefreshDroneSlots()
 		return;
 	}
 
+	if (DroneCountText) DroneCountText->SetText(FText::FromString(FString::Printf(TEXT("%d / %d ASSIGNED"), Building->GetAssignedDroneCount(), MaxSlots)));
 	const int32 UnlockedSlots = Building->GetUnlockedDroneSlots();
 	for (int32 SlotIndex = 0; SlotIndex < MaxSlots; ++SlotIndex)
 	{
 		const bool bUnlocked = SlotIndex < UnlockedSlots;
 		ABaseDrone* AssignedDrone = Building->GetAssignedDroneAtSlot(SlotIndex);
 
-		USizeBox* SlotSize = WidgetTree->ConstructWidget<USizeBox>();
-		SlotSize->SetWidthOverride(82.0f);
-		SlotSize->SetHeightOverride(82.0f);
-		// The wrapping UDroneSlotButton owns the full hit area. Its visual children
-		// must never become the Slate hit target themselves.
+		UClass* CardClass = LoadClass<UUserWidget>(nullptr, TEXT("/Game/UI/BuildingFlow/WBP_ProductionDroneSlot.WBP_ProductionDroneSlot_C"));
+		UUserWidget* SlotSize = CardClass ? CreateWidget<UUserWidget>(GetOwningPlayer(), CardClass) : nullptr;
+		if (!SlotSize) continue;
 		SlotSize->SetVisibility(ESlateVisibility::HitTestInvisible);
-
-		UBorder* SlotBorder = WidgetTree->ConstructWidget<UBorder>();
-		SlotBorder->SetPadding(FMargin(10.0f));
-		SlotBorder->SetHorizontalAlignment(HAlign_Center);
-		SlotBorder->SetVerticalAlignment(VAlign_Center);
-		SlotBorder->SetBrushColor(bUnlocked
-			? (AssignedDrone
-				? FLinearColor(0.07f, 0.22f, 0.10f, 1.0f)
-				: FLinearColor(0.055f, 0.16f, 0.075f, 1.0f))
-			: FLinearColor(0.035f, 0.045f, 0.05f, 1.0f));
-		SlotSize->SetContent(SlotBorder);
-
-		if (bUnlocked && AssignedDrone && AssignedDrone->GetDroneThumbnail())
+		if (UImage* Icon = Cast<UImage>(SlotSize->GetWidgetFromName(TEXT("DroneIcon"))))
 		{
-			UImage* DroneImage = WidgetTree->ConstructWidget<UImage>();
-			DroneImage->SetBrushFromTexture(AssignedDrone->GetDroneThumbnail(), true);
-			DroneImage->SetColorAndOpacity(FLinearColor::White);
-			SlotBorder->SetContent(DroneImage);
+			Icon->SetBrushFromTexture(AssignedDrone ? AssignedDrone->GetDroneThumbnail() : LockedDroneSlotIcon.Get());
+			Icon->SetVisibility(AssignedDrone || !bUnlocked ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
 		}
-		else if (!bUnlocked && LockedDroneSlotIcon)
+		if (UTextBlock* Label = Cast<UTextBlock>(SlotSize->GetWidgetFromName(TEXT("SlotLabel"))))
 		{
-			USizeBox* LockIconSize = WidgetTree->ConstructWidget<USizeBox>();
-			LockIconSize->SetWidthOverride(42.0f);
-			LockIconSize->SetHeightOverride(48.0f);
-
-			UImage* LockIcon = WidgetTree->ConstructWidget<UImage>();
-			LockIcon->SetBrushFromTexture(LockedDroneSlotIcon, true);
-			LockIcon->SetColorAndOpacity(FLinearColor(0.72f, 0.74f, 0.75f, 0.9f));
-			LockIconSize->SetContent(LockIcon);
-			SlotBorder->SetContent(LockIconSize);
+			FSlateFontInfo Font = Label->GetFont();
+			Font.Size = AssignedDrone ? 18 : bUnlocked ? 30 : 12;
+			Label->SetFont(Font);
+			if (auto* Position = Cast<UCanvasPanelSlot>(Label->Slot))
+			{
+				Position->SetPosition(FVector2D(0, AssignedDrone ? 59 : 20));
+				Position->SetSize(FVector2D(126, AssignedDrone ? 24 : 50));
+			}
+			Label->SetText(FText::FromString(AssignedDrone ? FString::Printf(TEXT("%.0f%%"), AssignedDrone->GetWorkingRate(Building->GetDroneWorkType()) * 100.0f) : bUnlocked ? TEXT("+") : TEXT("LOCKED")));
 		}
 
 		UWidget* SlotWidget = SlotSize;
@@ -456,4 +446,84 @@ void UBuildingInfoWidget::HandleDroneSlotsChanged(int32 UnlockedSlots)
 void UBuildingInfoWidget::HandleDroneAssignmentsChanged()
 {
 	RefreshDroneSlots();
+}
+
+void UWorkshopRecipeButton::Configure(UBuildingInfoWidget* InOwner, int32 InRecipeIndex)
+{
+	OwnerWidget = InOwner;
+	RecipeIndex = InRecipeIndex;
+	OnClicked.AddUniqueDynamic(this, &UWorkshopRecipeButton::HandleClicked);
+}
+
+void UWorkshopRecipeButton::HandleClicked()
+{
+	if (OwnerWidget.IsValid()) OwnerWidget->SelectWorkshopRecipe(RecipeIndex);
+}
+
+void UBuildingInfoWidget::NativeConstruct()
+{
+	Super::NativeConstruct();
+	if (StartProductionButton) StartProductionButton->OnClicked.AddUniqueDynamic(this, &UBuildingInfoWidget::HandleStartProduction);
+	if (PauseProductionButton) PauseProductionButton->OnClicked.AddUniqueDynamic(this, &UBuildingInfoWidget::HandlePauseProduction);
+	if (ClosePopupButton) ClosePopupButton->OnClicked.AddUniqueDynamic(this, &UBuildingInfoWidget::HandleClosePopup);
+}
+
+void UBuildingInfoWidget::HandleStartProduction()
+{
+	if (IsValid(Building)) Building->SetProductionEnabled(true);
+	RefreshProductionFlow();
+}
+
+void UBuildingInfoWidget::HandlePauseProduction()
+{
+	if (IsValid(Building)) Building->SetProductionEnabled(false);
+	RefreshProductionFlow();
+}
+
+void UBuildingInfoWidget::HandleClosePopup()
+{
+	if (auto* Controller = Cast<ASurviveThePlanetPlayerController>(GetOwningPlayer())) Controller->SetSelectedActor(nullptr);
+	SetBuilding(nullptr);
+}
+
+void UBuildingInfoWidget::SelectWorkshopRecipe(int32 RecipeIndex)
+{
+	ACrudeWorkshop* Workshop = Cast<ACrudeWorkshop>(Building);
+	if (!Workshop || RecipeIndex < 0 || RecipeIndex > 2) return;
+	Workshop->SetRecipe(static_cast<ECrudeWorkshopRecipe>(RecipeIndex));
+	BuildProductionFlow();
+	RefreshRecipeSelection();
+}
+
+void UBuildingInfoWidget::BuildRecipeSelection()
+{
+	RecipeCards.Reset();
+	if (RecipeButtonsBox) RecipeButtonsBox->ClearChildren();
+	ACrudeWorkshop* Workshop = Cast<ACrudeWorkshop>(Building);
+	if (RecipeSelectionSection) RecipeSelectionSection->SetVisibility(Workshop ? ESlateVisibility::SelfHitTestInvisible : ESlateVisibility::Collapsed);
+	if (!Workshop || !RecipeButtonsBox) return;
+	UClass* CardClass = LoadClass<UUserWidget>(nullptr, TEXT("/Game/UI/BuildingFlow/WBP_ProductionRecipeCard.WBP_ProductionRecipeCard_C"));
+	for (int32 Index = 0; Index < 3 && CardClass; ++Index)
+	{
+		UUserWidget* Card = CreateWidget<UUserWidget>(GetOwningPlayer(), CardClass);
+		if (!Card) continue;
+		const auto Recipe = static_cast<ECrudeWorkshopRecipe>(Index);
+		if (auto* Button = Cast<UWorkshopRecipeButton>(Card->GetWidgetFromName(TEXT("RecipeButton")))) Button->Configure(this, Index);
+		if (auto* Icon = Cast<UImage>(Card->GetWidgetFromName(TEXT("RecipeIcon")))) Icon->SetBrushFromTexture(UResourceCatalog::GetResourceIcon(ACrudeWorkshop::GetOutputForRecipe(Recipe)));
+		if (auto* Label = Cast<UTextBlock>(Card->GetWidgetFromName(TEXT("RecipeName")))) Label->SetText(FText::FromString(Index == 0 ? TEXT("CONCRETE") : Index == 1 ? TEXT("STEEL") : TEXT("COPPER")));
+		const int32 Seconds = FMath::RoundToInt(Workshop->GetCycleSecondsForRecipe(Recipe));
+		if (auto* Time = Cast<UTextBlock>(Card->GetWidgetFromName(TEXT("RecipeTime")))) Time->SetText(FText::FromString(FString::Printf(TEXT("%d:%02d"), Seconds / 60, Seconds % 60)));
+		RecipeButtonsBox->AddChildToHorizontalBox(Card)->SetPadding(FMargin(0, 0, 8, 0));
+		RecipeCards.Add(Card);
+	}
+	RefreshRecipeSelection();
+}
+
+void UBuildingInfoWidget::RefreshRecipeSelection()
+{
+	const ACrudeWorkshop* Workshop = Cast<ACrudeWorkshop>(Building);
+	if (!Workshop) return;
+	for (int32 Index = 0; Index < RecipeCards.Num(); ++Index)
+		if (UBorder* Selection = Cast<UBorder>(RecipeCards[Index]->GetWidgetFromName(TEXT("SelectionBorder"))))
+			Selection->SetBrushColor(Index == static_cast<int32>(Workshop->GetSelectedRecipe()) ? FLinearColor(0.02f, 0.8f, 1.0f) : FLinearColor(0.16f, 0.25f, 0.28f));
 }

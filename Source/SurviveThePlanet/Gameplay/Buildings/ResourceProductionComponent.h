@@ -18,6 +18,7 @@ public:
 		EResourceType OutputResource, int32 OutputPerCycle, float CycleSeconds);
 	float GetCycleProgressSeconds() const { return CycleProgressSeconds; }
 	void StopProduction() { bIsProducing = false; }
+	void ResetCycle() { CycleProgressSeconds = 0.0f; bIsProducing = false; }
 
 private:
 	UPROPERTY(Transient)

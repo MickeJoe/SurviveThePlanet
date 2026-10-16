@@ -153,8 +153,14 @@ float ABaseBuilding::GetEnergyConsumptionPerMinute() const
 		: EnergyConsumptionPerMinute;
 }
 
+void ABaseBuilding::SetProductionEnabled(bool bEnabled)
+{
+	bProductionEnabled = bEnabled;
+}
+
 float ABaseBuilding::GetEnergyProductionPerMinute() const
 {
+	if (!bProductionEnabled) return 0.0f;
 	return IsValid(BuildingData) && BuildingData->bOverrideEnergySettings
 		? BuildingData->EnergyProductionPerMinute
 		: EnergyProductionPerMinute;

@@ -17,6 +17,6 @@ void AUraniumProcessor::Tick(float DeltaSeconds)
  const float Efficiency = GetCombinedDroneEfficiency();
  const TArray<FResourceCost> Inputs = {{EResourceType::UraniumOre, FMath::Max(1, OrePerCycle)}};
  bIsProducing = Production->UpdateProduction(DeltaSeconds * Efficiency,
-  !IsPlacementPreview() && IsOperational() && Efficiency > 0.0f,
+  !IsPlacementPreview() && CanProduce() && Efficiency > 0.0f,
   Inputs, EResourceType::FuelRods, FMath::Max(1, FuelRodsPerCycle), FMath::Max(0.1f, CycleSeconds));
 }

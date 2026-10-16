@@ -1,0 +1,13 @@
+{
+  "source": "C:\\UE5\\SurviveThePlanet 5.8\\ContentSource\\CrudeWorkshop",
+  "footprint_cm": [
+    368,
+    341
+  ],
+  "vertices": 18336,
+  "parts": [
+    "SM_CrudeWorkshop",
+    "SM_WorkshopFan",
+    "SM_WorkshopRam"
+  ]
+}

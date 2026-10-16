@@ -102,7 +102,7 @@ float AMiningMachine::GetCurrentOutputPerMinute() const
 
 bool AMiningMachine::IsProducingResource() const
 {
-	return !bPlacementPreview && GetConstructionProgress() >= 1.0f && IsOperational()
+	return !bPlacementPreview && GetConstructionProgress() >= 1.0f && CanProduce()
 		&& IsValid(ResourceSource) && ResourceSource->GetRemainingAmount() > 0
 		&& GetOutputPerMinuteAt100Percent(ResourceSource->GetResourceType()) > 0.0f
 		&& GetCombinedDroneEfficiency() > 0.0f;

@@ -1,5 +1,6 @@
 #include "IndustrialEffectsComponent.h"
 #include "ThermalProcessingBuilding.h"
+#include "CrudeWorkshop.h"
 #include "Gameplay/Base/BaseBuilding.h"
 #include "Gameplay/Resources/BaseResourceSource.h"
 #include "Gameplay/Planet/PlanetWeatherManager.h"
@@ -54,7 +55,8 @@ void UIndustrialEffectsComponent::BeginPlay()
  UNiagaraSystem* System = LoadObject<UNiagaraSystem>(nullptr, SystemPath);
  if (!System || !Anchor) return;
  TArray<FVector> Vents;
- if (bMine) Vents = {FVector(-80,0,48)};
+ if (EffectKind == EIndustrialEffectKind::CrudeWorkshop) Vents = {FVector(87,-75,260)};
+ else if (bMine) Vents = {FVector(-80,0,48)};
  else if (bDeposit) Vents = {FVector(-35,15,18)};
  else if (EffectKind == EIndustrialEffectKind::NuclearReactor) Vents = {FVector(137,105,208),FVector(137,-88,208)};
  else if (EffectKind == EIndustrialEffectKind::WaterTreatment) Vents = {FVector(-125,-70,246)};
@@ -65,15 +67,19 @@ void UIndustrialEffectsComponent::BeginPlay()
   UNiagaraComponent* Particles = NewObject<UNiagaraComponent>(Owner);
   Particles->SetupAttachment(Anchor);
   Particles->SetRelativeLocation(Vent);
-  Particles->SetRelativeScale3D(FVector(bDust ? 1.0f : EffectKind == EIndustrialEffectKind::NuclearReactor ? 0.42f : 0.26f));
+  Particles->SetRelativeScale3D(FVector(EffectKind == EIndustrialEffectKind::CrudeWorkshop ? 0.12f : bDust ? 1.0f : EffectKind == EIndustrialEffectKind::NuclearReactor ? 0.42f : 0.26f));
   Particles->SetAutoActivate(false); Particles->SetAsset(System); Particles->SetCastShadow(false);
   Owner->AddInstanceComponent(Particles); Particles->RegisterComponent(); Emitters.Add(Particles);
  }
- if (bMine)
+ if (bMine || EffectKind == EIndustrialEffectKind::CrudeWorkshop)
  {
-  for (const FVector& Position : {FVector(-178,-155,40), FVector(178,-155,40), FVector(-178,155,40), FVector(178,155,40)})
+  const TArray<FVector> LightPositions = EffectKind == EIndustrialEffectKind::CrudeWorkshop
+   ? TArray<FVector>{FVector(-62,-16,133)}
+   : TArray<FVector>{FVector(-178,-155,40), FVector(178,-155,40), FVector(-178,155,40), FVector(178,155,40)};
+  for (const FVector& Position : LightPositions)
   {
    UPointLightComponent* Light = NewObject<UPointLightComponent>(Owner);
+   if (EffectKind == EIndustrialEffectKind::CrudeWorkshop) Light->ComponentTags.Add(TEXT("ProductionEffect"));
    Light->SetupAttachment(Anchor);
    Light->SetRelativeLocation(Position);
    Light->SetLightColor(FLinearColor(1.0f, 0.78f, 0.48f));
@@ -97,11 +103,12 @@ void UIndustrialEffectsComponent::TickComponent(float DeltaTime, ELevelTick Tick
  const AMiningMachine* Mine = (EffectKind == EIndustrialEffectKind::UraniumMine || EffectKind == EIndustrialEffectKind::SurfaceMine) ? Cast<AMiningMachine>(Owner) : nullptr;
  const ANuclearReactor* Reactor = Cast<ANuclearReactor>(Owner);
  const AUraniumProcessor* Processor = Cast<AUraniumProcessor>(Owner);
+ const ACrudeWorkshop* Workshop = Cast<ACrudeWorkshop>(Owner);
  const AThermalProcessingBuilding* Thermal = Cast<AThermalProcessingBuilding>(Owner);
  const UStaticMeshComponent* DepositMesh = Deposit ? Deposit->GetResourceMeshComponent() : nullptr;
  const bool bDepositVisible = DepositMesh && DepositMesh->IsVisible() && !DepositMesh->bHiddenInGame;
  const bool bActive = !Owner->IsHidden() && !Owner->IsActorBeingDestroyed()
-  && (Building ? !Building->IsPlacementPreview() && Building->IsOperational() && (!Mine || Mine->IsProducingResource()) && (!Processor || Processor->IsProducing()) && (!Reactor || Reactor->IsProducing()) && (!Thermal || Thermal->IsProducing()) : Deposit && bDepositVisible && Deposit->GetRemainingAmount() > 0);
+  && (Building ? !Building->IsPlacementPreview() && Building->CanProduce() && (!Mine || Mine->IsProducingResource()) && (!Processor || Processor->IsProducing()) && (!Reactor || Reactor->IsProducing()) && (!Thermal || Thermal->IsProducing()) && (!Workshop || Workshop->IsProducing()) : Deposit && bDepositVisible && Deposit->GetRemainingAmount() > 0);
  FPlanetWeatherState Weather;
  if (WeatherManager.IsValid()) Weather = WeatherManager->GetCurrentWeather();
  const float Brightness = 0.18f + 0.42f * FMath::Clamp(Weather.SunPercent / 100.0f, 0.0f, 1.0f);
@@ -116,7 +123,9 @@ void UIndustrialEffectsComponent::TickComponent(float DeltaTime, ELevelTick Tick
  const bool bLit = !Owner->IsHidden() && Building && Building->IsOperational();
  const float Darkness = 1.0f - FMath::Clamp(Weather.SunPercent / 35.0f, 0.0f, 1.0f);
  for (UPointLightComponent* Light : WorkLights)
-  Light->SetIntensity(bLit ? Darkness * 45.0f : 0.0f);
+  Light->SetIntensity(Workshop
+   ? (bActive ? 55.0f + 85.0f * FMath::Pow(FMath::Max(0.0f, FMath::Sin(Elapsed * 13.0f)), 4.0f) : 0.0f)
+   : (bLit ? Darkness * 45.0f : 0.0f));
  if (MineDrill && bActive)
  {
   MineDrill->AddLocalRotation(FRotator(0.0f, DeltaTime * 150.0f, 0.0f));

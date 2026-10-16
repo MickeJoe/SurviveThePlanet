@@ -35,6 +35,6 @@ void AThermalProcessingBuilding::Tick(float DeltaSeconds)
  Super::Tick(DeltaSeconds);
  const float Efficiency = GetCombinedDroneEfficiency();
  bIsProducing = Production->UpdateProduction(DeltaSeconds * Efficiency,
-  !IsPlacementPreview() && IsOperational() && Efficiency > 0.0f,
+  !IsPlacementPreview() && CanProduce() && Efficiency > 0.0f,
   GetRecipeInputs(), GetRecipeOutput(), FMath::Max(1, OutputPerCycle), FMath::Max(0.1f, CycleSeconds));
 }

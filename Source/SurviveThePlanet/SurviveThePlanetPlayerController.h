@@ -135,6 +135,8 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Camera Controls")
 	bool IsCameraInputBlocked() const;
+	UFUNCTION(BlueprintCallable, Category = "Selection")
+	void SetSelectedActor(AActor* NewSelectedActor);
 	UFUNCTION(BlueprintCallable, Category = "Trading")
 	void OpenTradeScreen(FName TraderId = TEXT("helix_industrial"));
 	UFUNCTION(BlueprintPure, Category = "Construction")
@@ -304,7 +306,7 @@ private:
 	AActor* FindSelectableActorNearScreenPosition(const FVector2D& ScreenPosition) const;
 	bool IsSelectableActor(const AActor* Actor) const;
 	bool TryGetCursorWorldLocation(FVector& OutWorldLocation) const;
-	void SetSelectedActor(AActor* NewSelectedActor);
+
 	void SetActorSelectedVisual(AActor* Actor, bool bSelected) const;
 	void DrawSelectedActorRing() const;
 	void LogSelectableActors(const TCHAR* Reason) const;

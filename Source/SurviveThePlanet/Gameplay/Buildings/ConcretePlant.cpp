@@ -17,7 +17,7 @@ AConcretePlant::AConcretePlant()
 void AConcretePlant::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
-	if (bPlacementPreview || GetConstructionProgress() < 1.0f || !IsOperational())
+	if (bPlacementPreview || GetConstructionProgress() < 1.0f || !CanProduce())
 	{
 		return;
 	}

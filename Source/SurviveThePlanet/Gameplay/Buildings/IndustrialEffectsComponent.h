@@ -9,7 +9,7 @@ class UMaterialInstanceDynamic;
 class APlanetWeatherManager;
 
 UENUM(BlueprintType)
-enum class EIndustrialEffectKind : uint8 { UraniumDeposit, NuclearReactor, UraniumProcessor, UraniumMine, WaterTreatment, CoolingPlant, SurfaceMine };
+enum class EIndustrialEffectKind : uint8 { UraniumDeposit, NuclearReactor, UraniumProcessor, UraniumMine, WaterTreatment, CoolingPlant, SurfaceMine, CrudeWorkshop };
 
 /** Pooled wind-driven particles and operational indicators for colony industry. */
 UCLASS(ClassGroup=(Effects), meta=(BlueprintSpawnableComponent))
