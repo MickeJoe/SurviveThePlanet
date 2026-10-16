@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Subsystems/WorldSubsystem.h"
+#include "Gameplay/Resources/ResourceManager.h"
 #include "ContractOfferSubsystem.generated.h"
 
 class UTexture2D;
@@ -73,6 +74,16 @@ struct FSTPContractTierDefinition
 
 	UPROPERTY(BlueprintReadOnly, Category = "Contracts")
 	TArray<FSTPContractEffectDefinition> CompletionBonus;
+
+	int32 GetMissionProgressReward() const
+	{
+		int64 Total = 0;
+		for (const auto& Effect : CompletionBonus)
+		{
+			if (Effect.Type == ESTPContractEffectType::MissionProgress) Total += Effect.Amount;
+		}
+		return static_cast<int32>(FMath::Clamp<int64>(Total, 0, MAX_int32));
+	}
 };
 
 USTRUCT(BlueprintType)
@@ -99,14 +110,39 @@ struct FSTPContractOfferDefinition
 	TArray<FSTPContractTierDefinition> Tiers;
 };
 
+UENUM(BlueprintType)
+enum class ESTPContractState : uint8 { None, Active, Completed, Failed };
+
+USTRUCT(BlueprintType)
+struct FSTPContractRuntimeState
+{
+	GENERATED_BODY()
+	UPROPERTY(BlueprintReadOnly, Category="Contracts") ESTPContractState State = ESTPContractState::None;
+	UPROPERTY(BlueprintReadOnly, Category="Contracts") int32 DeliveriesMade = 0;
+	UPROPERTY(BlueprintReadOnly, Category="Contracts") int32 DeliveriesMissed = 0;
+	/** One simulation second equals one minute on the game clock. */
+	UPROPERTY(BlueprintReadOnly, Category="Contracts") float SecondsUntilDelivery = 0.0f;
+};
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FContractStateChangedSignature);
+
 /** Loads UI-ready contract offer definitions from Config/ContractOffers.json. */
 UCLASS()
-class SURVIVETHEPLANET_API UContractOfferSubsystem : public UWorldSubsystem
+class SURVIVETHEPLANET_API UContractOfferSubsystem : public UTickableWorldSubsystem
 {
 	GENERATED_BODY()
 
 public:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
+	virtual void Tick(float DeltaTime) override;
+	virtual TStatId GetStatId() const override;
+	UFUNCTION(BlueprintPure, Category="Contracts") FSTPContractRuntimeState GetSelectedContractState() const { return RuntimeState; }
+	UFUNCTION(BlueprintPure, Category="Contracts") bool CanDeliverSelectedContract() const;
+	/** Pays for one shipment; completion rewards require every scheduled shipment. */
+	UFUNCTION(BlueprintCallable, Category="Contracts") bool DeliverSelectedContract();
+	UFUNCTION(BlueprintPure, Category="Contracts") int32 GetTraderReputation(FName TraderId) const { return TraderReputation.FindRef(TraderId); }
+	UFUNCTION(BlueprintPure, Category="Contracts") float GetTraderCooldownSeconds(FName TraderId) const { return TraderCooldowns.FindRef(TraderId); }
+	UPROPERTY(BlueprintAssignable, Category="Contracts") FContractStateChangedSignature OnContractStateChanged;
 	virtual void Deinitialize() override;
 	virtual bool DoesSupportWorldType(EWorldType::Type WorldType) const override;
 
@@ -145,6 +181,16 @@ private:
 	FName SelectedOfferId;
 	FName SelectedTierId;
 	bool bSelectionLocked = false;
+	bool bSettlingDelivery = false;
+	FSTPContractRuntimeState RuntimeState;
+	TMap<FName, int32> TraderReputation;
+	TMap<FName, float> TraderCooldowns;
+	bool ResolveSelectedContract(FSTPContractOfferDefinition& Offer, FSTPContractTierDefinition& Tier) const;
+	AResourceManager* FindResourceManager() const;
+	bool IsMissionActive() const;
+	void SettleDelivery(bool bDelivered);
+	int32 ApplyEffects(const TArray<FSTPContractEffectDefinition>& Effects, FName TraderId);
+	void GrantBlueprintReward(const FSTPContractEffectDefinition& Effect);
 
 	bool LoadFromJson(const FString& FilePath, TArray<FSTPContractOfferDefinition>& OutOffers) const;
 };

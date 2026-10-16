@@ -49,6 +49,7 @@
 #include "Blueprint/UserWidget.h"
 #include "SurviveThePlanet.h"
 #include "Gameplay/UI/PauseMenuWidget.h"
+#include "Gameplay/Planet/MissionConfidenceSubsystem.h"
 #include "Gameplay/UI/ResourceDisplayWidget.h"
 #include "Gameplay/UI/MissionChoiceWidget.h"
 #include "Gameplay/UI/ContractOfferWidget.h"
@@ -180,6 +181,16 @@ void ASurviveThePlanetPlayerController::SetEnergyStorageClass(TSubclassOf<AEnerg
 void ASurviveThePlanetPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
+
+	if (IsLocalPlayerController())
+	{
+		// UI Only changes the shared viewport, which survives OpenLevel after a mission result.
+		FlushPressedKeys();
+		SetInputMode(FInputModeGameAndUI().SetHideCursorDuringCapture(false));
+		bShowMouseCursor = true;
+		UWidgetBlueprintLibrary::SetFocusToGameViewport();
+	}
+
 
 	const AGameModeBase* GameMode = UGameplayStatics::GetGameMode(this);
 	const FString PawnClassName = GetPawn() ? GetPawn()->GetClass()->GetPathName() : TEXT("None");
@@ -461,6 +472,10 @@ void ASurviveThePlanetPlayerController::OnTouchReleased()
 
 void ASurviveThePlanetPlayerController::OnCancelBuildToolPressed()
 {
+	if (const auto* Mission = GetWorld()->GetSubsystem<UMissionConfidenceSubsystem>())
+	{
+		if (Mission->GetMissionOutcome() != EMissionOutcome::InProgress) return;
+	}
 	if (PauseMenuWidget && PauseMenuWidget->IsInViewport()) { ResumeGame(); return; }
 	if (TradeScreenWidget && TradeScreenWidget->IsInViewport()) { TradeScreenWidget->CloseTrade(); return; }
 	if (CheatMenuWidget && CheatMenuWidget->IsInViewport()) { ToggleCheatMenu(); return; }
@@ -2162,7 +2177,9 @@ USpringArmComponent* ASurviveThePlanetPlayerController::GetControlledCameraBoom(
 
 bool ASurviveThePlanetPlayerController::IsCameraInputBlocked() const
 {
-	return (PauseMenuWidget && PauseMenuWidget->IsInViewport())
+	const auto* Mission = GetWorld()->GetSubsystem<UMissionConfidenceSubsystem>();
+	return (Mission && Mission->GetMissionOutcome() != EMissionOutcome::InProgress)
+		|| (PauseMenuWidget && PauseMenuWidget->IsInViewport())
 		|| (CheatMenuWidget && CheatMenuWidget->IsInViewport())
 		|| (TradeScreenWidget && TradeScreenWidget->IsInViewport());
 }

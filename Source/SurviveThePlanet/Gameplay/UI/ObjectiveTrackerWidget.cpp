@@ -1,6 +1,7 @@
 #include "Gameplay/UI/ObjectiveTrackerWidget.h"
 
 #include "Blueprint/WidgetTree.h"
+#include "Blueprint/SlateBlueprintLibrary.h"
 #include "Components/HorizontalBox.h"
 #include "Components/HorizontalBoxSlot.h"
 #include "Components/SizeBox.h"
@@ -139,7 +140,16 @@ void UObjectiveTrackerWidget::AddObjectiveRow(const FSTPObjectiveDefinition& Def
 	ProgressSlot->SetHorizontalAlignment(HAlign_Right);
 	ProgressSlot->SetSize(FSlateChildSize(ESlateSizeRule::Automatic));
 
-	UVerticalBoxSlot* RowSlot = ObjectiveList->AddChildToVerticalBox(Row);
+	UVerticalBox* ObjectiveCard = WidgetTree->ConstructWidget<UVerticalBox>();
+	ObjectiveCard->AddChildToVerticalBox(Row);
+	if (const int32 Reward = Definition.GetMissionProgressReward(); Reward > 0)
+	{
+		UTextBlock* RewardText = WidgetTree->ConstructWidget<UTextBlock>();
+		RewardText->SetText(FText::Format(NSLOCTEXT("SurviveThePlanet", "TrackerProgressReward", "+{0} MISSION PROGRESSION"), FText::AsNumber(Reward)));
+		STPObjectiveUI::StyleText(RewardText, 11, STPObjectiveUI::Cyan);
+		ObjectiveCard->AddChildToVerticalBox(RewardText)->SetPadding(FMargin(18.0f, 0.0f, 0.0f, 5.0f));
+	}
+	UVerticalBoxSlot* RowSlot = ObjectiveList->AddChildToVerticalBox(ObjectiveCard);
 	RowSlot->SetPadding(FMargin(0.0f, 1.0f));
 	RowSlot->SetHorizontalAlignment(HAlign_Fill);
 }
@@ -159,4 +169,13 @@ FText UObjectiveTrackerWidget::FormatTime(float RemainingSeconds)
 {
 	const int32 TotalSeconds = FMath::Max(0, FMath::CeilToInt(RemainingSeconds));
 	return FText::FromString(FString::Printf(TEXT("%02d:%02d"), TotalSeconds / 60, TotalSeconds % 60));
+}
+
+float UObjectiveTrackerWidget::GetObjectivesBottomInViewport() const
+{
+	if (!ObjectiveList || ObjectiveList->GetCachedGeometry().GetLocalSize().IsNearlyZero()) return 0.0f;
+	FVector2D PixelPosition, ViewportPosition;
+	USlateBlueprintLibrary::LocalToViewport(this, ObjectiveList->GetCachedGeometry(),
+		FVector2D(0.0f, ObjectiveList->GetDesiredSize().Y), PixelPosition, ViewportPosition);
+	return ViewportPosition.Y;
 }

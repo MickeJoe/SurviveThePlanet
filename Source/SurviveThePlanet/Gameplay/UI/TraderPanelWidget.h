@@ -14,6 +14,7 @@ class UTraderSubsystem;
 class UContractOfferSubsystem;
 class UContractOfferWidget;
 class UVerticalBox;
+class UObjectiveTrackerWidget;
 struct FSTPTraderDefinition;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FSTPTraderSelectedSignature, FName, TraderId);
@@ -85,24 +86,24 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<UVerticalBox> ContractsList;
 
+	TWeakObjectPtr<UObjectiveTrackerWidget> ObjectiveTrackerWidget;
 	bool bCollapsed = false;
 	bool bTraderStructureDirty = false;
 	float TimerRefreshAccumulator = 0.0f;
-	float ActiveContractSimulationAccumulator = 0.0f;
 	TMap<FName, float> OfferSecondsRemaining;
 	UPROPERTY(Transient)
 	TMap<FName, TObjectPtr<UTextBlock>> OfferTimerTexts;
 	TSet<FName> PreviouslyEligibleTraders;
 	TSet<FName> ExpiredTraders;
-	FName TrackedContractOfferId;
-	FName TrackedContractTierId;
-	float NextDeliverySecondsRemaining = 0.0f;
+
 
 	void BuildFallbackLayout();
 	void ResolveResourceManager();
 	void RefreshTraders();
 	void UpdateTraderTimerTexts();
-	void RefreshActiveContracts(float DeltaTime);
+	void RefreshActiveContracts();
+	UFUNCTION() void HandleContractStateChanged();
+	UFUNCTION() void HandleDeliverContractClicked();
 	bool IsTraderEligible(const FSTPTraderDefinition& Trader) const;
 	bool UpdateOfferStates(float DeltaTime);
 	static FText FormatOfferTime(float RemainingSeconds);

@@ -1,6 +1,7 @@
 #include "Gameplay/UI/MissionConfidenceWidget.h"
 
 #include "Components/Border.h"
+#include "Components/ProgressBar.h"
 #include "Components/HorizontalBox.h"
 #include "Components/HorizontalBoxSlot.h"
 #include "Components/SizeBox.h"
@@ -15,6 +16,8 @@ void UMissionConfidenceWidget::NativeConstruct()
 	{
 		ConfidenceSubsystem->OnMissionConfidenceChanged.AddUniqueDynamic(this, &UMissionConfidenceWidget::HandleConfidenceChanged);
 		Refresh(ConfidenceSubsystem->GetMissionConfidence());
+		ConfidenceSubsystem->OnMissionProgressChanged.AddUniqueDynamic(this, &UMissionConfidenceWidget::HandleProgressChanged);
+		HandleProgressChanged(ConfidenceSubsystem->GetMissionProgress(), ConfidenceSubsystem->GetMissionProgressTarget());
 	}
 }
 
@@ -22,6 +25,7 @@ void UMissionConfidenceWidget::NativeDestruct()
 {
 	if (ConfidenceSubsystem)
 	{
+		ConfidenceSubsystem->OnMissionProgressChanged.RemoveDynamic(this, &UMissionConfidenceWidget::HandleProgressChanged);
 		ConfidenceSubsystem->OnMissionConfidenceChanged.RemoveDynamic(this, &UMissionConfidenceWidget::HandleConfidenceChanged);
 	}
 	Super::NativeDestruct();
@@ -70,4 +74,10 @@ void UMissionConfidenceWidget::BuildSegments(float Confidence)
 			SegmentSlot->SetPadding(FMargin(0.0f, 0.0f, Index == 9 ? 0.0f : 3.0f, 0.0f));
 		}
 	}
+}
+
+void UMissionConfidenceWidget::HandleProgressChanged(int32 Progress, int32 Target)
+{
+	if (MissionProgressBar) MissionProgressBar->SetPercent(Target > 0 ? static_cast<float>(Progress) / Target : 0.0f);
+	if (MissionProgressText) MissionProgressText->SetText(FText::FromString(FString::Printf(TEXT("%d / %d"), Progress, Target)));
 }

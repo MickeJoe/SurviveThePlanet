@@ -15,9 +15,15 @@
 #include "Gameplay/UI/MissionChoiceWidget.h"
 #include "Gameplay/UI/TraderPanelWidget.h"
 #include "SurviveThePlanet.h"
+#include "Gameplay/UI/MissionResultWidget.h"
+#include "Gameplay/Planet/MissionConfidenceSubsystem.h"
+#include "Blueprint/WidgetBlueprintLibrary.h"
+#include "Kismet/GameplayStatics.h"
 
 ASurviveThePlanetGameMode::ASurviveThePlanetGameMode()
 {
+	MissionResultWidgetClass = LoadClass<UMissionResultWidget>(nullptr,
+		TEXT("/Game/UI/Mission/WBP_MissionResult.WBP_MissionResult_C"));
 	DefaultPawnClass = ASurviveThePlanetCameraPawn::StaticClass();
 	PlayerControllerClass = ASurviveThePlanetPlayerController::StaticClass();
 	BuildToolbarWidgetClass = UBuildToolbarWidget::StaticClass();
@@ -40,6 +46,10 @@ ASurviveThePlanetGameMode::ASurviveThePlanetGameMode()
 void ASurviveThePlanetGameMode::StartPlay()
 {
 	Super::StartPlay();
+	if (auto* Mission = GetWorld()->GetSubsystem<UMissionConfidenceSubsystem>())
+	{
+		Mission->OnMissionEnded.AddUniqueDynamic(this, &ASurviveThePlanetGameMode::HandleMissionEnded);
+	}
 
 	UE_LOG(LogSurviveThePlanet, Warning, TEXT("STP_SELECT GameMode active: %s, DefaultPawnClass=%s, PlayerControllerClass=%s"),
 		*GetClass()->GetPathName(),
@@ -110,4 +120,29 @@ void ASurviveThePlanetGameMode::StartPlay()
 			if (TraderPanelWidget) TraderPanelWidget->AddToViewport(10);
 		}
 	}
+}
+
+void ASurviveThePlanetGameMode::HandleMissionEnded(EMissionOutcome Outcome)
+{
+	APlayerController* PC = GetWorld()->GetFirstPlayerController();
+	if (!PC || MissionResultWidget || Outcome == EMissionOutcome::InProgress) return;
+	UClass* ResultClass = MissionResultWidgetClass;
+	if (!ResultClass) ResultClass = LoadClass<UMissionResultWidget>(nullptr, TEXT("/Game/UI/Mission/WBP_MissionResult.WBP_MissionResult_C"));
+	if (!ResultClass) { UE_LOG(LogSurviveThePlanet, Error, TEXT("WBP_MissionResult missing")); return; }
+	MissionResultWidget = CreateWidget<UMissionResultWidget>(PC, ResultClass);
+	if (!MissionResultWidget) return;
+	TArray<UUserWidget*> Widgets;
+	UWidgetBlueprintLibrary::GetAllWidgetsOfClass(this, Widgets, UUserWidget::StaticClass(), true);
+	for (UUserWidget* Widget : Widgets)
+	{
+		if (auto* HUD = Cast<UResourceDisplayWidget>(Widget)) HUD->SetMenuPaused(true);
+		Widget->SetVisibility(ESlateVisibility::Collapsed);
+	}
+	MissionResultWidget->AddToViewport(3000);
+	MissionResultWidget->PresentResult(Outcome);
+	PC->SetPause(true);
+	PC->bShowMouseCursor = true;
+	PC->FlushPressedKeys();
+	PC->SetInputMode(FInputModeUIOnly().SetWidgetToFocus(MissionResultWidget->TakeWidget()));
+	MissionResultWidget->SetKeyboardFocus();
 }

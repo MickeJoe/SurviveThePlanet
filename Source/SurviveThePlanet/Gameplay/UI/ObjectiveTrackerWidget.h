@@ -14,6 +14,9 @@ class SURVIVETHEPLANET_API UObjectiveTrackerWidget : public UUserWidget
 {
 	GENERATED_BODY()
 
+public:
+	float GetObjectivesBottomInViewport() const;
+
 protected:
 	virtual void NativeConstruct() override;
 	virtual void NativeDestruct() override;

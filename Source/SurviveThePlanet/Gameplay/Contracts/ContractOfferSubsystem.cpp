@@ -3,6 +3,15 @@
 #include "Dom/JsonObject.h"
 #include "Engine/Texture2D.h"
 #include "Gameplay/Trading/TraderSubsystem.h"
+#include "Gameplay/Planet/MissionConfidenceSubsystem.h"
+#include "Gameplay/Buildings/BuildingBlueprintSubsystem.h"
+#include "Gameplay/Buildings/BuildingManagerSubsystem.h"
+#include "Gameplay/Buildings/BuildingCatalogDataAsset.h"
+#include "Gameplay/Base/BuildingDataAsset.h"
+#include "Engine/GameInstance.h"
+#include "EngineUtils.h"
+#include "Kismet/GameplayStatics.h"
+
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
 #include "Serialization/JsonReader.h"
@@ -109,6 +118,9 @@ void UContractOfferSubsystem::Deinitialize()
 	SelectedOfferId = NAME_None;
 	SelectedTierId = NAME_None;
 	bSelectionLocked = false;
+	RuntimeState = FSTPContractRuntimeState();
+	TraderReputation.Reset();
+	TraderCooldowns.Reset();
 	Super::Deinitialize();
 }
 
@@ -121,7 +133,7 @@ bool UContractOfferSubsystem::ReloadContractOffers()
 {
 	const FString Path = FPaths::Combine(FPaths::ProjectConfigDir(), TEXT("ContractOffers.json"));
 	TArray<FSTPContractOfferDefinition> LoadedOffers;
-	if (!LoadFromJson(Path, LoadedOffers)) return false;
+	if (bSelectionLocked || !LoadFromJson(Path, LoadedOffers)) return false;
 	ContractOffers = MoveTemp(LoadedOffers);
 	UE_LOG(LogContractOffers, Log, TEXT("Loaded %d contract offers from %s."), ContractOffers.Num(), *Path);
 	return true;
@@ -150,13 +162,13 @@ TArray<FSTPContractOfferDefinition> UContractOfferSubsystem::GetContractOffersFo
 
 bool UContractOfferSubsystem::ToggleContractSelection(FName OfferId, FName TierId)
 {
-	if (bSelectionLocked)
+	if (bSelectionLocked || bSettlingDelivery || !IsMissionActive())
 	{
 		return false;
 	}
 	const FSTPContractOfferDefinition* Offer = ContractOffers.FindByPredicate(
 		[OfferId](const FSTPContractOfferDefinition& Candidate) { return Candidate.Id == OfferId; });
-	if (!Offer || !Offer->Tiers.ContainsByPredicate(
+	if (!Offer || GetTraderCooldownSeconds(Offer->TraderId) > 0.0f || !Offer->Tiers.ContainsByPredicate(
 		[TierId](const FSTPContractTierDefinition& Candidate) { return Candidate.Id == TierId; }))
 	{
 		return false;
@@ -189,11 +201,18 @@ bool UContractOfferSubsystem::GetSelectedContract(FName& OutOfferId, FName& OutT
 
 bool UContractOfferSubsystem::ConfirmSelectedContract()
 {
-	if (bSelectionLocked || SelectedOfferId.IsNone() || SelectedTierId.IsNone())
+	if (bSelectionLocked || bSettlingDelivery || SelectedOfferId.IsNone() || SelectedTierId.IsNone())
 	{
 		return false;
 	}
+	FSTPContractOfferDefinition Offer;
+	FSTPContractTierDefinition Tier;
+	if (!IsMissionActive() || !ResolveSelectedContract(Offer, Tier) || GetTraderCooldownSeconds(Offer.TraderId) > 0.0f) return false;
 	bSelectionLocked = true;
+	RuntimeState = FSTPContractRuntimeState();
+	RuntimeState.State = ESTPContractState::Active;
+	RuntimeState.SecondsUntilDelivery = Tier.DeliveryIntervalHours * 60.0f;
+	OnContractStateChanged.Broadcast();
 	return true;
 }
 
@@ -251,6 +270,11 @@ bool UContractOfferSubsystem::LoadFromJson(const FString& FilePath,
 		Offer.Id = OfferId;
 		Offer.TraderId = FName(*TraderIdText);
 		Offer.ItemId = FName(*ItemIdText);
+		if (StaticEnum<EResourceType>()->GetValueByNameString(ItemIdText) == INDEX_NONE)
+		{
+			UE_LOG(LogContractOffers, Error, TEXT("Contract '%s' itemId '%s' is not an inventory resource."), *IdText, *ItemIdText);
+			return false;
+		}
 		Offer.Title = FText::FromString(TitleText);
 		Offer.Icon = TSoftObjectPtr<UTexture2D>(FSoftObjectPath(IconReference));
 		TSet<FName> TierIds;
@@ -293,4 +317,147 @@ bool UContractOfferSubsystem::LoadFromJson(const FString& FilePath,
 		OutOffers.Add(MoveTemp(Offer));
 	}
 	return true;
+}
+
+TStatId UContractOfferSubsystem::GetStatId() const
+{
+	RETURN_QUICK_DECLARE_CYCLE_STAT(UContractOfferSubsystem, STATGROUP_Tickables);
+}
+
+bool UContractOfferSubsystem::IsMissionActive() const
+{
+	const auto* Mission = GetWorld() ? GetWorld()->GetSubsystem<UMissionConfidenceSubsystem>() : nullptr;
+	return Mission && Mission->GetMissionOutcome() == EMissionOutcome::InProgress;
+}
+
+AResourceManager* UContractOfferSubsystem::FindResourceManager() const
+{
+	for (TActorIterator<AResourceManager> It(GetWorld()); It; ++It) return *It;
+	return nullptr;
+}
+
+bool UContractOfferSubsystem::ResolveSelectedContract(FSTPContractOfferDefinition& Offer, FSTPContractTierDefinition& Tier) const
+{
+	if (!GetContractOffer(SelectedOfferId, Offer)) return false;
+	const auto* SelectedTier = Offer.Tiers.FindByPredicate([this](const auto& Candidate) { return Candidate.Id == SelectedTierId; });
+	if (!SelectedTier) return false;
+	Tier = *SelectedTier;
+	return true;
+}
+
+bool UContractOfferSubsystem::CanDeliverSelectedContract() const
+{
+	if (bSettlingDelivery || !IsMissionActive() || RuntimeState.State != ESTPContractState::Active) return false;
+	FSTPContractOfferDefinition Offer;
+	FSTPContractTierDefinition Tier;
+	if (!ResolveSelectedContract(Offer, Tier)) return false;
+	const int64 Resource = StaticEnum<EResourceType>()->GetValueByNameString(Offer.ItemId.ToString());
+	const AResourceManager* Manager = FindResourceManager();
+	return Manager && Resource != INDEX_NONE && Manager->HasResource(static_cast<EResourceType>(Resource), Tier.DeliveryAmount);
+}
+
+bool UContractOfferSubsystem::DeliverSelectedContract()
+{
+	if (!CanDeliverSelectedContract()) return false;
+	TGuardValue<bool> SettlementGuard(bSettlingDelivery, true);
+	FSTPContractOfferDefinition Offer;
+	FSTPContractTierDefinition Tier;
+	if (!ResolveSelectedContract(Offer, Tier)) return false;
+	const auto Resource = static_cast<EResourceType>(StaticEnum<EResourceType>()->GetValueByNameString(Offer.ItemId.ToString()));
+	AResourceManager* Manager = FindResourceManager();
+	if (!Manager || !Manager->TrySpendResource(Resource, Tier.DeliveryAmount)) return false;
+	SettleDelivery(true);
+	return true;
+}
+
+void UContractOfferSubsystem::Tick(float DeltaTime)
+{
+	if (bSettlingDelivery || !IsMissionActive() || DeltaTime <= 0.0f || UGameplayStatics::IsGamePaused(this)
+		|| UGameplayStatics::GetGlobalTimeDilation(this) < 0.001f) return;
+	for (auto& Cooldown : TraderCooldowns) Cooldown.Value = FMath::Max(0.0f, Cooldown.Value - DeltaTime);
+	if (RuntimeState.State != ESTPContractState::Active) return;
+	float RemainingDelta = DeltaTime;
+	while (RuntimeState.State == ESTPContractState::Active && RemainingDelta >= RuntimeState.SecondsUntilDelivery && IsMissionActive())
+	{
+		RemainingDelta -= RuntimeState.SecondsUntilDelivery;
+		if (!DeliverSelectedContract())
+		{
+			TGuardValue<bool> SettlementGuard(bSettlingDelivery, true);
+			SettleDelivery(false);
+		}
+	}
+	if (RuntimeState.State == ESTPContractState::Active) RuntimeState.SecondsUntilDelivery -= RemainingDelta;
+}
+
+void UContractOfferSubsystem::SettleDelivery(bool bDelivered)
+{
+	if (RuntimeState.State != ESTPContractState::Active) return;
+	FSTPContractOfferDefinition Offer;
+	FSTPContractTierDefinition Tier;
+	if (!ResolveSelectedContract(Offer, Tier)) return;
+	if (bDelivered) ++RuntimeState.DeliveriesMade;
+	else ++RuntimeState.DeliveriesMissed;
+	RuntimeState.SecondsUntilDelivery = Tier.DeliveryIntervalHours * 60.0f;
+	const bool bAllShipmentsResolved = RuntimeState.DeliveriesMade + RuntimeState.DeliveriesMissed >= Tier.DeliveryCount;
+	if (bAllShipmentsResolved)
+	{
+		RuntimeState.State = RuntimeState.DeliveriesMissed == 0 ? ESTPContractState::Completed : ESTPContractState::Failed;
+		bSelectionLocked = false;
+	}
+	int64 ProgressReward = ApplyEffects(bDelivered ? Tier.DeliveryRewards : Tier.MissedDeliveryPenalties, Offer.TraderId);
+	if (RuntimeState.State == ESTPContractState::Completed) ProgressReward += ApplyEffects(Tier.CompletionBonus, Offer.TraderId);
+	OnContractStateChanged.Broadcast();
+	// The terminal state above prevents duplicate completion rewards, including callback re-entry.
+	if (auto* Mission = GetWorld()->GetSubsystem<UMissionConfidenceSubsystem>())
+	{
+		Mission->AddMissionProgress(static_cast<int32>(FMath::Clamp<int64>(ProgressReward, MIN_int32, MAX_int32)));
+	}
+}
+
+int32 UContractOfferSubsystem::ApplyEffects(const TArray<FSTPContractEffectDefinition>& Effects, FName TraderId)
+{
+	int64 ProgressReward = 0;
+	AResourceManager* Manager = FindResourceManager();
+	for (const auto& Effect : Effects)
+	{
+		switch (Effect.Type)
+		{
+		case ESTPContractEffectType::MissionProgress: ProgressReward += Effect.Amount; break;
+		case ESTPContractEffectType::Credits:
+			if (Manager) Manager->AddCredits(Effect.Amount);
+			break;
+		case ESTPContractEffectType::Resource:
+		{
+			const int64 Resource = StaticEnum<EResourceType>()->GetValueByNameString(Effect.Id.ToString());
+			if (Manager && Resource != INDEX_NONE) Manager->AddResource(static_cast<EResourceType>(Resource), Effect.Amount);
+			break;
+		}
+		case ESTPContractEffectType::MissionConfidence:
+			if (auto* Mission = GetWorld()->GetSubsystem<UMissionConfidenceSubsystem>()) Mission->AddMissionConfidence(Effect.Amount);
+			break;
+		case ESTPContractEffectType::TraderReputation:
+			TraderReputation.FindOrAdd(TraderId) = static_cast<int32>(FMath::Clamp<int64>(static_cast<int64>(GetTraderReputation(TraderId)) + Effect.Amount, MIN_int32, MAX_int32));
+			break;
+		case ESTPContractEffectType::TraderCooldownHours:
+			TraderCooldowns.FindOrAdd(TraderId) = FMath::Max(GetTraderCooldownSeconds(TraderId), Effect.Amount * 60.0f);
+			break;
+		case ESTPContractEffectType::Blueprint: GrantBlueprintReward(Effect); break;
+		}
+	}
+	return static_cast<int32>(FMath::Clamp<int64>(ProgressReward, MIN_int32, MAX_int32));
+}
+
+void UContractOfferSubsystem::GrantBlueprintReward(const FSTPContractEffectDefinition& Effect)
+{
+	const auto* Buildings = GetWorld()->GetSubsystem<UBuildingManagerSubsystem>();
+	const auto* Catalog = Buildings ? Buildings->GetCatalog() : nullptr;
+	auto* Inventory = GetWorld()->GetGameInstance() ? GetWorld()->GetGameInstance()->GetSubsystem<UBuildingBlueprintSubsystem>() : nullptr;
+	if (!Catalog || !Inventory || Effect.PoolId != TEXT("rare_industrial_blueprints")) return;
+	int32 Remaining = Effect.Amount;
+	for (const auto& Definition : Catalog->Buildings)
+	{
+		if (Remaining <= 0) break;
+		if (Definition && Definition->BuildCategory == ESTPBuildCategory::Industry && !Inventory->OwnsBlueprint(Definition->BuildTool)
+			&& Inventory->GrantBlueprint(Definition->BuildTool)) --Remaining;
+	}
 }

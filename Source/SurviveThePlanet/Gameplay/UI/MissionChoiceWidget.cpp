@@ -41,6 +41,9 @@ namespace STPMissionChoices
 			return FText::Format(NSLOCTEXT("SurviveThePlanet", "ObjectiveRewardResource", "+{0} {1}"),
 				FText::AsNumber(Reward.Amount), Name);
 		}
+		case ESTPObjectiveRewardType::GiveMissionProgress:
+			return FText::Format(NSLOCTEXT("SurviveThePlanet", "ObjectiveRewardProgression", "+{0} MISSION PROGRESSION"),
+				FText::AsNumber(Reward.Amount));
 		case ESTPObjectiveRewardType::GiveMissionConfidence:
 			return FText::Format(NSLOCTEXT("SurviveThePlanet", "ObjectiveRewardConfidence", "+{0} MISSION CONFIDENCE"),
 				FText::AsNumber(Reward.Amount));
@@ -177,6 +180,7 @@ void UMissionChoiceWidget::BuildCurrentGroup()
 		Card->AddChildToVerticalBox(Title)->SetPadding(FMargin(10, 8, 10, 3));
 		UTextBlock* Description = WidgetTree->ConstructWidget<UTextBlock>();
 		Description->SetText(Definition.Description);
+		Description->SetWrapTextAt(185.0f);
 		Description->SetAutoWrapText(true);
 		STPMissionChoices::StyleText(Description, 11, STPMissionChoices::White);
 		Card->AddChildToVerticalBox(Description)->SetPadding(FMargin(10, 0, 10, 4));
@@ -268,6 +272,7 @@ void UMissionChoiceWidget::BuildSlotPicker(int32 SlotIndex)
 		Card->AddChildToVerticalBox(Title)->SetPadding(FMargin(12, 10, 12, 5));
 		UTextBlock* Description = WidgetTree->ConstructWidget<UTextBlock>();
 		Description->SetText(Definition.Description);
+		Description->SetWrapTextAt(236.0f);
 		Description->SetAutoWrapText(true);
 		STPMissionChoices::StyleText(Description, 12, STPMissionChoices::White);
 		Card->AddChildToVerticalBox(Description)->SetPadding(FMargin(12, 0, 12, 6));

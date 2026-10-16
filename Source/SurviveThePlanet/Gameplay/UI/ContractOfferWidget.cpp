@@ -7,6 +7,8 @@
 #include "Components/HorizontalBoxSlot.h"
 #include "Components/Image.h"
 #include "Components/SizeBox.h"
+#include "Components/ScrollBox.h"
+#include "Blueprint/WidgetLayoutLibrary.h"
 #include "Components/TextBlock.h"
 #include "Components/VerticalBox.h"
 #include "Components/VerticalBoxSlot.h"
@@ -90,7 +92,9 @@ void UContractOfferWidget::BuildLayout()
 	Main->AddChildToVerticalBox(OfferTitleText)->SetPadding(FMargin(0.0f, 2.0f, 0.0f, 12.0f));
 
 	OfferContent = WidgetTree->ConstructWidget<UVerticalBox>();
-	Main->AddChildToVerticalBox(OfferContent);
+	UScrollBox* OfferScroll = WidgetTree->ConstructWidget<UScrollBox>();
+	OfferScroll->AddChild(OfferContent);
+	Main->AddChildToVerticalBox(OfferScroll)->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
 
 	UButton* DoneButton = WidgetTree->ConstructWidget<UButton>();
 	DoneButton->OnClicked.AddUniqueDynamic(this, &UContractOfferWidget::HandleDoneClicked);
@@ -100,7 +104,9 @@ void UContractOfferWidget::BuildLayout()
 	STPContractUI::Style(DoneLabel, 14, STPContractUI::Text);
 	DoneButton->SetContent(DoneLabel);
 	UVerticalBoxSlot* DoneSlot = Main->AddChildToVerticalBox(DoneButton);
-	DoneSlot->SetPadding(FMargin(390.0f, 12.0f, 390.0f, 0.0f));
+	DoneLabel->SetMinDesiredWidth(160.0f);
+	DoneSlot->SetPadding(FMargin(0.0f, 12.0f, 0.0f, 0.0f));
+	DoneSlot->SetHorizontalAlignment(HAlign_Center);
 }
 
 bool UContractOfferWidget::OpenForTrader(FName TraderId)
@@ -116,9 +122,11 @@ bool UContractOfferWidget::OpenForTrader(FName TraderId)
 	TraderNameText->SetText(Trader.Name.ToUpper());
 	PopulateOffer(Offers[0]);
 	SetVisibility(ESlateVisibility::Visible);
-	SetDesiredSizeInViewport(FVector2D(1000.0f, 670.0f));
+
 	FVector2D ViewportSize(1920.0f, 1080.0f);
 	if (GEngine && GEngine->GameViewport) GEngine->GameViewport->GetViewportSize(ViewportSize);
+	const FVector2D LogicalSize = ViewportSize / UWidgetLayoutLibrary::GetViewportScale(this);
+	SetDesiredSizeInViewport(FVector2D(FMath::Min(1000.0f, LogicalSize.X - 32.0f), FMath::Min(820.0f, LogicalSize.Y - 32.0f)));
 	SetAlignmentInViewport(FVector2D(0.5f, 0.5f));
 	SetPositionInViewport(ViewportSize * 0.5f, false);
 	return true;
@@ -180,7 +188,7 @@ UBorder* UContractOfferWidget::BuildTierCard(const FSTPContractOfferDefinition& 
 		Tier.DeliveryRewards, STPContractUI::Reward);
 	AddEffectSection(Card, NSLOCTEXT("SurviveThePlanet", "ContractPenalties", "PENALTIES"),
 		Tier.MissedDeliveryPenalties, STPContractUI::Penalty);
-	AddEffectSection(Card, NSLOCTEXT("SurviveThePlanet", "ContractBonus", "BONUS"),
+	AddEffectSection(Card, NSLOCTEXT("SurviveThePlanet", "ContractBonus", "ON AGREEMENT COMPLETION"),
 		Tier.CompletionBonus, STPContractUI::Bonus);
 
 	UContractTierButton* SelectButton = WidgetTree->ConstructWidget<UContractTierButton>();
@@ -207,9 +215,10 @@ void UContractOfferWidget::AddEffectSection(UVerticalBox* Parent, const FText& H
 	HeadingText->SetJustification(ETextJustify::Center);
 	STPContractUI::Style(HeadingText, 12, HeadingColor);
 	Parent->AddChildToVerticalBox(HeadingText)->SetPadding(FMargin(0.0f, 8.0f, 0.0f, 3.0f));
-	UHorizontalBox* Row = WidgetTree->ConstructWidget<UHorizontalBox>();
+	UVerticalBox* EffectList = WidgetTree->ConstructWidget<UVerticalBox>();
 	for (const FSTPContractEffectDefinition& Effect : Effects)
 	{
+		UHorizontalBox* Row = WidgetTree->ConstructWidget<UHorizontalBox>();
 		if (UTexture2D* Texture = Effect.Icon.LoadSynchronous())
 		{
 			UImage* Icon = WidgetTree->ConstructWidget<UImage>();
@@ -224,8 +233,9 @@ void UContractOfferWidget::AddEffectSection(UVerticalBox* Parent, const FText& H
 		Value->SetText(FormatEffect(Effect));
 		STPContractUI::Style(Value, 13, STPContractUI::Text);
 		Row->AddChildToHorizontalBox(Value)->SetPadding(FMargin(1.0f, 5.0f, 10.0f, 5.0f));
+		EffectList->AddChildToVerticalBox(Row);
 	}
-	UVerticalBoxSlot* RowSlot = Parent->AddChildToVerticalBox(Row);
+	UVerticalBoxSlot* RowSlot = Parent->AddChildToVerticalBox(EffectList);
 	RowSlot->SetHorizontalAlignment(HAlign_Center);
 }
 
@@ -235,6 +245,9 @@ FText UContractOfferWidget::FormatEffect(const FSTPContractEffectDefinition& Eff
 	switch (Effect.Type)
 	{
 	case ESTPContractEffectType::Resource: Label = Effect.Id.ToString(); break;
+	case ESTPContractEffectType::MissionProgress: Label = TEXT("MISSION PROGRESSION"); break;
+	case ESTPContractEffectType::MissionConfidence: Label = TEXT("Confidence"); break;
+	case ESTPContractEffectType::TraderReputation: Label = TEXT("Reputation"); break;
 	case ESTPContractEffectType::Blueprint: Label = TEXT("Rare Blueprint"); break;
 	case ESTPContractEffectType::TraderCooldownHours: Label = TEXT("h"); break;
 	default: break;

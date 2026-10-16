@@ -1,6 +1,8 @@
 {
   "maxActiveObjectives": 8,
-  "initialObjectives": ["mission_build_communication"],
+  "initialObjectives": [
+    "mission_build_communication"
+  ],
   "missionChoiceGroups": [
     {
       "id": "mother_base_directives",
@@ -10,17 +12,25 @@
         {
           "id": "logistics",
           "title": "SELECT OBJECTIVE - SLOT 1",
-          "objectives": ["mission_deliver_copper", "mission_deliver_water"]
+          "objectives": [
+            "mission_deliver_copper",
+            "mission_deliver_water"
+          ]
         },
         {
           "id": "expansion",
           "title": "SELECT OBJECTIVE - SLOT 2",
-          "objectives": ["mission_build_storage", "mission_build_concrete_plant"]
+          "objectives": [
+            "mission_build_storage",
+            "mission_build_concrete_plant"
+          ]
         },
         {
           "id": "operations",
           "title": "SELECT OBJECTIVE - SLOT 3",
-          "objectives": ["mission_expand_mining"]
+          "objectives": [
+            "mission_expand_mining"
+          ]
         }
       ]
     }
@@ -32,12 +42,30 @@
       "description": "Bygg och färdigställ din första gruvmaskin.",
       "timeLimitSeconds": 0,
       "conditions": [
-        { "type": "build_building", "building": "MiningMachine", "amount": 1 }
+        {
+          "type": "build_building",
+          "building": "MiningMachine",
+          "amount": 1
+        }
       ],
       "rewards": [
-        { "type": "give_resource", "resource": "ControlChip", "amount": 5 },
-		{ "type": "give_mission_confidence", "amount": 10 },
-        { "type": "unlock_objective", "objective": "deliver_iron_to_home_base" }
+        {
+          "type": "give_resource",
+          "resource": "ControlChip",
+          "amount": 5
+        },
+        {
+          "type": "give_mission_confidence",
+          "amount": 10
+        },
+        {
+          "type": "unlock_objective",
+          "objective": "deliver_iron_to_home_base"
+        },
+        {
+          "type": "give_mission_progress",
+          "amount": 1
+        }
       ]
     },
     {
@@ -46,11 +74,27 @@
       "description": "Leverera 100 järn till hemmabasen innan tiden tar slut.",
       "timeLimitSeconds": 600,
       "conditions": [
-        { "type": "deliver_resource", "destination": "HomeBase", "resource": "Iron", "amount": 100 }
+        {
+          "type": "deliver_resource",
+          "destination": "HomeBase",
+          "resource": "Iron",
+          "amount": 100
+        }
       ],
       "rewards": [
-		{ "type": "give_resource", "resource": "ControlChip", "amount": 10 },
-		{ "type": "give_mission_confidence", "amount": 15 }
+        {
+          "type": "give_resource",
+          "resource": "ControlChip",
+          "amount": 10
+        },
+        {
+          "type": "give_mission_confidence",
+          "amount": 15
+        },
+        {
+          "type": "give_mission_progress",
+          "amount": 2
+        }
       ]
     },
     {
@@ -58,43 +102,126 @@
       "title": "DELIVER COPPER",
       "description": "Deliver 150 Copper to Home Base.",
       "timeLimitSeconds": 0,
-      "conditions": [{ "type": "deliver_resource", "destination": "HomeBase", "resource": "Copper", "amount": 150 }],
-      "rewards": [{ "type": "give_mission_confidence", "amount": 15 }]
+      "conditions": [
+        {
+          "type": "deliver_resource",
+          "destination": "HomeBase",
+          "resource": "Copper",
+          "amount": 150
+        }
+      ],
+      "rewards": [
+        {
+          "type": "give_mission_confidence",
+          "amount": 15
+        },
+        {
+          "type": "give_mission_progress",
+          "amount": 2
+        }
+      ]
     },
     {
       "id": "mission_deliver_water",
       "title": "DELIVER WATER",
       "description": "Deliver 200 Water to Home Base.",
       "timeLimitSeconds": 0,
-      "conditions": [{ "type": "deliver_resource", "destination": "HomeBase", "resource": "Water", "amount": 200 }],
-      "rewards": [{ "type": "give_mission_confidence", "amount": 15 }]
+      "conditions": [
+        {
+          "type": "deliver_resource",
+          "destination": "HomeBase",
+          "resource": "Water",
+          "amount": 200
+        }
+      ],
+      "rewards": [
+        {
+          "type": "give_mission_confidence",
+          "amount": 15
+        },
+        {
+          "type": "give_mission_progress",
+          "amount": 1
+        }
+      ]
     },
     {
       "id": "mission_build_storage",
       "title": "EXPAND STORAGE",
       "description": "Build 2 Energy Storage modules.",
       "timeLimitSeconds": 0,
-      "conditions": [{ "type": "build_building", "building": "EnergyStorage", "amount": 2 }],
-      "rewards": [{ "type": "give_mission_confidence", "amount": 15 }]
+      "conditions": [
+        {
+          "type": "build_building",
+          "building": "EnergyStorage",
+          "amount": 2
+        }
+      ],
+      "rewards": [
+        {
+          "type": "give_mission_confidence",
+          "amount": 15
+        },
+        {
+          "type": "give_mission_progress",
+          "amount": 1
+        }
+      ]
     },
     {
       "id": "mission_build_concrete_plant",
       "title": "PRODUCE CONCRETE",
       "description": "Build and activate a Concrete Plant.",
       "timeLimitSeconds": 0,
-      "conditions": [{ "type": "build_building", "building": "ConcretePlant", "amount": 1 }],
-      "rewards": [{ "type": "give_mission_confidence", "amount": 15 }]
+      "conditions": [
+        {
+          "type": "build_building",
+          "building": "ConcretePlant",
+          "amount": 1
+        }
+      ],
+      "rewards": [
+        {
+          "type": "give_mission_confidence",
+          "amount": 15
+        },
+        {
+          "type": "give_mission_progress",
+          "amount": 2
+        }
+      ]
     },
     {
       "id": "mission_build_communication",
       "title": "ESTABLISH UPLINK",
       "description": "Build a Communication Module.",
       "timeLimitSeconds": 0,
-      "conditions": [{ "type": "build_building", "building": "CommunicationModule", "amount": 1 }],
+      "conditions": [
+        {
+          "type": "build_building",
+          "building": "CommunicationModule",
+          "amount": 1
+        }
+      ],
       "rewards": [
-        { "type": "give_mission_confidence", "amount": 30 },
-        { "type": "give_resource", "resource": "ControlChip", "amount": 2 },
-        { "type": "give_drone", "droneClass": "/Game/Models/Units/ExplorerDrone/BP_ExplorerDrone.BP_ExplorerDrone_C", "amount": 1 }
+        {
+          "type": "give_mission_confidence",
+          "amount": 30
+        },
+        {
+          "type": "give_resource",
+          "resource": "ControlChip",
+          "amount": 2
+        },
+        {
+          "type": "give_drone",
+          "droneClass": "/Game/Models/Units/ExplorerDrone/BP_ExplorerDrone.BP_ExplorerDrone_C",
+          "amount": 1
+        },
+        {
+          "type": "give_mission_progress",
+          "amount": 1
+        }
       ]
     },
     {
@@ -102,8 +229,23 @@
       "title": "EXPAND MINING",
       "description": "Build 2 additional Mining Machines.",
       "timeLimitSeconds": 0,
-      "conditions": [{ "type": "build_building", "building": "MiningMachine", "amount": 2 }],
-      "rewards": [{ "type": "give_mission_confidence", "amount": 20 }]
+      "conditions": [
+        {
+          "type": "build_building",
+          "building": "MiningMachine",
+          "amount": 2
+        }
+      ],
+      "rewards": [
+        {
+          "type": "give_mission_confidence",
+          "amount": 20
+        },
+        {
+          "type": "give_mission_progress",
+          "amount": 2
+        }
+      ]
     }
   ]
 }

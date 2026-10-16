@@ -28,6 +28,11 @@ public class SurviveThePlanet : ModuleRules
 
 		PrivateDependencyModuleNames.AddRange(new string[] { });
 
+		if (Target.bBuildEditor)
+		{
+			PrivateDependencyModuleNames.AddRange(new string[] { "UnrealEd", "ApplicationCore" }); // PIE and input automation.
+		}
+
 		PublicIncludePaths.AddRange(new string[] {
 			"SurviveThePlanet",
 			"SurviveThePlanet/Gameplay/Base",

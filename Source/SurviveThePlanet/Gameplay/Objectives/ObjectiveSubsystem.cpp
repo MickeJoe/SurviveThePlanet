@@ -292,6 +292,11 @@ bool UObjectiveSubsystem::LoadFromJson(const FString& FilePath)
 					bDefinitionValid = STPObjectives::ReadPositiveInt(RewardObject, TEXT("amount"), Reward.Amount)
 						&& Reward.Amount <= 100;
 				}
+				else if (Type == TEXT("give_mission_progress"))
+				{
+					Reward.Type = ESTPObjectiveRewardType::GiveMissionProgress;
+					bDefinitionValid = STPObjectives::ReadPositiveInt(RewardObject, TEXT("amount"), Reward.Amount);
+				}
 				else if (Type == TEXT("give_drone"))
 				{
 					FString DroneClassPath;
@@ -513,6 +518,8 @@ void UObjectiveSubsystem::ApplyProgressEvent(ESTPObjectiveConditionType EventTyp
 
 void UObjectiveSubsystem::CompleteObjective(FName ObjectiveId)
 {
+	const auto* Mission = GetWorld()->GetSubsystem<UMissionConfidenceSubsystem>();
+	if (Mission && Mission->GetMissionOutcome() != EMissionOutcome::InProgress) return;
 	FSTPObjectiveRuntimeState* State = RuntimeStates.Find(ObjectiveId);
 	const FSTPObjectiveDefinition* Definition = Definitions.Find(ObjectiveId);
 	if (!State || !Definition || State->State != ESTPObjectiveState::Active)
@@ -593,6 +600,11 @@ void UObjectiveSubsystem::GrantRewards(const FSTPObjectiveDefinition& Definition
 					*Definition.Id.ToString(), *Reward.BlueprintId.ToString());
 			}
 		}
+	}
+	// End the mission only after all other rewards in this completion have settled.
+	if (const int32 ProgressReward = Definition.GetMissionProgressReward(); ProgressReward > 0)
+	{
+		if (auto* Mission = GetWorld()->GetSubsystem<UMissionConfidenceSubsystem>()) Mission->AddMissionProgress(ProgressReward);
 	}
 }
 

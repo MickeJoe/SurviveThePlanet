@@ -23,10 +23,15 @@ TStatId UMissionConfidenceSubsystem::GetStatId() const
 
 void UMissionConfidenceSubsystem::Tick(float DeltaTime)
 {
+	if (Outcome != EMissionOutcome::InProgress) return;
 	if (!bSettingsResolved)
 	{
 		ResolvePlanetSettings();
 	}
+	if (Outcome != EMissionOutcome::InProgress) return;
+	EvaluateMissionOutcome();
+	if (Outcome != EMissionOutcome::InProgress) return;
+	if (!UGameplayStatics::IsGamePaused(this)) MissionElapsedSeconds += FMath::Max(0.0f, DeltaTime);
 	if (bDecayPaused || !bSettingsResolved || DeltaTime <= 0.0f || MissionConfidence <= 0.0f
 		|| UGameplayStatics::GetGlobalTimeDilation(this) < 0.001f)
 	{
@@ -52,14 +57,16 @@ void UMissionConfidenceSubsystem::AddMissionConfidence(float Amount)
 
 void UMissionConfidenceSubsystem::SetMissionConfidence(float NewConfidence)
 {
+	if (Outcome != EMissionOutcome::InProgress || !FMath::IsFinite(NewConfidence)) return;
 	const float Clamped = FMath::Clamp(NewConfidence, 0.0f, 100.0f);
-	if (FMath::IsNearlyEqual(Clamped, MissionConfidence))
+	if (Clamped == MissionConfidence)
 	{
 		return;
 	}
 	const float Delta = Clamped - MissionConfidence;
 	MissionConfidence = Clamped;
 	OnMissionConfidenceChanged.Broadcast(MissionConfidence, Delta);
+	EvaluateMissionOutcome();
 }
 
 void UMissionConfidenceSubsystem::ResolvePlanetSettings()
@@ -80,4 +87,29 @@ void UMissionConfidenceSubsystem::ResolvePlanetSettings()
 			return;
 		}
 	}
+}
+
+void UMissionConfidenceSubsystem::AddMissionProgress(int32 Amount)
+{
+	SetMissionProgress(static_cast<int32>(FMath::Clamp<int64>(static_cast<int64>(MissionProgress) + Amount, 0, GetMissionProgressTarget())));
+}
+
+void UMissionConfidenceSubsystem::SetMissionProgress(int32 Amount)
+{
+	if (Outcome != EMissionOutcome::InProgress) return;
+	const int32 NewProgress = FMath::Clamp(Amount, 0, GetMissionProgressTarget());
+	if (NewProgress == MissionProgress) return;
+	MissionProgress = NewProgress;
+	OnMissionProgressChanged.Broadcast(MissionProgress, GetMissionProgressTarget());
+	EvaluateMissionOutcome();
+}
+
+void UMissionConfidenceSubsystem::EvaluateMissionOutcome()
+{
+	if (Outcome != EMissionOutcome::InProgress) return;
+	// Once resolved, the outcome is immutable even if another event arrives this frame.
+	if (MissionConfidence <= 0.0f) Outcome = EMissionOutcome::Failed;
+	else if (MissionProgress >= GetMissionProgressTarget()) Outcome = EMissionOutcome::Complete;
+	else return;
+	OnMissionEnded.Broadcast(Outcome);
 }

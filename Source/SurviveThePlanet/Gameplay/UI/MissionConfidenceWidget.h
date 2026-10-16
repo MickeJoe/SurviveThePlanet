@@ -4,6 +4,7 @@
 #include "Blueprint/UserWidget.h"
 #include "MissionConfidenceWidget.generated.h"
 
+class UProgressBar;
 class UHorizontalBox;
 class UTextBlock;
 class UMissionConfidenceSubsystem;
@@ -27,6 +28,9 @@ protected:
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidget), Category = "Mission Confidence")
 	TObjectPtr<UTextBlock> ConfidenceDecayText;
 
+	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UProgressBar> MissionProgressBar;
+	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UTextBlock> MissionProgressText;
+	UFUNCTION() void HandleProgressChanged(int32 Progress, int32 Target);
 private:
 	UPROPERTY(Transient)
 	TObjectPtr<UMissionConfidenceSubsystem> ConfidenceSubsystem;

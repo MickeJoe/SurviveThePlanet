@@ -10,6 +10,8 @@ class UBuildToolbarWidget;
 class UResourceDisplayWidget;
 class UObjectiveTrackerWidget;
 class UMissionConfidenceWidget;
+class UMissionResultWidget;
+enum class EMissionOutcome : uint8;
 class UMissionChoiceWidget;
 class UTraderPanelWidget;
 class AEnergyModule;
@@ -34,6 +36,10 @@ public:
 	virtual void StartPlay() override;
 
 protected:
+	UPROPERTY(EditAnywhere, Category="UI") TSubclassOf<UMissionResultWidget> MissionResultWidgetClass;
+	UPROPERTY(Transient) TObjectPtr<UMissionResultWidget> MissionResultWidget;
+	UFUNCTION() void HandleMissionEnded(EMissionOutcome Outcome);
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "UI")
 	TSubclassOf<UBuildToolbarWidget> BuildToolbarWidgetClass;
 

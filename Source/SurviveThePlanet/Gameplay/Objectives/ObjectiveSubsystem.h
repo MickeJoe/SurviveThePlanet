@@ -30,7 +30,8 @@ enum class ESTPObjectiveRewardType : uint8
 	UnlockObjective,
 	GiveMissionConfidence,
 	GiveDrone,
-	GiveBuildingBlueprint
+	GiveBuildingBlueprint,
+	GiveMissionProgress
 };
 
 USTRUCT(BlueprintType)
@@ -103,6 +104,16 @@ struct FSTPObjectiveDefinition
 
 	UPROPERTY(BlueprintReadOnly, Category = "Objectives")
 	TArray<FSTPObjectiveRewardDefinition> Rewards;
+
+	int32 GetMissionProgressReward() const
+	{
+		int64 Total = 0;
+		for (const auto& Reward : Rewards)
+		{
+			if (Reward.Type == ESTPObjectiveRewardType::GiveMissionProgress) Total += Reward.Amount;
+		}
+		return static_cast<int32>(FMath::Clamp<int64>(Total, 0, MAX_int32));
+	}
 };
 
 USTRUCT(BlueprintType)
