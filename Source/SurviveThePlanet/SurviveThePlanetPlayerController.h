@@ -9,6 +9,7 @@
 #include "Gameplay/Resources/ResourceManager.h"
 #include "SurviveThePlanetPlayerController.generated.h"
 
+class UWorldHoverTooltipWidget;
 class UPauseMenuWidget;
 class UResourceDisplayWidget;
 class UNiagaraSystem;
@@ -46,6 +47,11 @@ UCLASS()
 class ASurviveThePlanetPlayerController : public APlayerController
 {
 	GENERATED_BODY()
+    void UpdateWorldHoverTooltip();
+    UPROPERTY(Transient) TObjectPtr<UWorldHoverTooltipWidget> WorldHoverTooltip;
+    TWeakObjectPtr<AActor> HoveredWorldActor;
+    double WorldHoverStartedAt = 0.0;
+	friend class FCentralIronPlacementCommand;
 	friend class FCameraMenuInputTest;
 	friend class FPauseMenuTest;
 

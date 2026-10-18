@@ -90,7 +90,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Planet Surface|Grid")
 	bool CanOccupyCells(FSTPGridCell OriginCell, FIntPoint Footprint) const;
 
-	/** Building-only validation; the surrounding corridor remains available to drones. */
+	/** Building-only validation, including space for future mines; corridors remain available to drones. */
 	UFUNCTION(BlueprintCallable, Category = "Planet Surface|Grid")
 	FSTPGridPlacement GetBuildingPlacementForWorldLocation(const FVector& WorldLocation, FIntPoint Footprint) const;
 

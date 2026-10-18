@@ -122,3 +122,51 @@ bool FEnergyCoveragePowerTest::RunTest(const FString& Parameters)
  return true;
 }
 #endif
+
+#if WITH_DEV_AUTOMATION_TESTS
+#include "Gameplay/Buildings/CrudeWorkshop.h"
+#include "Gameplay/Drones/BaseDrone.h"
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDroneEnergyConsumptionTest, "SurviveThePlanet.Energy.DroneConsumption",
+ EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDroneEnergyConsumptionTest::RunTest(const FString& Parameters)
+{
+ UWorld* World = UWorld::CreateWorld(EWorldType::Game, false,
+  MakeUniqueObjectName(nullptr, UWorld::StaticClass()), GetTransientPackage());
+ if (!TestNotNull(TEXT("Test world"), World)) return false;
+ auto* Workshop = World->SpawnActor<ACrudeWorkshop>();
+ Workshop->SetConstructionProgress(1.0f);
+ Workshop->SetUnlockedDroneSlots(4);
+ const float BaseDemand = Workshop->GetEnergyConsumptionPerMinute();
+ TestTrue(TEXT("Workshop has base demand"), BaseDemand > 0.0f);
+ const float Multipliers[] = {1.0f, 1.8f, 2.4f, 2.8f};
+ TArray<ABaseDrone*> Drones;
+ for (int32 Index = 0; Index < 4; ++Index)
+ {
+  auto* Drone = World->SpawnActor<ABaseDrone>();
+  Drones.Add(Drone);
+  TestTrue(TEXT("Assign productive drone"), Workshop->TryAssignDrone(Drone, Index));
+  TestTrue(FString::Printf(TEXT("%d drones use %.0f percent energy"), Index + 1, Multipliers[Index] * 100.0f),
+   FMath::IsNearlyEqual(Workshop->GetEnergyConsumptionPerMinute(), BaseDemand * Multipliers[Index]));
+ }
+ Workshop->UnassignDrone(Drones[3]);
+ TestTrue(TEXT("Removing fourth drone returns to 240 percent"),
+  FMath::IsNearlyEqual(Workshop->GetEnergyConsumptionPerMinute(), BaseDemand * 2.4f));
+ Drones[2]->Destroy();
+ TestTrue(TEXT("Destroyed drones do not increase demand"),
+  FMath::IsNearlyEqual(Workshop->GetEnergyConsumptionPerMinute(), BaseDemand * 1.8f));
+ Workshop->UnassignDrone(Drones[0]);
+ Workshop->UnassignDrone(Drones[1]);
+ TestTrue(TEXT("Empty workshop retains previous base demand"),
+  FMath::IsNearlyEqual(Workshop->GetEnergyConsumptionPerMinute(), BaseDemand));
+ auto* Mine = World->SpawnActor<AMiningMachine>();
+ Mine->SetConstructionProgress(1.0f);
+ Mine->SetUnlockedDroneSlots(4);
+ for (int32 Index = 0; Index < 4; ++Index)
+  Mine->TryAssignDrone(World->SpawnActor<ABaseDrone>(), Index);
+ TestEqual(TEXT("Mine without a resource still has zero demand"), Mine->GetEnergyConsumptionPerMinute(), 0.0f);
+ World->DestroyWorld(false);
+ return true;
+}
+#endif

@@ -1,4 +1,5 @@
 #include "Gameplay/Buildings/WaterCollector.h"
+#include "Gameplay/Buildings/ProductionBalance.h"
 
 #include "EngineUtils.h"
 #include "Components/StaticMeshComponent.h"
@@ -133,8 +134,8 @@ float AWaterCollector::GetWaterPerMinutePerMmOfRain() const
 {
 	if (const UWaterCollectorBuildingDataAsset* WaterData = GetWaterCollectorBuildingData())
 	{
-		return FMath::Max(0.0f, WaterData->WaterPerMinutePerMmOfRain);
+		return STPProductionBalance::OutputRate(WaterData->WaterPerMinutePerMmOfRain);
 	}
 
-	return FMath::Max(0.0f, WaterPerMinutePerMmOfRain);
+	return STPProductionBalance::OutputRate(WaterPerMinutePerMmOfRain);
 }

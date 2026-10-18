@@ -165,6 +165,7 @@ void UBuildingInfoWidget::RefreshDroneSlots()
 		SlotSize->SetVisibility(ESlateVisibility::HitTestInvisible);
 		if (UImage* Icon = Cast<UImage>(SlotSize->GetWidgetFromName(TEXT("DroneIcon"))))
 		{
+			Icon->SetToolTipText(AssignedDrone ? AssignedDrone->GetDroneDisplayName() : FText::FromString(TEXT("Empty drone slot")));
 			Icon->SetBrushFromTexture(AssignedDrone ? AssignedDrone->GetDroneThumbnail() : LockedDroneSlotIcon.Get());
 			Icon->SetVisibility(AssignedDrone || !bUnlocked ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
 		}
@@ -186,6 +187,7 @@ void UBuildingInfoWidget::RefreshDroneSlots()
 		{
 			UDroneSlotButton* SlotButton = WidgetTree->ConstructWidget<UDroneSlotButton>();
 			SlotButton->Configure(this, SlotIndex);
+			SlotButton->SetToolTipText(AssignedDrone ? AssignedDrone->GetDroneDisplayName() : FText::FromString(TEXT("Assign drone")));
 			SlotButton->SetIsEnabled(true);
 			SlotButton->SetVisibility(ESlateVisibility::Visible);
 			SlotButton->SetBackgroundColor(FLinearColor::Transparent);
@@ -311,6 +313,7 @@ void UBuildingInfoWidget::OpenDroneSelection(int32 SlotIndex)
 		if (UImage* Thumbnail = Cast<UImage>(Card->GetWidgetFromName(TEXT("DroneThumbnail"))))
 		{
 			Thumbnail->SetBrushFromTexture(Representative->GetDroneThumbnail(), true);
+			Thumbnail->SetToolTipText(Representative->GetDroneDisplayName());
 		}
 		if (UTextBlock* NameText = Cast<UTextBlock>(Card->GetWidgetFromName(TEXT("DroneNameText"))))
 		{
@@ -335,6 +338,7 @@ void UBuildingInfoWidget::OpenDroneSelection(int32 SlotIndex)
 		if (UDroneTypeSelectionButton* SelectButton = Cast<UDroneTypeSelectionButton>(Card->GetWidgetFromName(TEXT("SelectButton"))))
 		{
 			SelectButton->Configure(this, DroneClass, SlotIndex);
+			SelectButton->SetToolTipText(Representative->GetDroneDisplayName());
 			SelectButton->SetIsEnabled(AvailableCount > 0 && Rate > 0.0f);
 		}
 

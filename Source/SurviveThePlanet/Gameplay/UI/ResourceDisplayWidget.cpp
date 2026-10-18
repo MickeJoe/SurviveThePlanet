@@ -1,4 +1,5 @@
 #include "Gameplay/UI/ResourceDisplayWidget.h"
+#include "Gameplay/Buildings/ProductionBalance.h"
 #include "Gameplay/Buildings/NuclearReactor.h"
 #include "Gameplay/Buildings/UraniumProcessor.h"
 #include "Gameplay/Buildings/ThermalProcessingBuilding.h"
@@ -279,9 +280,9 @@ void UResourceDisplayWidget::RefreshTimeControlStyles()
 
 	SetSelected(PauseTimeButton, IsSimulationPaused());
 	SetSelected(Speed1Button, !IsSimulationPaused() && FMath::IsNearlyEqual(TimeScale, 1.0f));
-	SetSelected(Speed15Button, !IsSimulationPaused() && FMath::IsNearlyEqual(TimeScale, 1.5f));
-	SetSelected(Speed2Button, !IsSimulationPaused() && FMath::IsNearlyEqual(TimeScale, 2.0f));
-	SetSelected(Speed3Button, !IsSimulationPaused() && FMath::IsNearlyEqual(TimeScale, 3.0f));
+	SetSelected(Speed15Button, !IsSimulationPaused() && FMath::IsNearlyEqual(TimeScale, 2.0f));
+	SetSelected(Speed2Button, !IsSimulationPaused() && FMath::IsNearlyEqual(TimeScale, 4.0f));
+	SetSelected(Speed3Button, !IsSimulationPaused() && FMath::IsNearlyEqual(TimeScale, 10.0f));
 }
 
 void UResourceDisplayWidget::ApplySimulationRate() const
@@ -333,9 +334,9 @@ void UResourceDisplayWidget::SetTradingPaused(bool bPaused)
 }
 
 void UResourceDisplayWidget::HandleSpeed1Clicked() { SetGameTimeScale(1.0f); }
-void UResourceDisplayWidget::HandleSpeed15Clicked() { SetGameTimeScale(1.5f); }
-void UResourceDisplayWidget::HandleSpeed2Clicked() { SetGameTimeScale(2.0f); }
-void UResourceDisplayWidget::HandleSpeed3Clicked() { SetGameTimeScale(3.0f); }
+void UResourceDisplayWidget::HandleSpeed15Clicked() { SetGameTimeScale(2.0f); }
+void UResourceDisplayWidget::HandleSpeed2Clicked() { SetGameTimeScale(4.0f); }
+void UResourceDisplayWidget::HandleSpeed3Clicked() { SetGameTimeScale(10.0f); }
 void UResourceDisplayWidget::ResolveResourceManager()
 {
 	if (ResourceManager)
@@ -507,7 +508,7 @@ void UResourceDisplayWidget::RefreshResourceRates()
         for (TActorIterator<AThermalProcessingBuilding> It(World); It; ++It)
         {
             if (!It->IsProducing()) continue;
-            const float CyclesPerMinute = 60.0f * It->GetCombinedDroneEfficiency() / FMath::Max(0.1f, It->CycleSeconds);
+            const float CyclesPerMinute = 60.0f * It->GetCombinedDroneEfficiency() / STPProductionBalance::CycleDuration(It->CycleSeconds);
             for (const FResourceCost& Input : It->GetRecipeInputs())
                 Rates.FindOrAdd(Input.Resource) -= Input.Cost * CyclesPerMinute;
             Rates.FindOrAdd(It->GetRecipeOutput()) += FMath::Max(1, It->OutputPerCycle) * CyclesPerMinute;
@@ -515,7 +516,7 @@ void UResourceDisplayWidget::RefreshResourceRates()
         for (TActorIterator<AUraniumProcessor> It(World); It; ++It)
         {
             if (!It->IsProducing()) continue;
-            const float CyclesPerMinute = 60.0f * It->GetCombinedDroneEfficiency() / FMath::Max(0.1f, It->CycleSeconds);
+            const float CyclesPerMinute = 60.0f * It->GetCombinedDroneEfficiency() / STPProductionBalance::CycleDuration(It->CycleSeconds);
             Rates.FindOrAdd(EResourceType::UraniumOre) -= FMath::Max(1, It->OrePerCycle) * CyclesPerMinute;
             Rates.FindOrAdd(EResourceType::FuelRods) += FMath::Max(1, It->FuelRodsPerCycle) * CyclesPerMinute;
         }

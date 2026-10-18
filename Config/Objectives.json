@@ -194,7 +194,7 @@
     {
       "id": "mission_build_communication",
       "title": "ESTABLISH UPLINK",
-      "description": "Build a Communication Module.",
+      "description": "Mine stone and use Crude Workshop to produce 10 Concrete. Spend 20 Iron and 10 Concrete to build the Communication Module to contact Mother Base. Rewards: 5 Circuit Boards; Cargo Bay, Water Collector, Concrete Plant and Energy Storage blueprints; 1 Explorer Drone and 1 Construction Drone; +40 Mission Confidence; +1 Mission Progression.",
       "timeLimitSeconds": 0,
       "conditions": [
         {
@@ -206,12 +206,12 @@
       "rewards": [
         {
           "type": "give_mission_confidence",
-          "amount": 30
+          "amount": 40
         },
         {
           "type": "give_resource",
           "resource": "ControlChip",
-          "amount": 2
+          "amount": 5
         },
         {
           "type": "give_drone",
@@ -221,6 +221,31 @@
         {
           "type": "give_mission_progress",
           "amount": 1
+        },
+        {
+          "type": "give_building_blueprint",
+          "blueprintId": "CargoBay"
+        },
+        {
+          "type": "give_building_blueprint",
+          "blueprintId": "WaterCollector"
+        },
+        {
+          "type": "give_building_blueprint",
+          "blueprintId": "ConcretePlant"
+        },
+        {
+          "type": "give_building_blueprint",
+          "blueprintId": "EnergyStorage"
+        },
+        {
+          "type": "give_drone",
+          "droneClass": "/Game/BluePrints/WorkingDrone/BP_ConstructionDrone.BP_ConstructionDrone_C",
+          "amount": 1
+        },
+        {
+          "type": "unlock_objective",
+          "objective": "mission_build_cargo_bay"
         }
       ]
     },
@@ -244,6 +269,25 @@
         {
           "type": "give_mission_progress",
           "amount": 2
+        }
+      ]
+    },
+    {
+      "id": "mission_build_cargo_bay",
+      "title": "BUILD CARGO BAY",
+      "description": "Build and complete a Cargo Bay to enable contracts. Construction requires 20 Concrete, 10 Steel and 2 Circuit Boards.",
+      "timeLimitSeconds": 0,
+      "conditions": [
+        {
+          "type": "build_building",
+          "building": "CargoBay",
+          "amount": 1
+        }
+      ],
+      "rewards": [
+        {
+          "type": "give_mission_progress",
+          "amount": 1
         }
       ]
     }

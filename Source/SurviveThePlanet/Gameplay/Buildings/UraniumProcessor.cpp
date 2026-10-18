@@ -1,4 +1,5 @@
 #include "Gameplay/Buildings/UraniumProcessor.h"
+#include "Gameplay/Buildings/ProductionBalance.h"
 #include "Gameplay/Buildings/ResourceProductionComponent.h"
 
 AUraniumProcessor::AUraniumProcessor()
@@ -18,5 +19,5 @@ void AUraniumProcessor::Tick(float DeltaSeconds)
  const TArray<FResourceCost> Inputs = {{EResourceType::UraniumOre, FMath::Max(1, OrePerCycle)}};
  bIsProducing = Production->UpdateProduction(DeltaSeconds * Efficiency,
   !IsPlacementPreview() && CanProduce() && Efficiency > 0.0f,
-  Inputs, EResourceType::FuelRods, FMath::Max(1, FuelRodsPerCycle), FMath::Max(0.1f, CycleSeconds));
+  Inputs, EResourceType::FuelRods, FMath::Max(1, FuelRodsPerCycle), STPProductionBalance::CycleDuration(CycleSeconds));
 }

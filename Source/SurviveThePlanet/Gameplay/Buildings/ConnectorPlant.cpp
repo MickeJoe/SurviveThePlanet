@@ -1,4 +1,5 @@
 #include "Gameplay/Buildings/ConnectorPlant.h"
+#include "Gameplay/Buildings/ProductionBalance.h"
 
 #include "Gameplay/Buildings/ResourceProductionComponent.h"
 #include "Components/StaticMeshComponent.h"
@@ -87,7 +88,7 @@ void AConnectorPlant::Tick(float DeltaSeconds)
 	bIsProducing = Production->UpdateProduction(DeltaSeconds,
 		!bPlacementPreview && CanProduce(), Inputs, EResourceType::Connector,
 		FMath::Max(1, Recipe ? Recipe->ConnectorsPerCycle : 3),
-		Recipe ? Recipe->CycleSeconds : 20.0f);
+		STPProductionBalance::CycleDuration(Recipe ? Recipe->CycleSeconds : 20.0f));
 	if (bIsProducing)
 	{
 		const float Step = FMath::Max(0.0f, DeltaSeconds);
@@ -121,19 +122,19 @@ float AConnectorPlant::GetConnectorProductionPerMinute() const
 {
 	const auto* R = GetRecipe();
 	return FMath::Max(1, R ? R->ConnectorsPerCycle : 3) * 60.0f
-		/ FMath::Max(0.1f, R ? R->CycleSeconds : 20.0f);
+		/ STPProductionBalance::CycleDuration(R ? R->CycleSeconds : 20.0f);
 }
 float AConnectorPlant::GetCopperConsumptionPerMinute() const
 {
 	const auto* R = GetRecipe();
 	return FMath::Max(0, R ? R->CopperPerCycle : 2) * 60.0f
-		/ FMath::Max(0.1f, R ? R->CycleSeconds : 20.0f);
+		/ STPProductionBalance::CycleDuration(R ? R->CycleSeconds : 20.0f);
 }
 float AConnectorPlant::GetPolymerConsumptionPerMinute() const
 {
 	const auto* R = GetRecipe();
 	return FMath::Max(0, R ? R->PolymerPerCycle : 1) * 60.0f
-		/ FMath::Max(0.1f, R ? R->CycleSeconds : 20.0f);
+		/ STPProductionBalance::CycleDuration(R ? R->CycleSeconds : 20.0f);
 }
 
 void AConnectorPlant::RefreshVisuals()

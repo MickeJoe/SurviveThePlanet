@@ -1,4 +1,5 @@
 #include "Gameplay/Buildings/PolymerPlant.h"
+#include "Gameplay/Buildings/ProductionBalance.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/PointLightComponent.h"
 #include "EngineUtils.h"
@@ -68,7 +69,7 @@ void APolymerPlant::Tick(float DeltaSeconds)
 		{EResourceType::Coal, FMath::Max(0, Recipe ? Recipe->CoalPerCycle : 2)},
 		{EResourceType::Water, FMath::Max(0, Recipe ? Recipe->WaterPerCycle : 1)}
 	};
-	const float CycleSeconds = FMath::Max(0.1f, Recipe ? Recipe->CycleSeconds : 20.0f);
+	const float CycleSeconds = STPProductionBalance::CycleDuration(Recipe ? Recipe->CycleSeconds : 20.0f);
 	const int32 Output = FMath::Max(1, Recipe ? Recipe->PolymerPerCycle : 3);
 	bIsProducing = Production->UpdateProduction(DeltaSeconds,
 		!bPlacementPreview && CanProduce(), Inputs, EResourceType::Polymer, Output, CycleSeconds);
@@ -113,18 +114,18 @@ void APolymerPlant::SetPlacementPreviewValid(bool bValidPlacement)
 float APolymerPlant::GetPolymerProductionPerMinute() const
 {
 	const auto* R = GetRecipe();
-	return (R ? R->PolymerPerCycle : 3) * 60.0f / FMath::Max(0.1f,R ? R->CycleSeconds : 20.0f);
+	return (R ? R->PolymerPerCycle : 3) * 60.0f / STPProductionBalance::CycleDuration(R ? R->CycleSeconds : 20.0f);
 }
 
 float APolymerPlant::GetCoalConsumptionPerMinute() const
 {
 	const auto* R = GetRecipe();
-	return FMath::Max(0,R ? R->CoalPerCycle : 2) * 60.0f / FMath::Max(0.1f,R ? R->CycleSeconds : 20.0f);
+	return FMath::Max(0,R ? R->CoalPerCycle : 2) * 60.0f / STPProductionBalance::CycleDuration(R ? R->CycleSeconds : 20.0f);
 }
 
 float APolymerPlant::GetWaterConsumptionPerMinute() const
 {
 	const auto* R = GetRecipe();
-	return FMath::Max(0,R ? R->WaterPerCycle : 1) * 60.0f / FMath::Max(0.1f,R ? R->CycleSeconds : 20.0f);
+	return FMath::Max(0,R ? R->WaterPerCycle : 1) * 60.0f / STPProductionBalance::CycleDuration(R ? R->CycleSeconds : 20.0f);
 }
 

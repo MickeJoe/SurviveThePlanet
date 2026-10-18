@@ -1,5 +1,7 @@
-﻿#include "PlanetSurfaceManager.h"
+#include "PlanetSurfaceManager.h"
 #include "Gameplay/Resources/GeothermalSite.h"
+#include "Gameplay/Resources/BaseResourceSource.h"
+#include "Gameplay/Buildings/MiningMachine.h"
 #include "TimerManager.h"
 #include "SurviveThePlanet.h"
 
@@ -117,6 +119,35 @@ bool APlanetSurfaceManager::HasBuildingClearance(FSTPGridCell OriginCell, FIntPo
 	const int32 CandidateMinY = OriginCell.Y - Clearance;
 	const int32 CandidateMaxX = OriginCell.X + Footprint.X - 1 + Clearance;
 	const int32 CandidateMaxY = OriginCell.Y + Footprint.Y - 1 + Clearance;
+
+	// Protect the future mine footprint, not just the smaller deposit mesh.
+	// This is building-only clearance: drones may still travel through the area.
+	for (TActorIterator<ABaseResourceSource> It(GetWorld()); It; ++It)
+	{
+		const ABaseResourceSource* Source = *It;
+		if (!IsValid(Source) || Source->IsActorBeingDestroyed() || Source->GetRemainingAmount() <= 0) continue;
+		const TSubclassOf<AMiningMachine> MineClass = Source->GetMineBlueprint();
+		if (!MineClass) continue;
+		const AMiningMachine* MineDefaults = MineClass->GetDefaultObject<AMiningMachine>();
+		const FIntPoint MineFootprint = SanitizeFootprint(MineDefaults->GetGridFootprint());
+		const FSTPGridPlacement MinePlacement = GetPlacementForWorldLocation(
+			MineDefaults->GetPlacementTransformForSource(Source).GetLocation(), MineFootprint);
+		// The matching mine may replace this deposit, including during final reservation
+		// before AttachToResourceSource has stored its ResourceSource pointer.
+		if (IgnoredBuilding && IgnoredBuilding->IsA(MineClass)
+			&& OriginCell.X == MinePlacement.OriginCell.X && OriginCell.Y == MinePlacement.OriginCell.Y
+			&& Footprint == MineFootprint) continue;
+		const int32 MineMaxX = MinePlacement.OriginCell.X + MineFootprint.X - 1;
+		const int32 MineMaxY = MinePlacement.OriginCell.Y + MineFootprint.Y - 1;
+		const bool bSeparated = CandidateMaxX < MinePlacement.OriginCell.X || CandidateMinX > MineMaxX
+			|| CandidateMaxY < MinePlacement.OriginCell.Y || CandidateMinY > MineMaxY;
+		if (!bSeparated)
+		{
+			if (bLogDiagnostics) UE_LOG(LogSurviveThePlanet, Display,
+				TEXT("STP_MINING_DIAG protected_deposit=%s mine=%s"), *Source->GetName(), *MineClass->GetName());
+			return false;
+		}
+	}
 
 	// Query building actors directly. Map-authored buildings are not guaranteed to
 	// have been added to OccupiedCells, while placement previews must never block.

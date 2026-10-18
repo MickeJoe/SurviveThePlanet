@@ -1,4 +1,5 @@
 #include "Gameplay/Buildings/Steelworks.h"
+#include "Gameplay/Buildings/ProductionBalance.h"
 
 #include "Components/PointLightComponent.h"
 #include "Components/StaticMeshComponent.h"
@@ -85,7 +86,7 @@ void ASteelworks::Tick(float DeltaSeconds)
 
 	AResourceManager* Manager = ResolveResourceManager();
 	const USteelworksBuildingDataAsset* Data = GetSteelworksData();
-	const float CycleSeconds = Data ? FMath::Max(0.01f, Data->CycleSeconds) : DefaultCycleSeconds;
+	const float CycleSeconds = STPProductionBalance::CycleDuration(Data ? Data->CycleSeconds : DefaultCycleSeconds);
 	const int32 IronPerCycle = FMath::CeilToInt(Data ? Data->IronPerCycle : DefaultIronPerCycle);
 	const int32 SteelPerCycle = FMath::FloorToInt(Data ? Data->SteelPerCycle : DefaultSteelPerCycle);
 	const bool bCanProduce = !bPlacementPreview
@@ -121,7 +122,7 @@ float ASteelworks::GetSteelProductionPerMinute() const
 {
 	const USteelworksBuildingDataAsset* Data = GetSteelworksData();
 	const float Output = Data ? Data->SteelPerCycle : DefaultSteelPerCycle;
-	const float CycleSeconds = Data ? Data->CycleSeconds : DefaultCycleSeconds;
+	const float CycleSeconds = STPProductionBalance::CycleDuration(Data ? Data->CycleSeconds : DefaultCycleSeconds);
 	return FMath::Max(0.0f, Output) * 60.0f / FMath::Max(0.01f, CycleSeconds);
 }
 
@@ -129,7 +130,7 @@ float ASteelworks::GetIronConsumptionPerMinute() const
 {
 	const USteelworksBuildingDataAsset* Data = GetSteelworksData();
 	const float Input = Data ? Data->IronPerCycle : DefaultIronPerCycle;
-	const float CycleSeconds = Data ? Data->CycleSeconds : DefaultCycleSeconds;
+	const float CycleSeconds = STPProductionBalance::CycleDuration(Data ? Data->CycleSeconds : DefaultCycleSeconds);
 	return FMath::Max(0.0f, Input) * 60.0f / FMath::Max(0.01f, CycleSeconds);
 }
 

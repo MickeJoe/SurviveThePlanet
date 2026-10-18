@@ -108,6 +108,7 @@ void UTraderPanelWidget::NativeConstruct()
 	if (ContractSubsystem) ContractSubsystem->OnContractStateChanged.AddUniqueDynamic(this, &UTraderPanelWidget::HandleContractStateChanged);
 	RefreshActiveContracts();
 	RefreshTraders();
+	HandleContractStateChanged();
 }
 
 void UTraderPanelWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
@@ -557,6 +558,7 @@ FText UTraderPanelWidget::FormatOfferTime(float RemainingSeconds)
 
 void UTraderPanelWidget::HandleViewOffersRequested(FName TraderId)
 {
+	if (!ContractSubsystem || !ContractSubsystem->AreContractsAvailable()) return;
 	OnViewOffersRequested.Broadcast(TraderId);
 	if (!ContractOfferPopup)
 	{
@@ -569,6 +571,8 @@ void UTraderPanelWidget::HandleViewOffersRequested(FName TraderId)
 
 void UTraderPanelWidget::HandleContractStateChanged()
 {
+	const bool bAvailable = ContractSubsystem && ContractSubsystem->AreContractsAvailable();
+	SetVisibility(bAvailable ? ESlateVisibility::SelfHitTestInvisible : ESlateVisibility::Collapsed);
 	// Refresh on the next UI tick; a resource callback may still be inside settlement.
 	bTraderStructureDirty = true;
 	TimerRefreshAccumulator = 1.0f;

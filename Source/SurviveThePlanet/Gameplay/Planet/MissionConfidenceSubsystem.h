@@ -68,7 +68,7 @@ private:
 	float MissionElapsedSeconds = 0.0f;
 	void EvaluateMissionOutcome();
 	float MissionConfidence = 100.0f;
-	float DecayPerGameHour = 5.0f;
+	float DecayPerGameHour = 2.5f;
 	bool bSettingsResolved = false;
 	bool bDecayPaused = false;
 

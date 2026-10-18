@@ -1,4 +1,5 @@
 #include "Gameplay/Buildings/ConcretePlant.h"
+#include "Gameplay/Buildings/ProductionBalance.h"
 
 #include "Components/StaticMeshComponent.h"
 #include "EngineUtils.h"
@@ -23,7 +24,7 @@ void AConcretePlant::Tick(float DeltaSeconds)
 	}
 
 	const UConcretePlantBuildingDataAsset* Data = GetConcretePlantData();
-	const float CycleSeconds = Data ? FMath::Max(0.01f, Data->CycleSeconds) : 60.0f;
+	const float CycleSeconds = STPProductionBalance::CycleDuration(Data ? Data->CycleSeconds : 60.0f);
 	CycleProgressSeconds += FMath::Max(0.0f, DeltaSeconds);
 	while (CycleProgressSeconds >= CycleSeconds)
 	{
@@ -43,7 +44,8 @@ void AConcretePlant::Tick(float DeltaSeconds)
 float AConcretePlant::GetConcreteProductionPerMinute() const
 {
 	const UConcretePlantBuildingDataAsset* Data = GetConcretePlantData();
-	return Data ? Data->ConcretePerCycle * 60.0f / FMath::Max(0.01f, Data->CycleSeconds) : 3.0f;
+	return (Data ? Data->ConcretePerCycle : 3.0f) * 60.0f
+		/ STPProductionBalance::CycleDuration(Data ? Data->CycleSeconds : 60.0f);
 }
 
 void AConcretePlant::SetPlacementPreview(bool bPreview)

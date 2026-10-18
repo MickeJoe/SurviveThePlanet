@@ -3,6 +3,7 @@
 #include "Engine/Engine.h"
 #include "Engine/World.h"
 #include "Gameplay/Planet/MissionConfidenceSubsystem.h"
+#include "Gameplay/Buildings/CargoBay.h"
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FMissionOutcomeTest,
  "SurviveThePlanet.Mission.Outcome",
@@ -175,6 +176,12 @@ bool FProgressionRewardsTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("Storage objective grants +1"), Mission->GetMissionProgress(), 3);
 	Objectives->SubmitBuildingBuilt(ESTPBuildingType::MiningMachine, 2);
 	TestEqual(TEXT("Mining objective grants a different amount (+2)"), Mission->GetMissionProgress(), 5);
+	TestFalse(TEXT("Contracts require a Cargo Bay after uplink"), Contracts->AreContractsAvailable());
+	auto* CargoBay = World->SpawnActor<ACargoBay>();
+	CargoBay->SetConstructionProgress(0.5f);
+	TestFalse(TEXT("Unfinished Cargo Bay keeps contracts locked"), Contracts->AreContractsAvailable());
+	CargoBay->SetConstructionProgress(1.0f);
+	TestTrue(TEXT("Finished Cargo Bay unlocks contracts"), Contracts->AreContractsAvailable());
 	const auto Offers = Contracts->GetContractOffers();
 	if (!TestEqual(TEXT("Existing agreement loads"), Offers.Num(), 1)) { World->DestroyWorld(false); return false; }
 	const auto& Offer = Offers[0];
@@ -215,6 +222,7 @@ bool FProgressionRewardsTest::RunTest(const FString& Parameters)
 	Resources = World->SpawnActor<AResourceManager>();
 	Resources->SetCredits(0);
 	Resources->SetResourceAmount(EResourceType::ControlChip, 0);
+	World->SpawnActor<ACargoBay>()->SetConstructionProgress(1.0f);
 	Contracts->ToggleContractSelection(Offer.Id, TEXT("standard"));
 	Contracts->ConfirmSelectedContract();
 	const float Interval = Contracts->GetSelectedContractState().SecondsUntilDelivery;

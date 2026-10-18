@@ -1,4 +1,5 @@
 #include "Gameplay/Buildings/MiningMachine.h"
+#include "Gameplay/Buildings/ProductionBalance.h"
 #include "SurviveThePlanet.h"
 
 #include "Components/StaticMeshComponent.h"
@@ -87,7 +88,7 @@ float AMiningMachine::GetOutputPerMinuteAt100Percent(EResourceType ResourceType)
 	{
 		if (Output.Resource == ResourceType)
 		{
-			return FMath::Max(0.0f, Output.AmountPerMinutePerDroneAt100Percent);
+			return STPProductionBalance::OutputRate(Output.AmountPerMinutePerDroneAt100Percent);
 		}
 	}
 	return 0.0f;

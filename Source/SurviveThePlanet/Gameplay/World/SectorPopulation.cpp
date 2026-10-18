@@ -1,9 +1,11 @@
-﻿#include "Gameplay/World/SectorPopulation.h"
+#include "Gameplay/World/SectorPopulation.h"
 #include "Gameplay/Resources/GeothermalSite.h"
 #include "Gameplay/Planet/PlanetDefinition.h"
 #include "Gameplay/Planet/PlanetWeatherManager.h"
 #include "Gameplay/Resources/BaseResourceSource.h"
 #include "Gameplay/Buildings/MiningMachine.h"
+#include "Gameplay/Base/BaseBuilding.h"
+#include "Gameplay/Energy/EnergyCoverageComponent.h"
 #include "Gameplay/Planet/PlanetSurfaceManager.h"
 #include "Components/InstancedStaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
@@ -17,6 +19,23 @@
 #include "GameFramework/PlayerController.h"
 #include "SceneView.h"
 #include "Misc/Crc.h"
+
+namespace
+{
+	bool IsFootprintInsideSector(const AHexSectorGrid* Grid, const APlanetSurfaceManager* Surface,
+		int32 SectorId, const FSTPGridPlacement& Placement, FIntPoint Footprint)
+	{
+		if (Grid->GetSectorAtWorldLocation(Placement.WorldLocation) != SectorId) return false;
+		const FVector HalfX = Surface->GetActorTransform().TransformVector(FVector(Footprint.X * Surface->GetTileSpacing() * 0.5f, 0, 0));
+		const FVector HalfY = Surface->GetActorTransform().TransformVector(FVector(0, Footprint.Y * Surface->GetTileSpacing() * 0.5f, 0));
+		// Match the four-corner test used by HexSectorGrid::CanPlaceBuilding.
+		// Check geometry alone: other sectors need not be discovered at generation time.
+		for (const float X : {-1.0f, 1.0f})
+			for (const float Y : {-1.0f, 1.0f})
+				if (Grid->GetSectorAtWorldLocation(Placement.WorldLocation + X * HalfX + Y * HalfY) != SectorId) return false;
+		return true;
+	}
+}
 
 ASectorPopulation::ASectorPopulation()
 {
@@ -67,7 +86,12 @@ void ASectorPopulation::InitializePopulation()
 		FRandomStream SectorRandom(Seed ^ (Sector.Id * 7919) ^ 0x524553);
 		const int32 DepositCount = Sector.Id == Grid->StartingSectorId ? 3 : SectorRandom.RandRange(1, 3);
 		TArray<EResourceType> SectorTypes = {Types[0], Types[1], Types[2], Types[3]};
-		if (Sector.Id != Grid->StartingSectorId)
+		if (Sector.Id == Grid->StartingSectorId)
+		{
+			// Bootstrap resources must not depend on the planet seed.
+			SectorTypes = {EResourceType::Iron, EResourceType::Stone, EResourceType::Copper};
+		}
+		else
 		{
 			for (int32 Index = SectorTypes.Num() - 1; Index > 0; --Index)
 			{
@@ -152,6 +176,24 @@ bool ASectorPopulation::EnsureMineableDepositLocations()
 		return false;
 	}
 
+	const ABaseBuilding* StartingBase = nullptr;
+	for (TActorIterator<ABaseBuilding> It(GetWorld()); It; ++It)
+	{
+		if (It->GetBuildingType() == ESTPBuildingType::BaseModule && !It->IsPlacementPreview()
+			&& Grid->GetSectorAtWorldLocation(It->GetActorLocation()) == Grid->StartingSectorId)
+		{
+			StartingBase = *It;
+			break;
+		}
+	}
+	const UEnergyCoverageComponent* BaseCoverage = StartingBase
+		? StartingBase->FindComponentByClass<UEnergyCoverageComponent>() : nullptr;
+	if (!StartingBase || !BaseCoverage)
+	{
+		Diagnostics.Add(TEXT("Starting iron requires an HQ with configured power coverage."));
+		return false;
+	}
+
 	struct FMineCandidate
 	{
 		FVector SourceLocation;
@@ -177,9 +219,9 @@ bool ASectorPopulation::EnsureMineableDepositLocations()
 			if (Resources.Deposits[Index].SectorId == Sector.Id) DepositIndices.Add(Index);
 		const bool bStartingSector = Sector.Id == Grid->StartingSectorId;
 		// Search outside-in; ordinary sectors may use inner open ground when rocks fill the rim.
-		const float MinimumRadius = bStartingSector ? 2200.0f : 800.0f;
+		const float MinimumRadius = bStartingSector ? 1500.0f : 800.0f;
 		const float MaximumRadius = Grid->ExplorationSectorRadius - 650.0f;
-		const float Separation = bStartingSector ? 1800.0f : 1200.0f;
+		const float Separation = bStartingSector ? 1400.0f : 1200.0f;
 		struct FDepositSearch
 		{
 			const ABaseResourceSource* SourceDefaults = nullptr;
@@ -188,6 +230,10 @@ bool ASectorPopulation::EnsureMineableDepositLocations()
 			TArray<FMineCandidate> Options;
 			TSet<FIntPoint> VisitedOrigins;
 			int32 NextPosition = 0;
+			bool bCentralIron = false;
+			FVector SearchCenter;
+			float MinimumDistance = 0.0f;
+			float MaximumDistance = 0.0f;
 		};
 		TArray<FDepositSearch> Searches;
 		for (int32 DepositIndex : DepositIndices)
@@ -203,15 +249,27 @@ bool ASectorPopulation::EnsureMineableDepositLocations()
 				Diagnostics.Add(FString::Printf(TEXT("Sector %d: deposit %s has no configured MineBlueprint."), Sector.Id, *Deposit.RuleId.ToString()));
 				return false;
 			}
+			Search.bCentralIron = bStartingSector && Deposit.ResourceType == EResourceType::Iron;
+			Search.SearchCenter = Search.bCentralIron ? StartingBase->GetActorLocation() : Sector.WorldCenter;
+			Search.MinimumDistance = Search.bCentralIron ? 900.0f : MinimumRadius;
+			Search.MaximumDistance = Search.bCentralIron
+				? FMath::Min(1600.0f, BaseCoverage->CoverageRadius - 250.0f) : MaximumRadius;
+			if (Search.MaximumDistance < Search.MinimumDistance)
+			{
+				Diagnostics.Add(TEXT("HQ power coverage is too small for a safe starting iron mine."));
+				return false;
+			}
 			FRandomStream Random(Seed ^ (Sector.Id * 7919) ^ FCrc::StrCrc32(*Deposit.RuleId.ToString()));
 			const float StartAngle = Random.FRandRange(0.0f, 360.0f);
-			for (float Radius = MaximumRadius; Radius >= MinimumRadius; Radius -= 100.0f)
+			// Starting iron searches inside-out; other deposits keep their outer-ring search.
+			for (float Distance = Search.MinimumDistance; Distance <= Search.MaximumDistance; Distance += 100.0f)
 			{
+				const float Radius = Search.bCentralIron ? Distance : Search.MaximumDistance - Distance + Search.MinimumDistance;
 				const int32 Samples = FMath::Max(12, FMath::CeilToInt(2.0f * PI * Radius / 150.0f));
 				for (int32 Sample = 0; Sample < Samples; ++Sample)
 				{
 					const float Angle = FMath::DegreesToRadians(StartAngle + 360.0f * Sample / Samples);
-					Search.Positions.Add(Sector.WorldCenter + Grid->GetActorTransform().TransformVectorNoScale(
+					Search.Positions.Add(Search.SearchCenter + Grid->GetActorTransform().TransformVectorNoScale(
 						FVector(FMath::Cos(Angle) * Radius, FMath::Sin(Angle) * Radius, 0)));
 				}
 			}
@@ -236,9 +294,13 @@ bool ASectorPopulation::EnsureMineableDepositLocations()
 					if (!bBuildable) Surface->HasTerrainClearance(Candidate.Placement.OriginCell, Candidate.Footprint,
 						Clearance + ResourceTerrainMarginCells, true);
 				}
-				const float Radius = FVector::Dist2D(Sector.WorldCenter, Candidate.Placement.WorldLocation);
-				if (!bBuildable || Radius < MinimumRadius || Radius > MaximumRadius
-					|| Grid->GetSectorAtWorldLocation(Candidate.Placement.WorldLocation) != Sector.Id
+				FSTPGridPlacement RequestedPlacement = Candidate.Placement;
+				RequestedPlacement.WorldLocation = Search.MineDefaults->GetPlacementTransformForSourceAtTransform(
+					Search.SourceDefaults, FTransform(Candidate.SourceLocation)).GetLocation();
+				const float Radius = FVector::Dist2D(Search.SearchCenter, RequestedPlacement.WorldLocation);
+				if (!bBuildable || Radius < Search.MinimumDistance || Radius > Search.MaximumDistance
+					|| !IsFootprintInsideSector(Grid, Surface, Sector.Id, RequestedPlacement, Candidate.Footprint)
+					|| !IsFootprintInsideSector(Grid, Surface, Sector.Id, Candidate.Placement, Candidate.Footprint)
 					|| Search.VisitedOrigins.Contains(Candidate.Placement.OriginCell.ToIntPoint())) continue;
 				bool bSeparated = true;
 				for (const FMineCandidate& Existing : Accepted)
@@ -677,22 +739,58 @@ void ASectorPopulation::EndPlay(const EEndPlayReason::Type Reason)
 }
 
 bool ASectorPopulation::FindSpecialResourceLocation(const FHexSector& Sector, FRandomStream& Random,
- APlanetSurfaceManager* Surface, FIntPoint Footprint, FVector StartingOffset, FVector& OutLocation) const
+ APlanetSurfaceManager* Surface, FIntPoint Footprint, FVector StartingOffset, FVector& OutLocation,
+ const ABaseResourceSource* SourceDefaults) const
 {
+ const TSubclassOf<AMiningMachine> MineClass = SourceDefaults ? SourceDefaults->GetMineBlueprint() : nullptr;
+ const AMiningMachine* MineDefaults = MineClass ? MineClass->GetDefaultObject<AMiningMachine>() : nullptr;
  for (int32 Attempt = 0; Attempt < 250; ++Attempt)
  {
   const float Radius = Grid->ExplorationSectorRadius * 0.65f;
   FVector Candidate = Sector.WorldCenter + FVector(Random.FRandRange(-Radius,Radius),Random.FRandRange(-Radius,Radius),0);
   if (Sector.Id == Grid->StartingSectorId && Attempt == 0) Candidate = Sector.WorldCenter + StartingOffset;
-  const FSTPGridPlacement Placement = Surface->GetBuildingPlacementForWorldLocation(Candidate,Footprint);
-  if (!Placement.bValid || Grid->GetSectorAtWorldLocation(Placement.WorldLocation) != Sector.Id
-   || !Surface->HasTerrainClearance(Placement.OriginCell,Footprint,3)) continue;
-  bool bNearDeposit = false;
-  for (const FPlanetPlacedDeposit& Deposit : Resources.Deposits)
-   if (FVector::DistSquared2D(Deposit.Location,Placement.WorldLocation) < FMath::Square(Deposit.Radius + 450)) { bNearDeposit = true; break; }
   FVector Ground;
-  if (bNearDeposit || !GroundPosition(Placement.WorldLocation,Ground)) continue;
-  Ground.X = Placement.WorldLocation.X; Ground.Y = Placement.WorldLocation.Y;
+  if (!GroundPosition(Candidate, Ground)) continue;
+  FSTPGridPlacement Placement;
+  FVector RequestedLocation;
+  if (MineDefaults)
+  {
+   RequestedLocation = MineDefaults->GetPlacementTransformForSourceAtTransform(SourceDefaults, FTransform(Ground)).GetLocation();
+   if (!MineDefaults->CanBuildAtSourceTransform(SourceDefaults, FTransform(Ground), Surface, Placement, ResourceTerrainMarginCells)) continue;
+  }
+  else
+  {
+   Placement = Surface->GetBuildingPlacementForWorldLocation(Candidate, Footprint);
+   RequestedLocation = Placement.WorldLocation;
+   Ground.X = Placement.WorldLocation.X; Ground.Y = Placement.WorldLocation.Y;
+  }
+  FSTPGridPlacement Requested = Placement;
+  Requested.WorldLocation = RequestedLocation;
+  if (!Placement.bValid || !IsFootprintInsideSector(Grid, Surface, Sector.Id, Placement, Footprint)
+   || !IsFootprintInsideSector(Grid, Surface, Sector.Id, Requested, Footprint)
+   || !Surface->HasTerrainClearance(Placement.OriginCell, Footprint, 3)) continue;
+  bool bNearDeposit = false;
+  const int32 Clearance = Surface->GetBuildingClearanceCells();
+  for (const FPlanetPlacedDeposit& Deposit : Resources.Deposits)
+  {
+   if (FVector::DistSquared2D(Deposit.Location, Ground) < FMath::Square(Deposit.Radius + 450)) { bNearDeposit = true; break; }
+   const TSubclassOf<ABaseResourceSource> OtherClass = DepositClasses.FindRef(Deposit.ResourceType);
+   const ABaseResourceSource* OtherSource = OtherClass ? OtherClass->GetDefaultObject<ABaseResourceSource>() : nullptr;
+   const TSubclassOf<AMiningMachine> OtherMineClass = OtherSource ? OtherSource->GetMineBlueprint() : nullptr;
+   if (!OtherMineClass) continue;
+   const AMiningMachine* OtherMine = OtherMineClass->GetDefaultObject<AMiningMachine>();
+   const FIntPoint OtherFootprint = OtherMine->GetGridFootprint();
+   const FVector OtherLocation = OtherMine->GetPlacementTransformForSourceAtTransform(OtherSource, FTransform(Deposit.Location)).GetLocation();
+   const FSTPGridPlacement Other = Surface->GetPlacementForWorldLocation(OtherLocation, OtherFootprint);
+   // Plan against complete future mines, including art offsets. Small deposit
+   // meshes and center-distance checks cannot reserve enough room on their own.
+   const bool bSeparated = Placement.OriginCell.X + Footprint.X - 1 + Clearance < Other.OriginCell.X
+    || Other.OriginCell.X + OtherFootprint.X - 1 + Clearance < Placement.OriginCell.X
+    || Placement.OriginCell.Y + Footprint.Y - 1 + Clearance < Other.OriginCell.Y
+    || Other.OriginCell.Y + OtherFootprint.Y - 1 + Clearance < Placement.OriginCell.Y;
+   if (!bSeparated) { bNearDeposit = true; break; }
+  }
+  if (bNearDeposit) continue;
   OutLocation = Ground;
   return true;
  }
@@ -760,7 +858,7 @@ void ASectorPopulation::GenerateSurfaceDeposit(const FPlanetSurfaceDepositSettin
   const bool bStarting = Sector.Id == Grid->StartingSectorId;
   if (bStarting ? !Settings.bGuaranteeStartingDeposit : Random.FRand() >= Frequency) continue;
   FVector Ground;
-  if (!FindSpecialResourceLocation(Sector, Random, Surface, Footprint, Settings.StartingOffset, Ground))
+  if (!FindSpecialResourceLocation(Sector, Random, Surface, Footprint, Settings.StartingOffset, Ground, SourceDefaults))
   {
    Diagnostics.Add(FString::Printf(TEXT("Sector %d: no clear %s deposit position found."), Sector.Id, *Settings.Deposit.Id.ToString()));
    continue;

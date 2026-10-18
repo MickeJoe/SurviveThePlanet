@@ -42,7 +42,8 @@ def tick(delta):
         if stage=='objective':
             mission.set_decay_paused(True)
             tracker=get_widgets(world,unreal.ObjectiveTrackerWidget)[0]
-            assert '+1 MISSION PROGRESSION' in texts(tracker),texts(tracker)
+            icons=widgetlib.call_method('GetAllWidgetsOfClass',(world,unreal.ObjectiveRewardIconWidget,False))
+            assert any('+1' in texts(icon) for icon in icons),[texts(icon) for icon in icons]
             state['checks'].append('Active objective HUD displays its configured progression reward')
             capture(world,'Objectives');transition('choices');return
         if stage=='choices':
@@ -59,6 +60,14 @@ def tick(delta):
             state['chooser']=chooser;capture(world,'Choices');transition('offers');return
         if stage=='offers':
             preserve();state['chooser'].call_method('ClosePopup')
+            # Contracts now require a completed Cargo Bay.
+            statics=unreal.get_default_object(unreal.GameplayStatics)
+            transform=unreal.Transform(location=unreal.Vector(0,0,-10000))
+            cargo=statics.call_method('BeginDeferredActorSpawnFromClass',(world,unreal.CargoBay,transform,unreal.SpawnActorCollisionHandlingMethod.ALWAYS_SPAWN,None,unreal.SpawnActorScaleMethod.MULTIPLY_WITH_ROOT))
+            cargo=statics.call_method('FinishSpawningActor',(cargo,transform,unreal.SpawnActorScaleMethod.MULTIPLY_WITH_ROOT))
+            cargo.set_construction_progress(1)
+            objectives.submit_building_built(unreal.STPBuildingType.CARGO_BAY,1)
+            state['progress_before_contract']=mission.get_mission_progress()
             objectives.confirm_mission_choices('mother_base_directives',['mission_deliver_copper','mission_build_storage','mission_expand_mining'])
             panel=get_widgets(world,unreal.TraderPanelWidget)[0]
             panel.call_method('HandleViewOffersRequested',('helix_industrial',))
@@ -83,7 +92,7 @@ def tick(delta):
             assert 'DELIVER SHIPMENT' in texts(panel),texts(panel)
             for index in range(4):
                 panel.call_method('HandleDeliverContractClicked')
-                assert mission.get_mission_progress()==(2 if index==3 else 1)
+                assert mission.get_mission_progress()==state['progress_before_contract']+(1 if index==3 else 0)
             assert contracts.get_selected_contract_state().state==unreal.STPContractState.COMPLETED
             assert state['manager'].get_resource_amount(unreal.ResourceType.CONTROL_CHIP)==0
             state['checks'].append('Real UMG delivery handler consumes 4 shipments and grants completion progression only on the last one')

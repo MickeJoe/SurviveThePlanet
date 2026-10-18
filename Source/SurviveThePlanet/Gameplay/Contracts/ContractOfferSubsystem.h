@@ -150,7 +150,11 @@ public:
 	bool ReloadContractOffers();
 
 	UFUNCTION(BlueprintPure, Category = "Contracts")
-	TArray<FSTPContractOfferDefinition> GetContractOffers() const { return ContractOffers; }
+	TArray<FSTPContractOfferDefinition> GetContractOffers() const { return AreContractsAvailable() ? ContractOffers : TArray<FSTPContractOfferDefinition>(); }
+
+	/** A finished Cargo Bay enables contract offers and selection. */
+	UFUNCTION(BlueprintPure, Category = "Contracts")
+	bool AreContractsAvailable() const;
 
 	UFUNCTION(BlueprintPure, Category = "Contracts")
 	bool GetContractOffer(FName OfferId, FSTPContractOfferDefinition& OutOffer) const;
@@ -181,6 +185,7 @@ private:
 	FName SelectedOfferId;
 	FName SelectedTierId;
 	bool bSelectionLocked = false;
+	bool bCargoBayWasReady = false;
 	bool bSettlingDelivery = false;
 	FSTPContractRuntimeState RuntimeState;
 	TMap<FName, int32> TraderReputation;

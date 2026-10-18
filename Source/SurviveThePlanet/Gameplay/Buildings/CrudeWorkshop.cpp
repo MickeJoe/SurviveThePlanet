@@ -1,4 +1,5 @@
 #include "Gameplay/Buildings/CrudeWorkshop.h"
+#include "Gameplay/Buildings/ProductionBalance.h"
 #include "Gameplay/Buildings/ResourceProductionComponent.h"
 #include "Gameplay/Buildings/IndustrialEffectsComponent.h"
 #include "Components/StaticMeshComponent.h"
@@ -87,8 +88,8 @@ EResourceType ACrudeWorkshop::GetRecipeOutput() const { return GetOutputForRecip
 
 float ACrudeWorkshop::GetCycleSecondsForRecipe(ECrudeWorkshopRecipe Recipe) const
 {
-	return FMath::Max(0.1f, Recipe == ECrudeWorkshopRecipe::Steel ? SteelCycleSeconds
-		: Recipe == ECrudeWorkshopRecipe::Copper ? CopperCycleSeconds : ConcreteCycleSeconds);
+	return STPProductionBalance::CycleDuration(0.5f * (Recipe == ECrudeWorkshopRecipe::Steel ? SteelCycleSeconds
+		: Recipe == ECrudeWorkshopRecipe::Copper ? CopperCycleSeconds : ConcreteCycleSeconds));
 }
 
 float ACrudeWorkshop::GetCycleSeconds() const { return GetCycleSecondsForRecipe(SelectedRecipe); }

@@ -35,8 +35,10 @@ public:
 	UPROPERTY(BlueprintAssignable, Category="Building Blueprints")
 	FBuildingBlueprintInventoryChanged OnInventoryChanged;
 
-private:
+/** Shared catalog lookup for rewards and their UI previews. */
 	const class UBuildingDataAsset* FindDefinitionByBlueprintId(FName BlueprintId) const;
+
+private:
 
 	UPROPERTY(SaveGame)
 	TSet<ESTPBuildTool> ExplicitlyOwnedBlueprints;

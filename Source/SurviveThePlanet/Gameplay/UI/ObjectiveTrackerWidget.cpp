@@ -1,4 +1,7 @@
 #include "Gameplay/UI/ObjectiveTrackerWidget.h"
+#include "Gameplay/UI/WorldHoverTooltipWidget.h"
+#include "Blueprint/WidgetLayoutLibrary.h"
+#include "GameFramework/PlayerController.h"
 
 #include "Blueprint/WidgetTree.h"
 #include "Blueprint/SlateBlueprintLibrary.h"
@@ -8,6 +11,13 @@
 #include "Components/TextBlock.h"
 #include "Components/VerticalBox.h"
 #include "Components/VerticalBoxSlot.h"
+#include "Components/WrapBox.h"
+#include "Components/Image.h"
+#include "Engine/GameInstance.h"
+#include "Gameplay/Resources/ResourceCatalog.h"
+#include "Gameplay/Buildings/BuildingBlueprintSubsystem.h"
+#include "Gameplay/Base/BuildingDataAsset.h"
+#include "Gameplay/Drones/BaseDrone.h"
 
 namespace STPObjectiveUI
 {
@@ -33,6 +43,47 @@ namespace STPObjectiveUI
 		Text->SetShadowOffset(FVector2D(1.0f, 1.0f));
 		Text->SetShadowColorAndOpacity(Shadow);
 	}
+}
+
+void UObjectiveRewardIconWidget::NativeOnMouseEnter(const FGeometry& Geometry, const FPointerEvent& Event)
+{
+	Super::NativeOnMouseEnter(Geometry, Event);
+	if (RewardDescription.IsEmpty() || !GetOwningPlayer()) return;
+	HideRewardTooltip();
+	UClass* Class = LoadClass<UWorldHoverTooltipWidget>(nullptr,
+		TEXT("/Game/UI/WBP_WorldHoverTooltip.WBP_WorldHoverTooltip_C"));
+	if (!Class) return;
+	HoverTooltip = CreateWidget<UWorldHoverTooltipWidget>(GetOwningPlayer(), Class);
+	if (!HoverTooltip) return;
+	HoverTooltip->SetDisplayText(RewardDescription, 260.0f);
+	HoverTooltip->AddToViewport(100);
+	HoverTooltip->ForceLayoutPrepass();
+	float MouseX = 0.0f, MouseY = 0.0f;
+	GetOwningPlayer()->GetMousePosition(MouseX, MouseY);
+	int32 Width = 0, Height = 0;
+	GetOwningPlayer()->GetViewportSize(Width, Height);
+	const FVector2D Size = HoverTooltip->GetDesiredSize() * UWidgetLayoutLibrary::GetViewportScale(this);
+	HoverTooltip->SetPositionInViewport(FVector2D(
+		FMath::Clamp(MouseX + 16.0f, 0.0f, FMath::Max(0.0f, Width - Size.X - 8.0f)),
+		FMath::Clamp(MouseY + 22.0f, 0.0f, FMath::Max(0.0f, Height - Size.Y - 8.0f))));
+}
+
+void UObjectiveRewardIconWidget::HideRewardTooltip()
+{
+	if (HoverTooltip) HoverTooltip->RemoveFromParent();
+	HoverTooltip = nullptr;
+}
+
+void UObjectiveRewardIconWidget::NativeOnMouseLeave(const FPointerEvent& Event)
+{
+	HideRewardTooltip();
+	Super::NativeOnMouseLeave(Event);
+}
+
+void UObjectiveRewardIconWidget::NativeDestruct()
+{
+	HideRewardTooltip();
+	Super::NativeDestruct();
 }
 
 void UObjectiveTrackerWidget::NativeConstruct()
@@ -142,16 +193,105 @@ void UObjectiveTrackerWidget::AddObjectiveRow(const FSTPObjectiveDefinition& Def
 
 	UVerticalBox* ObjectiveCard = WidgetTree->ConstructWidget<UVerticalBox>();
 	ObjectiveCard->AddChildToVerticalBox(Row);
-	if (const int32 Reward = Definition.GetMissionProgressReward(); Reward > 0)
-	{
-		UTextBlock* RewardText = WidgetTree->ConstructWidget<UTextBlock>();
-		RewardText->SetText(FText::Format(NSLOCTEXT("SurviveThePlanet", "TrackerProgressReward", "+{0} MISSION PROGRESSION"), FText::AsNumber(Reward)));
-		STPObjectiveUI::StyleText(RewardText, 11, STPObjectiveUI::Cyan);
-		ObjectiveCard->AddChildToVerticalBox(RewardText)->SetPadding(FMargin(18.0f, 0.0f, 0.0f, 5.0f));
-	}
+	AddRewardIcons(ObjectiveCard, Definition);
+
 	UVerticalBoxSlot* RowSlot = ObjectiveList->AddChildToVerticalBox(ObjectiveCard);
 	RowSlot->SetPadding(FMargin(0.0f, 1.0f));
 	RowSlot->SetHorizontalAlignment(HAlign_Fill);
+}
+
+void UObjectiveTrackerWidget::AddRewardIcons(UVerticalBox* ObjectiveCard, const FSTPObjectiveDefinition& Definition)
+{
+	if (Definition.Rewards.IsEmpty()) return;
+	UClass* StripClass = LoadClass<UUserWidget>(nullptr,
+		TEXT("/Game/UI/Objectives/WBP_ObjectiveRewardStrip.WBP_ObjectiveRewardStrip_C"));
+	UClass* IconClass = LoadClass<UUserWidget>(nullptr,
+		TEXT("/Game/UI/Objectives/WBP_ObjectiveRewardIcon.WBP_ObjectiveRewardIcon_C"));
+	if (!StripClass || !IconClass)
+	{
+		UE_LOG(LogTemp, Error, TEXT("Objective reward Widget Blueprints are missing."));
+		return;
+	}
+	UUserWidget* Strip = CreateWidget<UUserWidget>(GetOwningPlayer(), StripClass);
+	UWrapBox* RewardsWrap = Strip ? Cast<UWrapBox>(Strip->GetWidgetFromName(TEXT("RewardsWrap"))) : nullptr;
+	if (!RewardsWrap) return;
+	Strip->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+	ObjectiveCard->AddChildToVerticalBox(Strip)->SetPadding(FMargin(18.0f, 2.0f, 0.0f, 5.0f));
+	const UBuildingBlueprintSubsystem* Blueprints = GetGameInstance()
+		? GetGameInstance()->GetSubsystem<UBuildingBlueprintSubsystem>() : nullptr;
+
+	for (const FSTPObjectiveRewardDefinition& Reward : Definition.Rewards)
+	{
+		UTexture2D* Texture = nullptr;
+		FString Amount;
+		FText Description;
+		const bool bBlueprint = Reward.Type == ESTPObjectiveRewardType::GiveBuildingBlueprint;
+		switch (Reward.Type)
+		{
+		case ESTPObjectiveRewardType::GiveResource:
+		{
+			Texture = UResourceCatalog::GetResourceIcon(Reward.ResourceType);
+			FText Name = StaticEnum<EResourceType>()->GetDisplayNameTextByValue(static_cast<int64>(Reward.ResourceType));
+			for (const FResourceDefinition& Resource : UResourceCatalog::GetDefinitions())
+				if (Resource.ResourceType == Reward.ResourceType) { Name = Resource.DisplayName; break; }
+			Amount = FString::Printf(TEXT("x%d"), Reward.Amount);
+			Description = FText::Format(NSLOCTEXT("STPRewards", "Resource", "{0} {1}"), FText::AsNumber(Reward.Amount), Name);
+			break;
+		}
+		case ESTPObjectiveRewardType::GiveMissionConfidence:
+			Texture = LoadObject<UTexture2D>(nullptr, TEXT("/Game/UI/Objectives/T_RewardConfidence.T_RewardConfidence"));
+			Amount = FString::Printf(TEXT("+%d"), Reward.Amount);
+			Description = FText::Format(NSLOCTEXT("STPRewards", "Confidence", "+{0} percentage points of mission confidence (maximum 100%)."), FText::AsNumber(Reward.Amount));
+			break;
+		case ESTPObjectiveRewardType::GiveMissionProgress:
+			Texture = LoadObject<UTexture2D>(nullptr, TEXT("/Game/UI/Objectives/T_RewardProgress.T_RewardProgress"));
+			Amount = FString::Printf(TEXT("+%d"), Reward.Amount);
+			Description = FText::Format(NSLOCTEXT("STPRewards", "Progress", "+{0} mission progression"), FText::AsNumber(Reward.Amount));
+			break;
+		case ESTPObjectiveRewardType::GiveDrone:
+		{
+			const UClass* DroneClass = Reward.DroneClass.TryLoadClass<ABaseDrone>();
+			const ABaseDrone* Drone = DroneClass ? DroneClass->GetDefaultObject<ABaseDrone>() : nullptr;
+			Texture = Drone ? Drone->GetDroneThumbnail() : nullptr;
+			Amount = FString::Printf(TEXT("x%d"), Reward.Amount);
+			Description = FText::Format(NSLOCTEXT("STPRewards", "Drone", "{0} x {1}"), FText::AsNumber(Reward.Amount),
+				Drone ? Drone->GetDroneDisplayName() : FText::FromString(Reward.DroneClass.ToString()));
+			break;
+		}
+		case ESTPObjectiveRewardType::GiveBuildingBlueprint:
+		{
+			const UBuildingDataAsset* Building = Blueprints ? Blueprints->FindDefinitionByBlueprintId(Reward.BlueprintId) : nullptr;
+			Texture = Building ? (Building->ToolbarIcon ? Building->ToolbarIcon.Get() : Building->Thumbnail.Get()) : nullptr;
+			Description = FText::Format(NSLOCTEXT("STPRewards", "Blueprint", "Blueprint: {0}\nUnlocks this building in the build menu."),
+				Building ? Building->DisplayName : FText::FromName(Reward.BlueprintId));
+			break;
+		}
+		case ESTPObjectiveRewardType::UnlockObjective:
+		{
+			Texture = LoadObject<UTexture2D>(nullptr, TEXT("/Game/UI/BuildingFlow/T_FlowArrow.T_FlowArrow"));
+			FSTPObjectiveDefinition Next;
+			Description = FText::Format(NSLOCTEXT("STPRewards", "NextObjective", "Next objective: {0}"),
+				ObjectiveSubsystem && ObjectiveSubsystem->GetObjectiveDefinition(Reward.ObjectiveId, Next)
+					? Next.Title : FText::FromName(Reward.ObjectiveId));
+			break;
+		}
+		}
+		// Keep a visible reward and its tooltip even when optional catalog art is missing.
+		if (!Texture) Texture = LoadObject<UTexture2D>(nullptr, TEXT("/Game/UI/Objectives/T_RewardBlueprint.T_RewardBlueprint"));
+		UObjectiveRewardIconWidget* Card = CreateWidget<UObjectiveRewardIconWidget>(GetOwningPlayer(), IconClass);
+		if (!Card) continue;
+		Card->SetVisibility(ESlateVisibility::Visible);
+		Card->SetRewardDescription(FText::Format(NSLOCTEXT("STPRewards", "Tooltip", "On completion\n{0}"), Description));
+		if (UImage* Icon = Cast<UImage>(Card->GetWidgetFromName(TEXT("RewardIcon")))) Icon->SetBrushFromTexture(Texture);
+		if (UTextBlock* Quantity = Cast<UTextBlock>(Card->GetWidgetFromName(TEXT("AmountText"))))
+		{
+			Quantity->SetText(FText::FromString(Amount));
+			Quantity->SetVisibility(Amount.IsEmpty() ? ESlateVisibility::Collapsed : ESlateVisibility::HitTestInvisible);
+		}
+		if (UWidget* Badge = Card->GetWidgetFromName(TEXT("BlueprintBadge")))
+			Badge->SetVisibility(bBlueprint ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
+		RewardsWrap->AddChildToWrapBox(Card);
+	}
 }
 
 FText UObjectiveTrackerWidget::FormatProgress(const FSTPObjectiveDefinition& Definition,

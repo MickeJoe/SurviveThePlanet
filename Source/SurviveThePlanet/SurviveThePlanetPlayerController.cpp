@@ -1,6 +1,10 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "SurviveThePlanetPlayerController.h"
+#include "Gameplay/UI/WorldHoverTooltipWidget.h"
+#include "Blueprint/WidgetLayoutLibrary.h"
+#include "Engine/GameViewportClient.h"
+#include "Widgets/SViewport.h"
 #include "Gameplay/Resources/GeothermalSite.h"
 #include "Gameplay/Energy/EnergyConnectionComponent.h"
 #include "Gameplay/Energy/EnergyCoverageSubsystem.h"
@@ -392,6 +396,7 @@ void ASurviveThePlanetPlayerController::PlayerTick(float DeltaTime)
 
 	UpdateBuildPlacementPreview();
 	DrawSelectedActorRing();
+	UpdateWorldHoverTooltip();
 }
 
 void ASurviveThePlanetPlayerController::OnInputStarted()
@@ -1242,6 +1247,10 @@ void ASurviveThePlanetPlayerController::UpdateMiningMachinePlacementPreview()
 	const FString ReasonSuffix = FailureReason.IsEmpty()
 		? FString()
 		: FString::Printf(TEXT(" reason=\"%s\""), *FailureReason);
+	if (bCanMineSource && bCanAfford && !bValidPlacement)
+	{
+		FailureReason = TEXT("The mine footprint overlaps a sector that does not permit construction.");
+	}
 	LogPreviewState(FString::Printf(
 		TEXT("%s source=%s%s"),
 		bValidPlacement ? TEXT("VALID") : TEXT("INVALID"),
@@ -2333,4 +2342,52 @@ void ASurviveThePlanetPlayerController::OpenTradeScreen(FName TraderId)
     if (CheatMenuWidget) CheatMenuWidget->RemoveFromParent();
     TradeScreenWidget->AddToViewport(1100);
     TradeScreenWidget->OpenForTrader(TraderId);
+}
+
+void ASurviveThePlanetPlayerController::UpdateWorldHoverTooltip()
+{
+    if (!IsLocalPlayerController()) return;
+    AActor* Actor = nullptr;
+    float MouseX = 0.0f, MouseY = 0.0f;
+    const ULocalPlayer* LocalPlayer = GetLocalPlayer();
+    const TSharedPtr<SViewport> Viewport = LocalPlayer && LocalPlayer->ViewportClient
+        ? LocalPlayer->ViewportClient->GetGameViewportWidget() : nullptr;
+    const bool bCanHover = bShowMouseCursor && ActiveBuildTool == ESTPBuildTool::None
+        && Viewport.IsValid() && Viewport->IsDirectlyHovered()
+        && !(PauseMenuWidget && PauseMenuWidget->IsInViewport())
+        && !(TradeScreenWidget && TradeScreenWidget->IsInViewport())
+        && !(CheatMenuWidget && CheatMenuWidget->IsInViewport())
+        && GetMousePosition(MouseX, MouseY);
+    FHitResult Hit;
+    if (bCanHover && GetHitResultUnderCursor(ECC_Visibility, true, Hit)
+        && !UWorldHoverTooltipWidget::GetActorDisplayName(Hit.GetActor()).IsEmpty()) Actor = Hit.GetActor();
+
+    const double Now = GetWorld()->GetRealTimeSeconds();
+    if (HoveredWorldActor.Get() != Actor)
+    {
+        HoveredWorldActor = Actor;
+        WorldHoverStartedAt = Now;
+    }
+    if (!Actor || Now - WorldHoverStartedAt < 0.25)
+    {
+        if (WorldHoverTooltip) WorldHoverTooltip->SetHoveredActor(nullptr);
+        return;
+    }
+    if (!WorldHoverTooltip)
+    {
+        UClass* Class = LoadClass<UWorldHoverTooltipWidget>(nullptr, TEXT("/Game/UI/WBP_WorldHoverTooltip.WBP_WorldHoverTooltip_C"));
+        if (!Class) return;
+        WorldHoverTooltip = CreateWidget<UWorldHoverTooltipWidget>(this, Class);
+        if (!WorldHoverTooltip) return;
+        WorldHoverTooltip->AddToViewport(90);
+    }
+    WorldHoverTooltip->SetHoveredActor(Actor);
+    WorldHoverTooltip->ForceLayoutPrepass();
+    const float Scale = UWidgetLayoutLibrary::GetViewportScale(this);
+    const FVector2D Size = WorldHoverTooltip->GetDesiredSize() * Scale;
+    int32 Width, Height;
+    GetViewportSize(Width, Height);
+    WorldHoverTooltip->SetPositionInViewport(FVector2D(
+        FMath::Clamp(MouseX + 16.0f, 0.0f, FMath::Max(0.0f, Width - Size.X - 8.0f)),
+        FMath::Clamp(MouseY + 22.0f, 0.0f, FMath::Max(0.0f, Height - Size.Y - 8.0f))));
 }

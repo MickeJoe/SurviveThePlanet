@@ -1,4 +1,5 @@
 #include "ThermalProcessingBuilding.h"
+#include "Gameplay/Buildings/ProductionBalance.h"
 #include "ResourceProductionComponent.h"
 #include "IndustrialEffectsComponent.h"
 #include "Components/StaticMeshComponent.h"
@@ -36,5 +37,5 @@ void AThermalProcessingBuilding::Tick(float DeltaSeconds)
  const float Efficiency = GetCombinedDroneEfficiency();
  bIsProducing = Production->UpdateProduction(DeltaSeconds * Efficiency,
   !IsPlacementPreview() && CanProduce() && Efficiency > 0.0f,
-  GetRecipeInputs(), GetRecipeOutput(), FMath::Max(1, OutputPerCycle), FMath::Max(0.1f, CycleSeconds));
+  GetRecipeInputs(), GetRecipeOutput(), FMath::Max(1, OutputPerCycle), STPProductionBalance::CycleDuration(CycleSeconds));
 }

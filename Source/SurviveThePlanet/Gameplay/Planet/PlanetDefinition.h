@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "CoreMinimal.h"
 #include "Engine/DataAsset.h"
@@ -88,7 +88,7 @@ struct SURVIVETHEPLANET_API FMissionConfidenceSettings
 
 	/** Percentage points lost for each hour shown by the game clock. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mission Confidence", meta = (ClampMin = "0.0", UIMin = "0.0", DisplayName = "Decay Per Game Hour"))
-	float DecayPerGameHour = 5.0f;
+	float DecayPerGameHour = 2.5f;
 };
 
 /** Data-driven description of a planet and its global weather characteristics. */

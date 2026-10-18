@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "Gameplay/World/HexSectorGrid.h"
@@ -90,7 +90,7 @@ private:
  void GenerateSurfaceDeposits();
  void GenerateSurfaceDeposit(const struct FPlanetSurfaceDepositSettings& Settings, int32 PlanetSeed, int32 SeedSalt);
  bool FindSpecialResourceLocation(const FHexSector& Sector, FRandomStream& Random, APlanetSurfaceManager* Surface,
-  FIntPoint Footprint, FVector StartingOffset, FVector& OutLocation) const;
+  FIntPoint Footprint, FVector StartingOffset, FVector& OutLocation, const ABaseResourceSource* SourceDefaults = nullptr) const;
  UPROPERTY(Transient) TMap<int32, FVector> GeothermalLocations;
  UPROPERTY(Transient) TArray<TObjectPtr<AActor>> SpawnedGeothermalSites;
 	bool GroundPosition(FVector Position, FVector& Ground) const;

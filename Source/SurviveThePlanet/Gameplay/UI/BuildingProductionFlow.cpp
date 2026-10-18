@@ -1,4 +1,5 @@
 #include "Gameplay/UI/BuildingInfoWidget.h"
+#include "Gameplay/Buildings/ProductionBalance.h"
 #include "Gameplay/Base/BaseBuilding.h"
 #include "Gameplay/Buildings/ResourceProductionComponent.h"
 #include "Gameplay/Buildings/ConcretePlant.h"
@@ -105,42 +106,42 @@ void UBuildingInfoWidget::BuildProductionFlow()
 	else if (const auto* Processor = Cast<AUraniumProcessor>(Building))
 	{
 		DisplayedInputs = {{EResourceType::UraniumOre, FMath::Max(1, Processor->OrePerCycle)}};
-		DisplayedCycleSeconds = FMath::Max(0.1f, Processor->CycleSeconds);
+		DisplayedCycleSeconds = STPProductionBalance::CycleDuration(Processor->CycleSeconds);
 		Output = EResourceType::FuelRods; OutputAmount = FMath::Max(1, Processor->FuelRodsPerCycle);
 		bHasOutput = true; bPerMinute = false;
 	}
 	else if (const auto* Thermal = Cast<AThermalProcessingBuilding>(Building))
 	{
 		DisplayedInputs = Thermal->GetRecipeInputs();
-		DisplayedCycleSeconds = FMath::Max(0.1f, Thermal->CycleSeconds);
+		DisplayedCycleSeconds = STPProductionBalance::CycleDuration(Thermal->CycleSeconds);
 		Output = Thermal->GetRecipeOutput(); OutputAmount = FMath::Max(1, Thermal->OutputPerCycle);
 		bHasOutput = true; bPerMinute = false;
 	}
 	else if (PolymerRecipe)
 	{
 		DisplayedInputs = {{EResourceType::Coal, PolymerRecipe->CoalPerCycle}, {EResourceType::Water, PolymerRecipe->WaterPerCycle}};
-		DisplayedCycleSeconds = FMath::Max(0.1f, PolymerRecipe->CycleSeconds);
+		DisplayedCycleSeconds = STPProductionBalance::CycleDuration(PolymerRecipe->CycleSeconds);
 		Output = EResourceType::Polymer; OutputAmount = PolymerRecipe->PolymerPerCycle;
 		bHasOutput = true; bPerMinute = false;
 	}
 	else if (ConnectorRecipe)
 	{
 		DisplayedInputs = {{EResourceType::Copper, ConnectorRecipe->CopperPerCycle}, {EResourceType::Polymer, ConnectorRecipe->PolymerPerCycle}};
-		DisplayedCycleSeconds = FMath::Max(0.1f, ConnectorRecipe->CycleSeconds);
+		DisplayedCycleSeconds = STPProductionBalance::CycleDuration(ConnectorRecipe->CycleSeconds);
 		Output = EResourceType::Connector; OutputAmount = ConnectorRecipe->ConnectorsPerCycle;
 		bHasOutput = true; bPerMinute = false;
 	}
 	else if (ConcreteRecipe)
 	{
 		DisplayedInputs = {{EResourceType::Water, FMath::CeilToInt(ConcreteRecipe->WaterPerCycle)}, {EResourceType::Stone, FMath::CeilToInt(ConcreteRecipe->StonePerCycle)}};
-		DisplayedCycleSeconds = FMath::Max(0.01f, ConcreteRecipe->CycleSeconds);
+		DisplayedCycleSeconds = STPProductionBalance::CycleDuration(ConcreteRecipe->CycleSeconds);
 		Output = EResourceType::Concrete; OutputAmount = FMath::FloorToInt(ConcreteRecipe->ConcretePerCycle);
 		bHasOutput = true; bPerMinute = false;
 	}
 	else if (SteelRecipe)
 	{
 		DisplayedInputs = {{EResourceType::Iron, FMath::CeilToInt(SteelRecipe->IronPerCycle)}};
-		DisplayedCycleSeconds = FMath::Max(0.01f, SteelRecipe->CycleSeconds);
+		DisplayedCycleSeconds = STPProductionBalance::CycleDuration(SteelRecipe->CycleSeconds);
 		Output = EResourceType::Steel; OutputAmount = FMath::FloorToInt(SteelRecipe->SteelPerCycle);
 		bHasOutput = true; bPerMinute = false;
 	}

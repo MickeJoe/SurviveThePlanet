@@ -148,9 +148,20 @@ bool ABaseBuilding::ProvidesVision() const
 
 float ABaseBuilding::GetEnergyConsumptionPerMinute() const
 {
-	return IsValid(BuildingData) && BuildingData->bOverrideEnergySettings
+	const float BaseConsumption = IsValid(BuildingData) && BuildingData->bOverrideEnergySettings
 		? BuildingData->EnergyConsumptionPerMinute
 		: EnergyConsumptionPerMinute;
+	int32 WorkingDroneCount = 0;
+	const ESTPDroneWorkType WorkType = GetDroneWorkType();
+	for (const ABaseDrone* Drone : AssignedDrones)
+	{
+		if (IsValid(Drone) && Drone->CanPerformWork(WorkType)) ++WorkingDroneCount;
+	}
+
+	// No drones retains the existing idle demand. Keep this independent of grid
+	// supply: demand must not disappear during a blackout and cause power cycling.
+	constexpr float Multipliers[] = {1.0f, 1.0f, 1.8f, 2.4f, 2.8f};
+	return BaseConsumption * Multipliers[FMath::Clamp(WorkingDroneCount, 0, 4)];
 }
 
 void ABaseBuilding::SetProductionEnabled(bool bEnabled)

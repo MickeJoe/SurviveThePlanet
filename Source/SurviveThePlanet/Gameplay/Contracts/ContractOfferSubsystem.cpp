@@ -10,6 +10,7 @@
 #include "Gameplay/Base/BuildingDataAsset.h"
 #include "Engine/GameInstance.h"
 #include "EngineUtils.h"
+#include "Gameplay/Buildings/CargoBay.h"
 #include "Kismet/GameplayStatics.h"
 
 #include "Misc/FileHelper.h"
@@ -150,9 +151,20 @@ bool UContractOfferSubsystem::GetContractOffer(FName OfferId, FSTPContractOfferD
 	return false;
 }
 
+bool UContractOfferSubsystem::AreContractsAvailable() const
+{
+    if (!GetWorld()) return false;
+    for (TActorIterator<ACargoBay> It(GetWorld()); It; ++It)
+    {
+        if (!It->IsPlacementPreview() && It->GetConstructionProgress() >= 1.0f) return true;
+    }
+    return false;
+}
+
 TArray<FSTPContractOfferDefinition> UContractOfferSubsystem::GetContractOffersForTrader(FName TraderId) const
 {
 	TArray<FSTPContractOfferDefinition> Result;
+	if (!AreContractsAvailable()) return Result;
 	for (const FSTPContractOfferDefinition& Offer : ContractOffers)
 	{
 		if (Offer.TraderId == TraderId) Result.Add(Offer);
@@ -162,7 +174,7 @@ TArray<FSTPContractOfferDefinition> UContractOfferSubsystem::GetContractOffersFo
 
 bool UContractOfferSubsystem::ToggleContractSelection(FName OfferId, FName TierId)
 {
-	if (bSelectionLocked || bSettlingDelivery || !IsMissionActive())
+	if (!AreContractsAvailable() || bSelectionLocked || bSettlingDelivery || !IsMissionActive())
 	{
 		return false;
 	}
@@ -201,7 +213,7 @@ bool UContractOfferSubsystem::GetSelectedContract(FName& OutOfferId, FName& OutT
 
 bool UContractOfferSubsystem::ConfirmSelectedContract()
 {
-	if (bSelectionLocked || bSettlingDelivery || SelectedOfferId.IsNone() || SelectedTierId.IsNone())
+	if (!AreContractsAvailable() || bSelectionLocked || bSettlingDelivery || SelectedOfferId.IsNone() || SelectedTierId.IsNone())
 	{
 		return false;
 	}
@@ -372,6 +384,13 @@ bool UContractOfferSubsystem::DeliverSelectedContract()
 
 void UContractOfferSubsystem::Tick(float DeltaTime)
 {
+    const bool bCargoBayReady = AreContractsAvailable();
+    if (bCargoBayReady != bCargoBayWasReady)
+    {
+        bCargoBayWasReady = bCargoBayReady;
+        OnContractStateChanged.Broadcast();
+    }
+
 	if (bSettlingDelivery || !IsMissionActive() || DeltaTime <= 0.0f || UGameplayStatics::IsGamePaused(this)
 		|| UGameplayStatics::GetGlobalTimeDilation(this) < 0.001f) return;
 	for (auto& Cooldown : TraderCooldowns) Cooldown.Value = FMath::Max(0.0f, Cooldown.Value - DeltaTime);
