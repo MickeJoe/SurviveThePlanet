@@ -40,6 +40,12 @@ void APlanetWeatherManager::InitializePresentation()
 		SunLight = It->GetComponent(); break;
 	}
 	if (!SunLight) SunLight = GetWorld()->SpawnActor<ADirectionalLight>()->GetComponent();
+	MoonLight = GetWorld()->SpawnActor<ADirectionalLight>()->GetComponent();
+	MoonLight->SetMobility(EComponentMobility::Movable);
+	MoonLight->SetWorldRotation(FRotator(-55.0f, -35.0f, 0.0f));
+	MoonLight->SetLightColor(FLinearColor(0.55f, 0.67f, 0.9f));
+	MoonLight->SetCastShadows(false);
+	MoonLight->SetIntensity(0.0f);
 	// Preserve the authored exposure/lighting calibration while changing relative irradiance.
 	ClearSkySunIntensity = FMath::Max(SunLight->Intensity, 1.0f);
 	SunLight->SetMobility(EComponentMobility::Movable);
@@ -150,7 +156,9 @@ void APlanetWeatherManager::UpdatePresentation(double Minutes)
 	SunLight->SetWorldRotation(FRotator(-Elevation,Yaw,0));
 	SunLight->SetIntensity(ClearSkySunIntensity*Daylight*FMath::Lerp(0.08f,1.0f,Sunshine));
 	SunLight->SetLightColor(FLinearColor::LerpUsingHSV(FLinearColor(1,0.35f,0.12f), FLinearColor(1,0.97f,0.88f),Daylight));
-	if (SkyLight) SkyLight->SetIntensity(ClearSkyAmbientIntensity*FMath::Lerp(0.12f,1.0f,Daylight)*FMath::Lerp(0.35f,1.0f,Sunshine));
+	// A separate moon fill keeps terrain readable without affecting solar production.
+	if (MoonLight) MoonLight->SetIntensity(FMath::Max(1.5f, ClearSkySunIntensity * 0.10f) * (1.0f - Daylight));
+	if (SkyLight) SkyLight->SetIntensity(ClearSkyAmbientIntensity * FMath::Lerp(0.5f, 1.0f, Daylight) * FMath::Lerp(0.65f, 1.0f, Sunshine));
 	if (Fog)
 	{
 		Fog->SetFogDensity(0.005f + (1-Sunshine)*0.025f + CurrentWeather.PrecipitationPercent*0.001f);

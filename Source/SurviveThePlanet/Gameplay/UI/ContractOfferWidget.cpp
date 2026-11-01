@@ -17,6 +17,7 @@
 #include "Engine/Texture2D.h"
 #include "Gameplay/Contracts/ContractOfferSubsystem.h"
 #include "Gameplay/Trading/TraderSubsystem.h"
+#include "Gameplay/Resources/ResourceCatalog.h"
 
 namespace STPContractUI
 {
@@ -28,6 +29,14 @@ namespace STPContractUI
 	const FLinearColor Penalty(1.0f, 0.30f, 0.22f, 1.0f);
 	const FLinearColor Bonus(1.0f, 0.72f, 0.12f, 1.0f);
 	const FLinearColor Shadow(0.0f, 0.0f, 0.0f, 0.95f);
+
+	FText ResourceName(FName Id)
+	{
+		const int64 Value = StaticEnum<EResourceType>()->GetValueByNameString(Id.ToString());
+		for (const auto& Definition : UResourceCatalog::GetDefinitions())
+			if (static_cast<int64>(Definition.ResourceType) == Value) return Definition.DisplayName;
+		return FText::FromName(Id);
+	}
 
 	void Style(UTextBlock* Widget, int32 Size, const FLinearColor& Color)
 	{
@@ -172,11 +181,35 @@ UBorder* UContractOfferWidget::BuildTierCard(const FSTPContractOfferDefinition& 
 	TierHeader->AddChildToHorizontalBox(Check)->SetPadding(FMargin(6.0f, 0.0f));
 	Card->AddChildToVerticalBox(TierHeader)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 10.0f));
 
+	UTextBlock* DeliveryHeading = WidgetTree->ConstructWidget<UTextBlock>();
+	DeliveryHeading->SetText(NSLOCTEXT("SurviveThePlanet", "ContractDeliveryRequirement", "PER DELIVERY"));
+	DeliveryHeading->SetJustification(ETextJustify::Center);
+	STPContractUI::Style(DeliveryHeading, 12, STPContractUI::Muted);
+	Card->AddChildToVerticalBox(DeliveryHeading)->SetPadding(FMargin(0.0f, 3.0f));
+	UHorizontalBox* DeliveryRow = WidgetTree->ConstructWidget<UHorizontalBox>();
+	const int64 ResourceValue = StaticEnum<EResourceType>()->GetValueByNameString(Offer.ItemId.ToString());
+	if (ResourceValue != INDEX_NONE)
+	{
+		if (UTexture2D* Texture = UResourceCatalog::GetResourceIcon(static_cast<EResourceType>(ResourceValue)))
+		{
+			UImage* Icon = WidgetTree->ConstructWidget<UImage>();
+			Icon->SetBrushFromTexture(Texture);
+			Icon->SetDesiredSizeOverride(FVector2D(32.0f, 32.0f));
+			Icon->SetToolTipText(STPContractUI::ResourceName(Offer.ItemId));
+			auto* ResourceIconSlot = DeliveryRow->AddChildToHorizontalBox(Icon);
+			ResourceIconSlot->SetPadding(FMargin(0, 0, 8, 0)); ResourceIconSlot->SetVerticalAlignment(VAlign_Center);
+		}
+	}
 	UTextBlock* Delivery = WidgetTree->ConstructWidget<UTextBlock>();
-	Delivery->SetText(FText::FromString(FString::Printf(TEXT("%d  PER DELIVERY"), Tier.DeliveryAmount)));
+	Delivery->SetText(FText::Format(NSLOCTEXT("SurviveThePlanet", "ContractResourceAmount", "{0} {1}"),
+		FText::AsNumber(Tier.DeliveryAmount), STPContractUI::ResourceName(Offer.ItemId)));
 	Delivery->SetJustification(ETextJustify::Center);
+	Delivery->SetWrapTextAt(200.0f);
 	STPContractUI::Style(Delivery, 17, STPContractUI::Text);
-	Card->AddChildToVerticalBox(Delivery)->SetPadding(FMargin(0.0f, 3.0f));
+	DeliveryRow->AddChildToHorizontalBox(Delivery)->SetVerticalAlignment(VAlign_Center);
+	auto* DeliverySlot = Card->AddChildToVerticalBox(DeliveryRow);
+	DeliverySlot->SetHorizontalAlignment(HAlign_Center);
+	DeliverySlot->SetPadding(FMargin(0.0f, 3.0f));
 	UTextBlock* Schedule = WidgetTree->ConstructWidget<UTextBlock>();
 	Schedule->SetText(FText::FromString(FString::Printf(TEXT("Every %.0fh     %d DELIVERIES"),
 		Tier.DeliveryIntervalHours, Tier.DeliveryCount)));
@@ -210,6 +243,7 @@ UBorder* UContractOfferWidget::BuildTierCard(const FSTPContractOfferDefinition& 
 void UContractOfferWidget::AddEffectSection(UVerticalBox* Parent, const FText& Heading,
 	const TArray<FSTPContractEffectDefinition>& Effects, const FLinearColor& HeadingColor)
 {
+	if (!Effects.ContainsByPredicate([](const auto& Effect) { return Effect.Type != ESTPContractEffectType::TraderReputation; })) return;
 	UTextBlock* HeadingText = WidgetTree->ConstructWidget<UTextBlock>();
 	HeadingText->SetText(Heading);
 	HeadingText->SetJustification(ETextJustify::Center);
@@ -218,6 +252,7 @@ void UContractOfferWidget::AddEffectSection(UVerticalBox* Parent, const FText& H
 	UVerticalBox* EffectList = WidgetTree->ConstructWidget<UVerticalBox>();
 	for (const FSTPContractEffectDefinition& Effect : Effects)
 	{
+		if (Effect.Type == ESTPContractEffectType::TraderReputation) continue;
 		UHorizontalBox* Row = WidgetTree->ConstructWidget<UHorizontalBox>();
 		if (UTexture2D* Texture = Effect.Icon.LoadSynchronous())
 		{
@@ -244,10 +279,10 @@ FText UContractOfferWidget::FormatEffect(const FSTPContractEffectDefinition& Eff
 	FString Label;
 	switch (Effect.Type)
 	{
-	case ESTPContractEffectType::Resource: Label = Effect.Id.ToString(); break;
+	case ESTPContractEffectType::Resource: Label = STPContractUI::ResourceName(Effect.Id).ToString(); break;
 	case ESTPContractEffectType::MissionProgress: Label = TEXT("MISSION PROGRESSION"); break;
 	case ESTPContractEffectType::MissionConfidence: Label = TEXT("Confidence"); break;
-	case ESTPContractEffectType::TraderReputation: Label = TEXT("Reputation"); break;
+	case ESTPContractEffectType::TraderReputation: return FText::GetEmpty();
 	case ESTPContractEffectType::Blueprint: Label = TEXT("Rare Blueprint"); break;
 	case ESTPContractEffectType::TraderCooldownHours: Label = TEXT("h"); break;
 	default: break;

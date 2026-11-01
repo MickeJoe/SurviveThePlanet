@@ -23,6 +23,7 @@ UCLASS(Blueprintable)
 class SURVIVETHEPLANET_API ABaseBuilding : public ASelectableWorldActor
 {
 	GENERATED_BODY()
+	friend class UColonySaveSubsystem;
 
 public:
 	ABaseBuilding();
@@ -180,7 +181,7 @@ protected:
 	TObjectPtr<UWidgetComponent> ConstructionProgressBar;
 
 	/** Canonical identity, visuals and balance configuration for this building type. */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Base Building|Data")
+	UPROPERTY(SaveGame, EditDefaultsOnly, BlueprintReadOnly, Category = "Base Building|Data")
 	TObjectPtr<UBuildingDataAsset> BuildingData;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Base Building")
@@ -211,7 +212,7 @@ protected:
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Base Building|Drone Slots", SaveGame)
 	int32 UnlockedDroneSlots = 0;
 
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Base Building|Drone Slots")
+	UPROPERTY(SaveGame, VisibleInstanceOnly, BlueprintReadOnly, Category = "Base Building|Drone Slots")
 	TArray<TObjectPtr<ABaseDrone>> AssignedDrones;
 
 	/** Activity used to calculate drone efficiency in this building. */
@@ -221,7 +222,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Base Building", meta = (ClampMin = "0.0", UIMin = "0.0"))
 	float MaxHealth = 1000.0f;
 
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Base Building")
+	UPROPERTY(SaveGame, VisibleInstanceOnly, BlueprintReadOnly, Category = "Base Building")
 	float CurrentHealth = 1000.0f;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Base Building|Power", meta = (ClampMin = "0.0", UIMin = "0.0"))
@@ -241,7 +242,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Base Building|Exploration")
 	bool bProvidesVision = false;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Construction", meta = (ClampMin = "0.0", ClampMax = "1.0", UIMin = "0.0", UIMax = "1.0"))
+	UPROPERTY(SaveGame, EditAnywhere, BlueprintReadOnly, Category = "Construction", meta = (ClampMin = "0.0", ClampMax = "1.0", UIMin = "0.0", UIMax = "1.0"))
 	float ConstructionProgress = 1.0f;
 
 	UPROPERTY(VisibleInstanceOnly, SaveGame, Category = "Production")

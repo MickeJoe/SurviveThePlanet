@@ -1,11 +1,19 @@
 #include "Gameplay/UI/MissionChoiceWidget.h"
 
 #include "Blueprint/WidgetTree.h"
+#include "Blueprint/GameViewportSubsystem.h"
+#include "Blueprint/WidgetBlueprintLibrary.h"
+#include "Components/CanvasPanelSlot.h"
+#include "Gameplay/UI/ResourceDisplayWidget.h"
+#include "GameFramework/PlayerController.h"
+#include "Kismet/GameplayStatics.h"
+#include "InputCoreTypes.h"
 #include "Components/Border.h"
 #include "Components/CanvasPanel.h"
 #include "Components/HorizontalBox.h"
 #include "Components/HorizontalBoxSlot.h"
 #include "Components/SizeBox.h"
+#include "Components/ScrollBox.h"
 #include "Components/TextBlock.h"
 #include "Components/UniformGridPanel.h"
 #include "Components/VerticalBox.h"
@@ -81,7 +89,7 @@ namespace STPMissionChoices
 	{
 		USizeBox* Size = Tree->ConstructWidget<USizeBox>();
 		Size->SetWidthOverride(Width);
-		Size->SetHeightOverride(Height);
+		Size->SetMinDesiredHeight(Height);
 		Size->SetContent(Content);
 		return Size;
 	}
@@ -103,6 +111,14 @@ void UMissionChoiceButton::HandleClicked()
 void UMissionChoiceWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
+	SetIsFocusable(true);
+	// A full-screen hit target catches clicks outside the panel and above the HUD.
+	UButton* Blocker = WidgetTree->ConstructWidget<UButton>(UButton::StaticClass(), TEXT("MissionModalBlocker"));
+	Blocker->SetBackgroundColor(FLinearColor::Transparent);
+	UCanvasPanelSlot* BlockerSlot = ModalOverlay->AddChildToCanvas(Blocker);
+	BlockerSlot->SetAnchors(FAnchors(0, 0, 1, 1));
+	BlockerSlot->SetOffsets(FMargin(0));
+	BlockerSlot->SetZOrder(-100);
 	ObjectiveSubsystem = GetWorld() ? GetWorld()->GetSubsystem<UObjectiveSubsystem>() : nullptr;
 	OpenMissionChoicesButton->OnClicked.AddUniqueDynamic(this, &UMissionChoiceWidget::OpenPopup);
 	CloseMissionChoicesButton->OnClicked.AddUniqueDynamic(this, &UMissionChoiceWidget::ClosePopup);
@@ -115,11 +131,23 @@ void UMissionChoiceWidget::NativeConstruct()
 
 void UMissionChoiceWidget::NativeDestruct()
 {
+	SetPopupVisible(false);
 	if (ObjectiveSubsystem)
 	{
 		ObjectiveSubsystem->OnMissionChoiceConfirmed.RemoveDynamic(this, &UMissionChoiceWidget::HandleGroupConfirmed);
 	}
 	Super::NativeDestruct();
+}
+
+void UMissionChoiceWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
+{
+ Super::NativeTick(MyGeometry, InDeltaTime);
+ if (!ObjectiveSubsystem || !ModalOverlay->IsVisible()) return;
+ TArray<UWidget*> Widgets;
+ WidgetTree->GetAllWidgets(Widgets);
+ for (UWidget* Widget : Widgets)
+  if (auto* Button = Cast<UMissionChoiceButton>(Widget); Button && Button->GetSlotIndex() == INDEX_NONE)
+   Button->SetIsEnabled(ObjectiveSubsystem->CanDeliverObjective(Button->GetObjectiveId()));
 }
 
 void UMissionChoiceWidget::OpenPopup()
@@ -140,13 +168,67 @@ void UMissionChoiceWidget::ClosePopup() { SetPopupVisible(false); }
 void UMissionChoiceWidget::SetPopupVisible(bool bVisible)
 {
 	ModalOverlay->SetVisibility(bVisible ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
+	if (bPopupOpen == bVisible) return;
+	bPopupOpen = bVisible;
+	auto* PC = GetOwningPlayer();
+	if (!PC) return;
+	if (bVisible)
+	{
+		PreviousTimeDilation = UGameplayStatics::GetGlobalTimeDilation(this);
+		bPreviouslyPaused = UGameplayStatics::IsGamePaused(this);
+		TArray<UUserWidget*> Widgets;
+		UWidgetBlueprintLibrary::GetAllWidgetsOfClass(this, Widgets, UResourceDisplayWidget::StaticClass(), false);
+		for (auto* Widget : Widgets) if (Widget->GetOwningPlayer() == PC && Widget->IsInViewport())
+		{
+			PausedHUD = Cast<UResourceDisplayWidget>(Widget);
+			PausedHUD->SetMenuPaused(true);
+			break;
+		}
+		PC->SetPause(true);
+		PC->FlushPressedKeys();
+		if (auto* Viewport = UGameViewportSubsystem::Get())
+		{
+			auto ViewportSlot = Viewport->GetWidgetSlot(this);
+			ViewportSlot.ZOrder = 1500;
+			Viewport->SetWidgetSlot(this, ViewportSlot);
+		}
+		PC->SetInputMode(FInputModeUIOnly().SetWidgetToFocus(TakeWidget()));
+		PC->bShowMouseCursor = true;
+		CloseMissionChoicesButton->SetKeyboardFocus();
+	}
+	else
+	{
+		if (PausedHUD) PausedHUD->SetMenuPaused(false);
+		PausedHUD = nullptr;
+		UGameplayStatics::SetGlobalTimeDilation(this, PreviousTimeDilation);
+		PC->SetPause(bPreviouslyPaused);
+		PC->FlushPressedKeys();
+		if (auto* Viewport = UGameViewportSubsystem::Get())
+		{
+			auto ViewportSlot = Viewport->GetWidgetSlot(this);
+			ViewportSlot.ZOrder = 20;
+			Viewport->SetWidgetSlot(this, ViewportSlot);
+		}
+		PC->SetInputMode(FInputModeGameAndUI().SetHideCursorDuringCapture(false));
+	}
+}
+
+FReply UMissionChoiceWidget::NativeOnPreviewKeyDown(const FGeometry& Geometry, const FKeyEvent& Event)
+{
+	if (bPopupOpen && Event.GetKey() == EKeys::Escape)
+	{
+		ClosePopup();
+		return FReply::Handled();
+	}
+	return Super::NativeOnPreviewKeyDown(Geometry, Event);
 }
 
 void UMissionChoiceWidget::BuildCurrentGroup()
 {
 	ChoiceColumns->ClearChildren();
-	if (!ObjectiveSubsystem || ObjectiveSubsystem->GetMissionChoiceGroups().IsEmpty()) return;
-	CurrentGroup = ObjectiveSubsystem->GetMissionChoiceGroups()[0];
+	if (!ObjectiveSubsystem) return;
+	const auto Groups = ObjectiveSubsystem->GetMissionChoiceGroups();
+	CurrentGroup = Groups.IsEmpty() ? FSTPMissionChoiceGroupDefinition() : Groups[0];
 	PickerSlotIndex = INDEX_NONE;
 	HeaderText->SetVisibility(ESlateVisibility::Collapsed);
 	DescriptionText->SetVisibility(ESlateVisibility::Collapsed);
@@ -159,15 +241,17 @@ void UMissionChoiceWidget::BuildCurrentGroup()
 
 	UUniformGridPanel* Grid = WidgetTree->ConstructWidget<UUniformGridPanel>();
 	Grid->SetSlotPadding(FMargin(6));
-	UHorizontalBoxSlot* ContainerSlot = ChoiceColumns->AddChildToHorizontalBox(Grid);
+	UScrollBox* Scroll = WidgetTree->ConstructWidget<UScrollBox>();
+	Scroll->AddChild(Grid);
+	UHorizontalBoxSlot* ContainerSlot = ChoiceColumns->AddChildToHorizontalBox(Scroll);
 	ContainerSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
 	ContainerSlot->SetHorizontalAlignment(HAlign_Center);
-	ContainerSlot->SetVerticalAlignment(VAlign_Center);
+	ContainerSlot->SetVerticalAlignment(VAlign_Fill);
 
 	int32 CardIndex = 0;
 	for (const FSTPObjectiveRuntimeState& Runtime : ObjectiveSubsystem->GetActiveObjectives())
 	{
-		if (CardIndex >= 8) break;
+
 		FSTPObjectiveDefinition Definition;
 		if (!ObjectiveSubsystem->GetObjectiveDefinition(Runtime.ObjectiveId, Definition)) continue;
 		UBorder* Border = WidgetTree->ConstructWidget<UBorder>();
@@ -176,13 +260,13 @@ void UMissionChoiceWidget::BuildCurrentGroup()
 		UTextBlock* Title = WidgetTree->ConstructWidget<UTextBlock>();
 		Title->SetText(Definition.Title);
 		Title->SetAutoWrapText(true);
-		STPMissionChoices::StyleText(Title, 15, STPMissionChoices::Cyan);
+		STPMissionChoices::StyleText(Title, 16, STPMissionChoices::Cyan);
 		Card->AddChildToVerticalBox(Title)->SetPadding(FMargin(10, 8, 10, 3));
 		UTextBlock* Description = WidgetTree->ConstructWidget<UTextBlock>();
 		Description->SetText(Definition.Description);
-		Description->SetWrapTextAt(185.0f);
+		Description->SetWrapTextAt(236.0f);
 		Description->SetAutoWrapText(true);
-		STPMissionChoices::StyleText(Description, 11, STPMissionChoices::White);
+		STPMissionChoices::StyleText(Description, 13, STPMissionChoices::White);
 		Card->AddChildToVerticalBox(Description)->SetPadding(FMargin(10, 0, 10, 4));
 		if (!Definition.Conditions.IsEmpty())
 		{
@@ -193,9 +277,22 @@ void UMissionChoiceWidget::BuildCurrentGroup()
 			STPMissionChoices::StyleText(Progress, 11, STPMissionChoices::Gold);
 			Card->AddChildToVerticalBox(Progress)->SetPadding(FMargin(10, 0, 10, 3));
 		}
-		STPMissionChoices::AddRewards(WidgetTree, Card, Definition, ObjectiveSubsystem);
+		STPMissionChoices::AddRewards(WidgetTree, Card, Definition, ObjectiveSubsystem, 12);
+		if (!Definition.Conditions.IsEmpty() && Definition.Conditions[0].Type == ESTPObjectiveConditionType::DeliverResource)
+		{
+			UMissionChoiceButton* Deliver = WidgetTree->ConstructWidget<UMissionChoiceButton>();
+			Deliver->InitializeChoice(this, INDEX_NONE, Definition.Id);
+			Deliver->SetIsEnabled(ObjectiveSubsystem->CanDeliverObjective(Definition.Id));
+			UTextBlock* Label = WidgetTree->ConstructWidget<UTextBlock>();
+			Label->SetText(NSLOCTEXT("STP", "DeliverMotherBaseSupply", "DELIVER TO MOTHER BASE"));
+			Label->SetAutoWrapText(true);
+			Label->SetJustification(ETextJustify::Center);
+			STPMissionChoices::StyleText(Label, 11, STPMissionChoices::Cyan);
+			Deliver->SetContent(Label);
+			Card->AddChildToVerticalBox(Deliver)->SetPadding(FMargin(10, 5));
+		}
 		Border->SetContent(Card);
-		Grid->AddChildToUniformGrid(STPMissionChoices::SizeCard(WidgetTree, Border, 205.0f, 250.0f), CardIndex / 4, CardIndex % 4);
+		Grid->AddChildToUniformGrid(STPMissionChoices::SizeCard(WidgetTree, Border, 260.0f, 400.0f), CardIndex / 3, CardIndex % 3);
 		++CardIndex;
 	}
 
@@ -213,7 +310,7 @@ void UMissionChoiceWidget::BuildCurrentGroup()
 		STPMissionChoices::StyleText(SlotTitle, 13, STPMissionChoices::Gold);
 		Card->AddChildToVerticalBox(SlotTitle)->SetPadding(FMargin(10, 30, 10, 20));
 		UTextBlock* Select = WidgetTree->ConstructWidget<UTextBlock>();
-		Select->SetText(NSLOCTEXT("SurviveThePlanet", "OpenObjectivePickerButton", "VÄLJ OBJECTIVE"));
+		Select->SetText(NSLOCTEXT("SurviveThePlanet", "OpenObjectivePickerButton", "VÃƒÆ’Ã¢â‚¬Å¾LJ OBJECTIVE"));
 		Select->SetJustification(ETextJustify::Center);
 		STPMissionChoices::StyleText(Select, 15, STPMissionChoices::Cyan);
 		Card->AddChildToVerticalBox(Select)->SetPadding(FMargin(10, 10, 10, 25));
@@ -225,6 +322,12 @@ void UMissionChoiceWidget::BuildCurrentGroup()
 
 void UMissionChoiceWidget::HandleCandidateClicked(int32 SlotIndex, FName ObjectiveId)
 {
+	if (SlotIndex == INDEX_NONE && !ObjectiveId.IsNone())
+	{
+		if (ObjectiveSubsystem) ObjectiveSubsystem->DeliverObjective(ObjectiveId);
+		BuildCurrentGroup();
+		return;
+	}
 	if (ObjectiveId.IsNone())
 	{
 		BuildSlotPicker(SlotIndex);
@@ -278,7 +381,7 @@ void UMissionChoiceWidget::BuildSlotPicker(int32 SlotIndex)
 		Card->AddChildToVerticalBox(Description)->SetPadding(FMargin(12, 0, 12, 6));
 		STPMissionChoices::AddRewards(WidgetTree, Card, Definition, ObjectiveSubsystem, 12);
 		UTextBlock* Select = WidgetTree->ConstructWidget<UTextBlock>();
-		Select->SetText(NSLOCTEXT("SurviveThePlanet", "ConfirmSingleObjective", "VÄLJ"));
+		Select->SetText(NSLOCTEXT("SurviveThePlanet", "ConfirmSingleObjective", "VÃƒÆ’Ã¢â‚¬Å¾LJ"));
 		Select->SetJustification(ETextJustify::Center);
 		STPMissionChoices::StyleText(Select, 14, STPMissionChoices::Gold);
 		Card->AddChildToVerticalBox(Select)->SetPadding(FMargin(12, 6, 12, 10));

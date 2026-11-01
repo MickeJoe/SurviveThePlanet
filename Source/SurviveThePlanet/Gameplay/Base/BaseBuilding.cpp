@@ -476,7 +476,7 @@ void ABaseBuilding::SetPlacementPreviewValid(bool bValidPlacement)
 		const bool bHorizontal = Edge < 2;
 		const float Sign = Edge % 2 == 0 ? -1.0f : 1.0f;
 		SetLine(bHorizontal ? FVector(0, Sign * HalfY, 12) : FVector(Sign * HalfX, 0, 12),
-			2 * (bHorizontal ? HalfX : HalfY), bHorizontal, 1.2f);
+			2 * (bHorizontal ? HalfX : HalfY), bHorizontal, 4.0f);
 		const float Along = (bHorizontal ? HalfX : HalfY) + Gap;
 		const float Across = (bHorizontal ? HalfY : HalfX) + Gap;
 		for (int32 Dash = 0; Dash < 16; ++Dash)
@@ -489,8 +489,8 @@ void ABaseBuilding::SetPlacementPreviewValid(bool bValidPlacement)
 	for (int32 Grid = 1; Grid <= 11; ++Grid)
 	{
 		const float Fraction = Grid / 12.0f;
-		SetLine(FVector(0, FMath::Lerp(-HalfY, HalfY, Fraction), 11), 2 * HalfX, true, 0.35f);
-		SetLine(FVector(FMath::Lerp(-HalfX, HalfX, Fraction), 0, 11), 2 * HalfY, false, 0.35f);
+		SetLine(FVector(0, FMath::Lerp(-HalfY, HalfY, Fraction), 11), 2 * HalfX, true, 0.8f);
+		SetLine(FVector(FMath::Lerp(-HalfX, HalfX, Fraction), 0, 11), 2 * HalfY, false, 0.8f);
 	}
 }
 

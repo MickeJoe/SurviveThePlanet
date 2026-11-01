@@ -10,6 +10,7 @@ class UCanvasPanel;
 class UHorizontalBox;
 class UTextBlock;
 class UMissionChoiceWidget;
+class UResourceDisplayWidget;
 
 UCLASS()
 class SURVIVETHEPLANET_API UMissionChoiceButton : public UButton
@@ -36,6 +37,7 @@ UCLASS(Blueprintable)
 class SURVIVETHEPLANET_API UMissionChoiceWidget : public UUserWidget
 {
 	GENERATED_BODY()
+	friend class FMissionPopupTest;
 
 public:
 	void HandleCandidateClicked(int32 SlotIndex, FName ObjectiveId);
@@ -43,7 +45,9 @@ public:
 
 protected:
 	virtual void NativeConstruct() override;
+	virtual FReply NativeOnPreviewKeyDown(const FGeometry& Geometry, const FKeyEvent& Event) override;
 	virtual void NativeDestruct() override;
+	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidget), Category = "Mission Choices")
 	TObjectPtr<UButton> OpenMissionChoicesButton;
@@ -67,6 +71,10 @@ private:
 	TObjectPtr<UObjectiveSubsystem> ObjectiveSubsystem;
 	FSTPMissionChoiceGroupDefinition CurrentGroup;
 	int32 PickerSlotIndex = INDEX_NONE;
+	bool bPopupOpen = false;
+	bool bPreviouslyPaused = false;
+	float PreviousTimeDilation = 1.0f;
+	UPROPERTY(Transient) TObjectPtr<UResourceDisplayWidget> PausedHUD;
 
 	UFUNCTION() void OpenPopup();
 	UFUNCTION() void ClosePopup();

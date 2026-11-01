@@ -146,13 +146,13 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Drone")
 	FName DroneTag = TEXT("Drone");
 
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Drone|Assignment")
+	UPROPERTY(SaveGame, VisibleInstanceOnly, BlueprintReadOnly, Category = "Drone|Assignment")
 	TObjectPtr<ABaseBuilding> AssignedBuilding;
 
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Drone|Assignment")
+	UPROPERTY(SaveGame, VisibleInstanceOnly, BlueprintReadOnly, Category = "Drone|Assignment")
 	int32 AssignedBuildingSlot = INDEX_NONE;
 
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Drone|Assignment")
+	UPROPERTY(SaveGame, VisibleInstanceOnly, BlueprintReadOnly, Category = "Drone|Assignment")
 	bool bParkedAtAssignedBuilding = false;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Drone|Assignment", meta = (ClampMin = "0.0", UIMin = "0.0", Units = "cm/s"))
@@ -189,24 +189,25 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Drone|Visual|Animation", meta = (ClampMin = "0.0", Units = "deg"))
 	float ScannerYawAmplitude = 4.0f;
 
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Drone|Construction")
+	UPROPERTY(SaveGame, VisibleInstanceOnly, BlueprintReadOnly, Category = "Drone|Construction")
 	bool bHasOngoingConstructionJob = false;
 
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Drone|Construction")
+	UPROPERTY(SaveGame, VisibleInstanceOnly, BlueprintReadOnly, Category = "Drone|Construction")
 	FSTPOngoingConstructionJob OngoingConstructionJob;
 
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Drone|Idle")
+	UPROPERTY(SaveGame, VisibleInstanceOnly, BlueprintReadOnly, Category = "Drone|Idle")
 	bool bHasIdleDestination = false;
 
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Drone|Idle")
+	UPROPERTY(SaveGame, VisibleInstanceOnly, BlueprintReadOnly, Category = "Drone|Idle")
 	FSTPGridCell IdleCell;
 
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Drone|Idle")
+	UPROPERTY(SaveGame, VisibleInstanceOnly, BlueprintReadOnly, Category = "Drone|Idle")
 	FVector IdleDestination = FVector::ZeroVector;
 
-	UPROPERTY(Transient)
+	UPROPERTY(SaveGame, Transient)
 	TArray<FVector> IdlePath;
 
+	UPROPERTY(SaveGame)
 	int32 IdlePathIndex = 0;
 
 	FVector BaseMeshRelativeLocation = FVector::ZeroVector;
@@ -217,6 +218,7 @@ private:
 	bool bMovingAsideForConstruction = false;
 	FVector ConstructionAvoidanceDestination = FVector::ZeroVector;
 	friend class ABaseBuilding;
+	friend class UColonySaveSubsystem;
 	void SetBuildingAssignmentInternal(ABaseBuilding* Building, int32 SlotIndex);
 	void ParkAtAssignedBuilding();
 	void ConfigureMesh();

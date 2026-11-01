@@ -20,6 +20,10 @@ AThermalProcessingBuilding::AThermalProcessingBuilding()
 
 TArray<FResourceCost> AThermalProcessingBuilding::GetRecipeInputs() const
 {
+ if (Recipe == EThermalRecipe::Groundwater) return {};
+ if (Recipe == EThermalRecipe::Glass) return {{EResourceType::Silica, FMath::Max(1, PrimaryInputPerCycle)}};
+ if (Recipe == EThermalRecipe::SyntheticFuel)
+  return {{EResourceType::Coal, FMath::Max(1, PrimaryInputPerCycle)}, {EResourceType::Water, FMath::Max(1, PurifiedWaterPerCycle)}};
  if (Recipe == EThermalRecipe::CoolingUnits)
   return {{EResourceType::Steel, FMath::Max(1, PrimaryInputPerCycle)},
    {EResourceType::PurifiedWater, FMath::Max(1, PurifiedWaterPerCycle)}};
@@ -28,6 +32,9 @@ TArray<FResourceCost> AThermalProcessingBuilding::GetRecipeInputs() const
 
 EResourceType AThermalProcessingBuilding::GetRecipeOutput() const
 {
+ if (Recipe == EThermalRecipe::Groundwater) return EResourceType::Water;
+ if (Recipe == EThermalRecipe::Glass) return EResourceType::Glass;
+ if (Recipe == EThermalRecipe::SyntheticFuel) return EResourceType::SyntheticFuel;
  return Recipe == EThermalRecipe::CoolingUnits ? EResourceType::CoolingUnits : EResourceType::PurifiedWater;
 }
 

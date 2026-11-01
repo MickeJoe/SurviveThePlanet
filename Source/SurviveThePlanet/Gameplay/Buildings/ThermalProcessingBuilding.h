@@ -8,7 +8,7 @@ class UStaticMeshComponent;
 class UIndustrialEffectsComponent;
 
 UENUM(BlueprintType)
-enum class EThermalRecipe : uint8 { WaterPurification, CoolingUnits };
+enum class EThermalRecipe : uint8 { WaterPurification, CoolingUnits, Glass, SyntheticFuel, Groundwater };
 
 /** Water treatment and coolant manufacture share the atomic production system. */
 UCLASS(Blueprintable)

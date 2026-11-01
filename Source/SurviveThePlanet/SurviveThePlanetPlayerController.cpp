@@ -117,7 +117,7 @@ ASurviveThePlanetPlayerController::ASurviveThePlanetPlayerController()
 
 void ASurviveThePlanetPlayerController::SetActiveBuildTool(ESTPBuildTool NewBuildTool)
 {
-	if (NewBuildTool == ESTPBuildTool::EnergyCable)
+	if (NewBuildTool == ESTPBuildTool::EnergyCable || !UBuildingManagerSubsystem::IsStandalonePlacementEnabled(NewBuildTool))
 	{
 		return;
 	}
@@ -2187,7 +2187,8 @@ USpringArmComponent* ASurviveThePlanetPlayerController::GetControlledCameraBoom(
 bool ASurviveThePlanetPlayerController::IsCameraInputBlocked() const
 {
 	const auto* Mission = GetWorld()->GetSubsystem<UMissionConfidenceSubsystem>();
-	return (Mission && Mission->GetMissionOutcome() != EMissionOutcome::InProgress)
+	return UGameplayStatics::IsGamePaused(this)
+		|| (Mission && Mission->GetMissionOutcome() != EMissionOutcome::InProgress)
 		|| (PauseMenuWidget && PauseMenuWidget->IsInViewport())
 		|| (CheatMenuWidget && CheatMenuWidget->IsInViewport())
 		|| (TradeScreenWidget && TradeScreenWidget->IsInViewport());

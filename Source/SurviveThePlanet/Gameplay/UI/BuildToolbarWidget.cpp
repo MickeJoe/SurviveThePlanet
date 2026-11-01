@@ -937,7 +937,7 @@ void UBuildToolbarClickBinding::Click()
 
 bool UBuildToolbarWidget::IsToolAvailable(ESTPBuildTool Tool) const
 {
-	if (Tool == ESTPBuildTool::EnergyCable) return false;
+	if (Tool == ESTPBuildTool::EnergyCable || !UBuildingManagerSubsystem::IsStandalonePlacementEnabled(Tool)) return false;
 	const UWorld* World = GetWorld();
 	const UBuildingManagerSubsystem* Manager = World ? World->GetSubsystem<UBuildingManagerSubsystem>() : nullptr;
 	const UBuildingDataAsset* Definition = Manager ? Manager->GetDefinition(Tool) : nullptr;

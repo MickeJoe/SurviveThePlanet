@@ -261,7 +261,24 @@ bool ASectorPopulation::EnsureMineableDepositLocations()
 			}
 			FRandomStream Random(Seed ^ (Sector.Id * 7919) ^ FCrc::StrCrc32(*Deposit.RuleId.ToString()));
 			const float StartAngle = Random.FRandRange(0.0f, 360.0f);
-			// Starting iron searches inside-out; other deposits keep their outer-ring search.
+			if (bStartingSector && Deposit.ResourceType == EResourceType::Stone)
+			{
+				// Prefer the open ground beside the early extender route, rather than
+				// the far side of the curved rock formation. Normal mine clearance,
+				// sector bounds and deposit separation still validate every candidate.
+				const FVector PreferredLocation = StartingBase->GetActorLocation()
+					+ Grid->GetActorTransform().TransformVectorNoScale(FVector(3000.0f, 0.0f, 0.0f));
+				Search.Positions.Add(PreferredLocation);
+				for (float Radius = 100.0f; Radius <= 500.0f; Radius += 100.0f)
+				{
+					for (int32 Sample = 0; Sample < 24; ++Sample)
+					{
+						const float Angle = FMath::DegreesToRadians(15.0f * Sample);
+						Search.Positions.Add(PreferredLocation + FVector(FMath::Cos(Angle) * Radius, FMath::Sin(Angle) * Radius, 0));
+					}
+				}
+			}
+			// Starting iron searches inside-out; other deposits keep their outer-ring fallback.
 			for (float Distance = Search.MinimumDistance; Distance <= Search.MaximumDistance; Distance += 100.0f)
 			{
 				const float Radius = Search.bCentralIron ? Distance : Search.MaximumDistance - Distance + Search.MinimumDistance;

@@ -31,6 +31,6 @@ public:
 	int32 GetJobCount() const { return Jobs.Num(); }
 
 private:
-	UPROPERTY()
+	UPROPERTY(SaveGame)
 	TArray<FSTPConstructionJob> Jobs;
 };

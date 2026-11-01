@@ -102,6 +102,7 @@ private:
 
 	bool bIsProducing = false;
 	bool bVisualStateInitialized = false;
+	UPROPERTY(SaveGame)
 	float CycleProgressSeconds = 0.0f;
 	float VisualTimeSeconds = 0.0f;
 	float SparkAccumulatorSeconds = 0.0f;

@@ -146,13 +146,13 @@ protected:
 	TMap<EResourceType, int32> InitialResourceAmounts;
 
 	/** Current resource amounts during play. */
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Resources")
+	UPROPERTY(SaveGame, VisibleInstanceOnly, BlueprintReadOnly, Category = "Resources")
 	TMap<EResourceType, int32> ResourceAmounts;
 
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Resources|Energy")
+	UPROPERTY(SaveGame, VisibleInstanceOnly, BlueprintReadOnly, Category = "Resources|Energy")
 	int32 EnergyStorageCapacity = 1000;
 
 private:
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Economy", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(SaveGame, VisibleInstanceOnly, BlueprintReadOnly, Category = "Economy", meta = (AllowPrivateAccess = "true"))
 	int32 Credits = 0;
 };

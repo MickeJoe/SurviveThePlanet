@@ -1,0 +1,10 @@
+{
+  "passed": true,
+  "objective": "mother_base_concrete",
+  "delivery_consumes_inventory": true,
+  "blueprint_rewards_verified": true,
+  "circuit_board_rewards_verified": true,
+  "duplicate_reward_blocked": true,
+  "contract_families": 5,
+  "tiers": 15
+}

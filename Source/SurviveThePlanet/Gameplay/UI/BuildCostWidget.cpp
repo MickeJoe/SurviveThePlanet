@@ -10,6 +10,8 @@
 #include "Gameplay/Buildings/BuildingManagerSubsystem.h"
 #include "SurviveThePlanetPlayerController.h"
 #include "EngineUtils.h"
+#include "Gameplay/Planet/PlanetSurfaceManager.h"
+#include "Gameplay/World/HexSectorGrid.h"
 
 void UBuildCostWidget::Configure(ESTPBuildTool Tool, bool bPlacement, const FText& Tooltip)
 {
@@ -80,6 +82,32 @@ void UBuildCostWidget::Refresh()
 	DisplayedCosts = Costs;
 	const ABaseBuilding* Preview = bPlacementView ? Controller->GetActivePlacementPreview() : nullptr;
 	const bool bValid = bAffordable && (!bPlacementView || (Preview && !Preview->IsHidden() && Preview->IsPlacementPreviewValid()));
+	if (bPlacementView && DescriptionText)
+	{
+		FText Feedback;
+		if (!bAffordable) Feedback = NSLOCTEXT("Placement", "Resources", "Not enough resources");
+		else if (!Preview || Preview->IsHidden()) Feedback = NSLOCTEXT("Placement", "Aim", "Point at terrain to place the building");
+		else if (!bValid)
+		{
+			Feedback = NSLOCTEXT("Placement", "Blocked", "Placement blocked: check clearance and building requirements");
+			for (TActorIterator<APlanetSurfaceManager> It(GetWorld()); It; ++It)
+			{
+				const auto Placement = It->GetPlacementForWorldLocation(Preview->GetActorLocation(), Preview->GetGridFootprint());
+				if (!It->CanBuildInSector(Preview, Preview->GetActorLocation()))
+					Feedback = NSLOCTEXT("Placement", "Sector", "Sector or site requirement not met. Ordinary buildings need an established sector with their entire footprint inside.");
+				else if (!It->HasTerrainClearance(Placement.OriginCell, Preview->GetGridFootprint(), It->GetBuildingClearanceCells()))
+					Feedback = NSLOCTEXT("Placement", "Terrain", "Blocked by terrain: move away from rocks and cliffs");
+				else if (!It->HasBuildingClearance(Placement.OriginCell, Preview->GetGridFootprint(), const_cast<ABaseBuilding*>(Preview)))
+					Feedback = NSLOCTEXT("Placement", "Clearance", "Keep clear of buildings and reserved mining areas");
+				break;
+			}
+		}
+		else Feedback = NSLOCTEXT("Placement", "Ready", "Ready to build");
+		DescriptionText->SetText(Feedback);
+		DescriptionText->SetAutoWrapText(true);
+		DescriptionText->SetWrapTextAt(540.0f);
+		DescriptionText->SetVisibility(ESlateVisibility::HitTestInvisible);
+	}
 	StatusText->SetText(FText::FromString(bValid ? TEXT("\u2713") : TEXT("\u00D7")));
 	StatusText->SetColorAndOpacity(bValid ? FLinearColor(0.25f,1,0.15f,1) : FLinearColor(1,0.22f,0.16f,1));
 }

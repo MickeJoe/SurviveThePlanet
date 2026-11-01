@@ -1,0 +1,108 @@
+﻿{
+	"devices": [
+		{
+			"deviceName": "MICKEJOE26",
+			"instance": "B5ACBE464630BF0AB31C57B7E9D26C97",
+			"instanceName": "MICKEJOE26-43144",
+			"platform": "WindowsEditor",
+			"oSVersion": "Windows 11 (25H2) [10.0.26200.9711] ",
+			"model": "Default",
+			"gPU": "Intel(R) UHD Graphics",
+			"cPUModel": "13th Gen Intel(R) Core(TM) i7-13700HX",
+			"rAMInGB": 32,
+			"renderMode": "SM6",
+			"rHI": "",
+			"appInstanceLog": ""
+		}
+	],
+	"reportCreatedOn": "2026.10.18-16.32.48",
+	"succeeded": 1,
+	"succeededWithWarnings": 1,
+	"failed": 0,
+	"notRun": 0,
+	"inProcess": 0,
+	"totalDuration": 2.0907840728759766,
+	"comparisonExported": false,
+	"comparisonExportDirectory": "",
+	"tests": [
+		{
+			"testDisplayName": "Orders",
+			"fullTestPath": "SurviveThePlanet.CargoPackages.Orders",
+			"tags": [],
+			"state": "Success",
+			"deviceInstance": [
+				"B5ACBE464630BF0AB31C57B7E9D26C97"
+			],
+			"duration": 0.75198888778686523,
+			"dateTime": "2026.10.18-16.32.46",
+			"entries": [],
+			"warnings": 0,
+			"errors": 0,
+			"artifacts": []
+		},
+		{
+			"testDisplayName": "Recipes",
+			"fullTestPath": "SurviveThePlanet.CargoPackages.Recipes",
+			"tags": [],
+			"state": "Success",
+			"deviceInstance": [
+				"B5ACBE464630BF0AB31C57B7E9D26C97"
+			],
+			"duration": 1.3387953042984009,
+			"dateTime": "2026.10.18-16.32.47",
+			"entries": [
+				{
+					"event":
+					{
+						"type": "Warning",
+						"message": "LogSpawn: UWorld::DestroyActor: World has no context! World: World_24, Actor: /Engine/Transient.World_24:PersistentLevel.Actor_0",
+						"context": "log",
+						"artifact": "00000000000000000000000000000000"
+					},
+					"filename": "",
+					"lineNumber": -1,
+					"timestamp": "2026.10.18-16.32.48"
+				},
+				{
+					"event":
+					{
+						"type": "Warning",
+						"message": "LogSpawn: UWorld::DestroyActor: World has no context! World: World_24, Actor: /Engine/Transient.World_24:PersistentLevel.Actor_1",
+						"context": "log",
+						"artifact": "00000000000000000000000000000000"
+					},
+					"filename": "",
+					"lineNumber": -1,
+					"timestamp": "2026.10.18-16.32.48"
+				},
+				{
+					"event":
+					{
+						"type": "Warning",
+						"message": "LogSpawn: UWorld::DestroyActor: World has no context! World: World_24, Actor: /Engine/Transient.World_24:PersistentLevel.Actor_2",
+						"context": "log",
+						"artifact": "00000000000000000000000000000000"
+					},
+					"filename": "",
+					"lineNumber": -1,
+					"timestamp": "2026.10.18-16.32.48"
+				},
+				{
+					"event":
+					{
+						"type": "Warning",
+						"message": "LogSpawn: UWorld::DestroyActor: World has no context! World: World_24, Actor: /Engine/Transient.World_24:PersistentLevel.Actor_3",
+						"context": "log",
+						"artifact": "00000000000000000000000000000000"
+					},
+					"filename": "",
+					"lineNumber": -1,
+					"timestamp": "2026.10.18-16.32.48"
+				}
+			],
+			"warnings": 4,
+			"errors": 0,
+			"artifacts": []
+		}
+	]
+}

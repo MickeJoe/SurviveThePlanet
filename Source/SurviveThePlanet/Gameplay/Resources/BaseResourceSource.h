@@ -17,6 +17,7 @@ UCLASS(Abstract, Blueprintable)
 class SURVIVETHEPLANET_API ABaseResourceSource : public AActor
 {
 	GENERATED_BODY()
+	friend class UColonySaveSubsystem;
 
 public:
 	ABaseResourceSource();
@@ -46,7 +47,7 @@ public:
 	void SetFogOfWarVisible(bool bVisible);
 	/** Configure a deferred generated deposit before FinishSpawning. */
 	void ConfigureGeneratedDeposit(int32 Amount) { StartingAmount = FMath::Max(0, Amount); bRemainsVisibleAfterDiscovery = true; }
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Resource Source|Generation")
+	UPROPERTY(SaveGame, VisibleInstanceOnly, BlueprintReadOnly, Category="Resource Source|Generation")
 	bool bRevealedBySector = false;
 
 	/** Mesh used to calculate the visual center when a mining building replaces this deposit. */
@@ -86,19 +87,19 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Resource Source|Components")
 	TObjectPtr<UStaticMeshComponent> ResourceMesh;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Resource Source")
+	UPROPERTY(SaveGame, EditAnywhere, BlueprintReadOnly, Category = "Resource Source")
 	EResourceType ResourceType = EResourceType::Iron;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Resource Source|Mining")
 	TSubclassOf<AMiningMachine> MineBlueprint;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Resource Source", meta = (ClampMin = "0", UIMin = "0"))
+	UPROPERTY(SaveGame, EditAnywhere, BlueprintReadOnly, Category = "Resource Source", meta = (ClampMin = "0", UIMin = "0"))
 	int32 StartingAmount = 100;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Resource Source|Exploration")
+	UPROPERTY(SaveGame, EditAnywhere, BlueprintReadOnly, Category = "Resource Source|Exploration")
 	bool bRemainsVisibleAfterDiscovery = false;
 
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Resource Source", meta = (ClampMin = "0", UIMin = "0"))
+	UPROPERTY(SaveGame, VisibleInstanceOnly, BlueprintReadOnly, Category = "Resource Source", meta = (ClampMin = "0", UIMin = "0"))
 	int32 RemainingAmount = 0;
 
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Resource Source|Grid")
@@ -111,7 +112,7 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<APlanetSurfaceManager> SurfaceManager;
 
-	UPROPERTY(Transient)
+	UPROPERTY(SaveGame, Transient)
 	TObjectPtr<AMiningMachine> ReservedMiningMachine;
 
 	UPROPERTY(Transient)

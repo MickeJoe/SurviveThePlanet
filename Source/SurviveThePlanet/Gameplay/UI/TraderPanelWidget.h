@@ -16,6 +16,8 @@ class UContractOfferWidget;
 class UVerticalBox;
 class UObjectiveTrackerWidget;
 struct FSTPTraderDefinition;
+struct FSTPContractOfferDefinition;
+struct FSTPContractTierDefinition;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FSTPTraderSelectedSignature, FName, TraderId);
 
@@ -35,6 +37,15 @@ private:
 
 	UFUNCTION()
 	void HandleClicked();
+};
+
+USTRUCT()
+struct FTraderResourceTextBinding
+{
+	GENERATED_BODY()
+	UPROPERTY() TObjectPtr<UTextBlock> Text;
+	UPROPERTY() EResourceType Resource = EResourceType::Iron;
+	UPROPERTY() int32 RequiredAmount = 0;
 };
 
 /** Runtime trader overview. Can be used directly or as the native parent of WBP_TraderPanel. */
@@ -86,10 +97,21 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<UVerticalBox> ContractsList;
 
+	UPROPERTY(Transient) TObjectPtr<UTextBlock> ActiveProgressText;
+	UPROPERTY(Transient) TObjectPtr<UTextBlock> ActiveDeadlineText;
+	UPROPERTY(Transient) TObjectPtr<UTextBlock> ActiveDeliveryStatusText;
+	UPROPERTY(Transient) TObjectPtr<UTextBlock> ActiveRewardText;
+	UPROPERTY(Transient) TObjectPtr<UButton> ActiveDeliverButton;
+	UPROPERTY(Transient) TArray<FTraderResourceTextBinding> TraderResourceTexts;
+	FName ActiveOfferId;
+	FName ActiveTierId;
+	void UpdateTraderResourceTexts(EResourceType Resource);
 	TWeakObjectPtr<UObjectiveTrackerWidget> ObjectiveTrackerWidget;
 	bool bCollapsed = false;
 	bool bTraderStructureDirty = false;
 	float TimerRefreshAccumulator = 0.0f;
+	FVector2D LastPanelPosition = FVector2D(-1.0f);
+	FVector2D LastPanelSize = FVector2D::ZeroVector;
 	TMap<FName, float> OfferSecondsRemaining;
 	UPROPERTY(Transient)
 	TMap<FName, TObjectPtr<UTextBlock>> OfferTimerTexts;
@@ -102,6 +124,7 @@ private:
 	void RefreshTraders();
 	void UpdateTraderTimerTexts();
 	void RefreshActiveContracts();
+	void BuildActiveContractWidgets(const FSTPContractOfferDefinition& Offer, const FSTPContractTierDefinition& Tier);
 	UFUNCTION() void HandleContractStateChanged();
 	UFUNCTION() void HandleDeliverContractClicked();
 	bool IsTraderEligible(const FSTPTraderDefinition& Trader) const;

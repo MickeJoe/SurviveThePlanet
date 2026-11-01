@@ -1,200 +1,14 @@
 {
-  "maxActiveObjectives": 8,
+  "maxActiveObjectives": 32,
   "initialObjectives": [
     "mission_build_communication"
   ],
-  "missionChoiceGroups": [
-    {
-      "id": "mother_base_directives",
-      "title": "MOTHER BASE CONNECTION ESTABLISHED",
-      "description": "Connection to Mother Base is online. Select one objective for each slot.",
-      "slots": [
-        {
-          "id": "logistics",
-          "title": "SELECT OBJECTIVE - SLOT 1",
-          "objectives": [
-            "mission_deliver_copper",
-            "mission_deliver_water"
-          ]
-        },
-        {
-          "id": "expansion",
-          "title": "SELECT OBJECTIVE - SLOT 2",
-          "objectives": [
-            "mission_build_storage",
-            "mission_build_concrete_plant"
-          ]
-        },
-        {
-          "id": "operations",
-          "title": "SELECT OBJECTIVE - SLOT 3",
-          "objectives": [
-            "mission_expand_mining"
-          ]
-        }
-      ]
-    }
-  ],
+  "missionChoiceGroups": [],
   "objectives": [
-    {
-      "id": "build_first_mining_machine",
-      "title": "Bygg en gruvmaskin",
-      "description": "Bygg och färdigställ din första gruvmaskin.",
-      "timeLimitSeconds": 0,
-      "conditions": [
-        {
-          "type": "build_building",
-          "building": "MiningMachine",
-          "amount": 1
-        }
-      ],
-      "rewards": [
-        {
-          "type": "give_resource",
-          "resource": "ControlChip",
-          "amount": 5
-        },
-        {
-          "type": "give_mission_confidence",
-          "amount": 10
-        },
-        {
-          "type": "unlock_objective",
-          "objective": "deliver_iron_to_home_base"
-        },
-        {
-          "type": "give_mission_progress",
-          "amount": 1
-        }
-      ]
-    },
-    {
-      "id": "deliver_iron_to_home_base",
-      "title": "Leverera järn till basen",
-      "description": "Leverera 100 järn till hemmabasen innan tiden tar slut.",
-      "timeLimitSeconds": 600,
-      "conditions": [
-        {
-          "type": "deliver_resource",
-          "destination": "HomeBase",
-          "resource": "Iron",
-          "amount": 100
-        }
-      ],
-      "rewards": [
-        {
-          "type": "give_resource",
-          "resource": "ControlChip",
-          "amount": 10
-        },
-        {
-          "type": "give_mission_confidence",
-          "amount": 15
-        },
-        {
-          "type": "give_mission_progress",
-          "amount": 2
-        }
-      ]
-    },
-    {
-      "id": "mission_deliver_copper",
-      "title": "DELIVER COPPER",
-      "description": "Deliver 150 Copper to Home Base.",
-      "timeLimitSeconds": 0,
-      "conditions": [
-        {
-          "type": "deliver_resource",
-          "destination": "HomeBase",
-          "resource": "Copper",
-          "amount": 150
-        }
-      ],
-      "rewards": [
-        {
-          "type": "give_mission_confidence",
-          "amount": 15
-        },
-        {
-          "type": "give_mission_progress",
-          "amount": 2
-        }
-      ]
-    },
-    {
-      "id": "mission_deliver_water",
-      "title": "DELIVER WATER",
-      "description": "Deliver 200 Water to Home Base.",
-      "timeLimitSeconds": 0,
-      "conditions": [
-        {
-          "type": "deliver_resource",
-          "destination": "HomeBase",
-          "resource": "Water",
-          "amount": 200
-        }
-      ],
-      "rewards": [
-        {
-          "type": "give_mission_confidence",
-          "amount": 15
-        },
-        {
-          "type": "give_mission_progress",
-          "amount": 1
-        }
-      ]
-    },
-    {
-      "id": "mission_build_storage",
-      "title": "EXPAND STORAGE",
-      "description": "Build 2 Energy Storage modules.",
-      "timeLimitSeconds": 0,
-      "conditions": [
-        {
-          "type": "build_building",
-          "building": "EnergyStorage",
-          "amount": 2
-        }
-      ],
-      "rewards": [
-        {
-          "type": "give_mission_confidence",
-          "amount": 15
-        },
-        {
-          "type": "give_mission_progress",
-          "amount": 1
-        }
-      ]
-    },
-    {
-      "id": "mission_build_concrete_plant",
-      "title": "PRODUCE CONCRETE",
-      "description": "Build and activate a Concrete Plant.",
-      "timeLimitSeconds": 0,
-      "conditions": [
-        {
-          "type": "build_building",
-          "building": "ConcretePlant",
-          "amount": 1
-        }
-      ],
-      "rewards": [
-        {
-          "type": "give_mission_confidence",
-          "amount": 15
-        },
-        {
-          "type": "give_mission_progress",
-          "amount": 2
-        }
-      ]
-    },
     {
       "id": "mission_build_communication",
       "title": "ESTABLISH UPLINK",
-      "description": "Mine stone and use Crude Workshop to produce 10 Concrete. Spend 20 Iron and 10 Concrete to build the Communication Module to contact Mother Base. Rewards: 5 Circuit Boards; Cargo Bay, Water Collector, Concrete Plant and Energy Storage blueprints; 1 Explorer Drone and 1 Construction Drone; +40 Mission Confidence; +1 Mission Progression.",
+      "description": "Mine stone and use Crude Workshop to produce 10 Concrete. Spend 20 Iron and 10 Concrete to build the Communication Module to contact Mother Base. Rewards: 5 Circuit Boards and 50 Connectors; Cargo Bay, Water Collector, Concrete Plant Energy Storage and Sub-Base blueprints; 1 Explorer Drone and 1 Construction Drone; +40 Mission Confidence; +1 Mission Progression. Also unlocks Groundwater Pump and Silica Extractor for reliable production inputs.",
       "timeLimitSeconds": 0,
       "conditions": [
         {
@@ -246,36 +60,30 @@
         {
           "type": "unlock_objective",
           "objective": "mission_build_cargo_bay"
-        }
-      ]
-    },
-    {
-      "id": "mission_expand_mining",
-      "title": "EXPAND MINING",
-      "description": "Build 2 additional Mining Machines.",
-      "timeLimitSeconds": 0,
-      "conditions": [
-        {
-          "type": "build_building",
-          "building": "MiningMachine",
-          "amount": 2
-        }
-      ],
-      "rewards": [
-        {
-          "type": "give_mission_confidence",
-          "amount": 20
         },
         {
-          "type": "give_mission_progress",
-          "amount": 2
+          "type": "give_resource",
+          "resource": "Connector",
+          "amount": 50
+        },
+        {
+          "type": "give_building_blueprint",
+          "blueprintId": "RemoteBase"
+        },
+        {
+          "type": "give_building_blueprint",
+          "blueprintId": "GroundwaterPump"
+        },
+        {
+          "type": "give_building_blueprint",
+          "blueprintId": "SilicaExtractor"
         }
       ]
     },
     {
       "id": "mission_build_cargo_bay",
       "title": "BUILD CARGO BAY",
-      "description": "Build and complete a Cargo Bay to enable contracts. Construction requires 20 Concrete, 10 Steel and 2 Circuit Boards.",
+      "description": "Build and complete a Cargo Bay to enable contracts. Construction requires 20 Concrete, 10 Steel and 2 Circuit Boards. Mother Base assigns package A or B: three production blueprints and three independent delivery requests. Includes 40 Coal as a finite startup reserve. Rewards also include +40 Mission Confidence and 2 Worker Drones.",
       "timeLimitSeconds": 0,
       "conditions": [
         {
@@ -285,11 +93,249 @@
         }
       ],
       "rewards": [
+        {             "type":  "give_mission_confidence",             "amount":  40         },
+        {             "amount":  2,             "droneClass":  "/Game/BluePrints/WorkingDrone/BP_ConstructionDrone.BP_ConstructionDrone_C",             "type":  "give_drone"         },
         {
           "type": "give_mission_progress",
           "amount": 1
+        },
+        {
+          "type": "give_resource",
+          "resource": "Coal",
+          "amount": 40
+        }
+      ]
+    },
+    {
+      "id": "mother_base_glass",
+      "title": "MOTHER BASE: GLASS",
+      "description": "Mother Base requests 15 Glass. Deliver through Cargo Bay. Complete requests in any order.",
+      "timeLimitSeconds": 0,
+      "conditions": [
+        {
+          "type": "deliver_resource",
+          "destination": "HomeBase",
+          "resource": "Glass",
+          "amount": 15
+        }
+      ],
+      "rewards": [
+        {
+          "type": "give_mission_confidence",
+          "amount": 24
+        },
+        {
+          "type": "give_resource",
+          "resource": "ControlChip",
+          "amount": 2
+        },
+        {
+          "type": "give_mission_progress",
+          "amount": 2
+        }
+      ]
+    },
+    {
+      "id": "mother_base_polymer",
+      "title": "MOTHER BASE: POLYMER",
+      "description": "Mother Base requests 15 Polymer. Deliver through Cargo Bay. Complete requests in any order.",
+      "timeLimitSeconds": 0,
+      "conditions": [
+        {
+          "type": "deliver_resource",
+          "destination": "HomeBase",
+          "resource": "Polymer",
+          "amount": 15
+        }
+      ],
+      "rewards": [
+        {
+          "type": "give_mission_confidence",
+          "amount": 20
+        },
+        {
+          "type": "give_resource",
+          "resource": "ControlChip",
+          "amount": 2
+        },
+        {
+          "type": "give_mission_progress",
+          "amount": 2
+        }
+      ]
+    },
+    {
+      "id": "mother_base_water",
+      "title": "MOTHER BASE: PURIFIEDWATER",
+      "description": "Mother Base requests 20 PurifiedWater. Deliver through Cargo Bay. Complete requests in any order.",
+      "timeLimitSeconds": 0,
+      "conditions": [
+        {
+          "type": "deliver_resource",
+          "destination": "HomeBase",
+          "resource": "PurifiedWater",
+          "amount": 20
+        }
+      ],
+      "rewards": [
+        {
+          "type": "give_mission_confidence",
+          "amount": 26
+        },
+        {
+          "type": "give_resource",
+          "resource": "ControlChip",
+          "amount": 2
+        },
+        {
+          "type": "give_mission_progress",
+          "amount": 2
+        }
+      ]
+    },
+    {
+      "id": "mother_base_fuel",
+      "title": "MOTHER BASE: SYNTHETICFUEL",
+      "description": "Mother Base requests 12 SyntheticFuel. Deliver through Cargo Bay. Complete requests in any order.",
+      "timeLimitSeconds": 0,
+      "conditions": [
+        {
+          "type": "deliver_resource",
+          "destination": "HomeBase",
+          "resource": "SyntheticFuel",
+          "amount": 12
+        }
+      ],
+      "rewards": [
+        {
+          "type": "give_mission_confidence",
+          "amount": 24
+        },
+        {
+          "type": "give_resource",
+          "resource": "ControlChip",
+          "amount": 2
+        },
+        {
+          "type": "give_mission_progress",
+          "amount": 2
         }
       ]
     }
-  ]
+  ],
+  "cargoPackages": [
+    {
+      "id": "A",
+      "blueprints": [
+        "Glassworks",
+        "PolymerPlant",
+        "WaterPurifier"
+      ],
+      "objectives": [
+        "mother_base_glass",
+        "mother_base_polymer",
+        "mother_base_water"
+      ]
+    },
+    {
+      "id": "B",
+      "blueprints": [
+        "PolymerPlant",
+        "FuelProcessor",
+        "WaterPurifier"
+      ],
+      "objectives": [
+        "mother_base_polymer",
+        "mother_base_fuel",
+        "mother_base_water"
+      ]
+    }
+  ],
+  "cargoProduction": {
+    "Glassworks": {
+      "recipe": "GLASS",
+      "inputs": {
+        "Silica": 2
+      },
+      "output": "Glass",
+      "outputAmount": 1,
+      "cycleSeconds": 20,
+      "energy": 12,
+      "costs": {
+        "Iron": 15,
+        "Concrete": 5,
+        "ControlChip": 1
+      },
+      "drone": true
+    },
+    "FuelProcessor": {
+      "recipe": "SYNTHETIC_FUEL",
+      "inputs": {
+        "Coal": 2,
+        "Water": 1
+      },
+      "output": "SyntheticFuel",
+      "outputAmount": 1,
+      "cycleSeconds": 20,
+      "energy": 12,
+      "costs": {
+        "Iron": 15,
+        "Concrete": 5,
+        "ControlChip": 1
+      },
+      "drone": true
+    },
+    "WaterPurifier": {
+      "recipe": "WATER_PURIFICATION",
+      "inputs": {
+        "Water": 2
+      },
+      "output": "PurifiedWater",
+      "outputAmount": 1,
+      "cycleSeconds": 20,
+      "energy": 12,
+      "costs": {
+        "Iron": 15,
+        "Concrete": 5,
+        "ControlChip": 1
+      },
+      "drone": true
+    },
+    "GroundwaterPump": {
+      "recipe": "GROUNDWATER",
+      "inputs": {},
+      "output": "Water",
+      "outputAmount": 2,
+      "cycleSeconds": 20,
+      "energy": 10,
+      "costs": {
+        "Iron": 10,
+        "Concrete": 5
+      },
+      "drone": true
+    },
+    "PolymerPlant": {
+      "inputs": {
+        "Coal": 2,
+        "Water": 1
+      },
+      "output": "Polymer",
+      "outputAmount": 3,
+      "cycleSeconds": 20,
+      "energy": 12,
+      "costs": {
+        "Iron": 15,
+        "Concrete": 5,
+        "ControlChip": 1
+      },
+      "drone": false
+    },
+    "SilicaExtractor": {
+      "output": "Silica",
+      "costs": {
+        "Iron": 10
+      },
+      "energy": 10
+    }
+  }
 }

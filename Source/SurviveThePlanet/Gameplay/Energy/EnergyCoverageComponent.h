@@ -16,7 +16,7 @@ class SURVIVETHEPLANET_API UEnergyCoverageComponent : public USceneComponent
 public:
 	UEnergyCoverageComponent();
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Energy Coverage", meta=(ClampMin="0", Units="cm"))
+	UPROPERTY(SaveGame, EditAnywhere, BlueprintReadWrite, Category="Energy Coverage", meta=(ClampMin="0", Units="cm"))
 	float CoverageRadius = 4000.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Energy Coverage|Appearance")

@@ -36,6 +36,16 @@ namespace STPTraderUI
 	const FLinearColor Cyan(0.0f, 0.72f, 0.88f, 1.0f);
 	const FLinearColor Shadow(0.0f, 0.0f, 0.0f, 0.95f);
 
+	void SetTextIfChanged(UTextBlock* Widget, const FText& Text)
+	{
+		if (Widget && !Widget->GetText().EqualTo(Text)) Widget->SetText(Text);
+	}
+
+	void SetColorIfChanged(UTextBlock* Widget, const FLinearColor& Color)
+	{
+		if (Widget && Widget->GetColorAndOpacity().GetSpecifiedColor() != Color) Widget->SetColorAndOpacity(FSlateColor(Color));
+	}
+
 	void StyleText(UTextBlock* Text, int32 Size, const FLinearColor& Color)
 	{
 		if (!Text) return;
@@ -117,8 +127,10 @@ void UTraderPanelWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTi
 	// Reward rows increase the objective tracker's height. Keep contracts below its actual content.
 	const float Top = ObjectiveTrackerWidget.IsValid() ? FMath::Max(155.0f, ObjectiveTrackerWidget->GetObjectivesBottomInViewport() + 12.0f) : 155.0f;
 	const float ViewportHeight = UWidgetLayoutLibrary::GetViewportSize(this).Y / UWidgetLayoutLibrary::GetViewportScale(this);
-	SetPositionInViewport(FVector2D(15.0f, Top), false);
-	SetDesiredSizeInViewport(FVector2D(320.0f, FMath::Clamp(ViewportHeight - Top - 16.0f, 120.0f, 650.0f)));
+	const FVector2D Position(15.0f, Top);
+	const FVector2D Size(320.0f, FMath::Clamp(ViewportHeight - Top - 16.0f, 120.0f, 650.0f));
+	if (!LastPanelPosition.Equals(Position, 0.1f)) { SetPositionInViewport(Position, false); LastPanelPosition = Position; }
+	if (!LastPanelSize.Equals(Size, 0.1f)) { SetDesiredSizeInViewport(Size); LastPanelSize = Size; }
 	const float SimulationDeltaTime = GetWorld() ? GetWorld()->GetDeltaSeconds() : InDeltaTime;
 	bTraderStructureDirty |= UpdateOfferStates(SimulationDeltaTime);
 	TimerRefreshAccumulator += InDeltaTime;
@@ -230,6 +242,7 @@ void UTraderPanelWidget::RefreshTraders()
 {
 	if (!TraderList) return;
 	OfferTimerTexts.Reset();
+	TraderResourceTexts.Reset();
 	TraderList->ClearChildren();
 	if (!TraderSubsystem) return;
 
@@ -302,6 +315,8 @@ void UTraderPanelWidget::RefreshTraders()
 			Progress->SetJustification(ETextJustify::Center);
 			STPTraderUI::StyleText(Progress, 13,
 				CurrentAmount >= Good.ProductionThreshold ? STPTraderUI::Ready : STPTraderUI::Missing);
+			auto& Binding = TraderResourceTexts.AddDefaulted_GetRef();
+			Binding.Text = Progress; Binding.Resource = Good.Resource; Binding.RequiredAmount = Good.ProductionThreshold;
 			GoodBox->AddChildToVerticalBox(Progress)->SetHorizontalAlignment(HAlign_Center);
 			UHorizontalBoxSlot* GoodSlot = GoodsRow->AddChildToHorizontalBox(GoodBox);
 			GoodSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
@@ -360,10 +375,73 @@ void UTraderPanelWidget::UpdateTraderTimerTexts()
 		if (Entry.Value)
 		{
 			const float RemainingSeconds = OfferSecondsRemaining.FindRef(Entry.Key);
-			Entry.Value->SetText(FText::Format(
+			STPTraderUI::SetTextIfChanged(Entry.Value, FText::Format(
 				NSLOCTEXT("SurviveThePlanet", "ContractOfferExpires", "Expires in: {0}"),
 				FormatOfferTime(RemainingSeconds)));
 		}
+	}
+}
+
+void UTraderPanelWidget::BuildActiveContractWidgets(const FSTPContractOfferDefinition& Offer, const FSTPContractTierDefinition& Tier)
+{
+	ContractsList->ClearChildren();
+	UHorizontalBox* ContractRow = WidgetTree->ConstructWidget<UHorizontalBox>();
+	ContractRow->SetToolTipText(Offer.Title);
+
+	USizeBox* IconSize = WidgetTree->ConstructWidget<USizeBox>();
+	IconSize->SetWidthOverride(34.0f);
+	IconSize->SetHeightOverride(34.0f);
+	if (UTexture2D* Texture = Offer.Icon.LoadSynchronous())
+	{
+		UImage* Icon = WidgetTree->ConstructWidget<UImage>();
+		Icon->SetBrushFromTexture(Texture, true);
+		IconSize->SetContent(Icon);
+	}
+	else
+	{
+		UTextBlock* Fallback = WidgetTree->ConstructWidget<UTextBlock>();
+		Fallback->SetText(FText::FromString(TEXT("◆")));
+		Fallback->SetJustification(ETextJustify::Center);
+		STPTraderUI::StyleText(Fallback, 20, Tier.AccentColor);
+		IconSize->SetContent(Fallback);
+	}
+	ContractRow->AddChildToHorizontalBox(IconSize)->SetPadding(FMargin(0.0f, 3.0f, 9.0f, 3.0f));
+
+	ActiveProgressText = WidgetTree->ConstructWidget<UTextBlock>();
+	UTextBlock* Progress = ActiveProgressText;
+	STPTraderUI::StyleText(Progress, 14, STPTraderUI::MainText);
+	UHorizontalBoxSlot* ProgressSlot = ContractRow->AddChildToHorizontalBox(Progress);
+	ProgressSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+	ProgressSlot->SetVerticalAlignment(VAlign_Center);
+
+	ActiveDeadlineText = WidgetTree->ConstructWidget<UTextBlock>();
+	UTextBlock* Deadline = ActiveDeadlineText;
+	Deadline->SetJustification(ETextJustify::Right);
+	STPTraderUI::StyleText(Deadline, 13, STPTraderUI::MainText);
+	UHorizontalBoxSlot* DeadlineSlot = ContractRow->AddChildToHorizontalBox(Deadline);
+	DeadlineSlot->SetVerticalAlignment(VAlign_Center);
+	DeadlineSlot->SetHorizontalAlignment(HAlign_Right);
+	ContractsList->AddChildToVerticalBox(ContractRow)->SetPadding(FMargin(0.0f, 2.0f));
+	ActiveDeliveryStatusText = WidgetTree->ConstructWidget<UTextBlock>();
+	UTextBlock* DeliveryStatus = ActiveDeliveryStatusText;
+	STPTraderUI::StyleText(DeliveryStatus, 12, STPTraderUI::MainText);
+	ContractsList->AddChildToVerticalBox(DeliveryStatus);
+	ActiveRewardText = WidgetTree->ConstructWidget<UTextBlock>();
+	UTextBlock* ProgressReward = ActiveRewardText;
+	STPTraderUI::StyleText(ProgressReward, 11, STPTraderUI::Cyan);
+	ProgressReward->SetAutoWrapText(true);
+	ContractsList->AddChildToVerticalBox(ProgressReward)->SetPadding(FMargin(0, 3));
+	{
+		ActiveDeliverButton = WidgetTree->ConstructWidget<UButton>();
+		UButton* Deliver = ActiveDeliverButton;
+		Deliver->OnClicked.AddUniqueDynamic(this, &UTraderPanelWidget::HandleDeliverContractClicked);
+
+		UTextBlock* Label = WidgetTree->ConstructWidget<UTextBlock>();
+		Label->SetText(NSLOCTEXT("SurviveThePlanet", "DeliverAgreementShipment", "DELIVER SHIPMENT"));
+		Label->SetJustification(ETextJustify::Center);
+		STPTraderUI::StyleText(Label, 12, STPTraderUI::Cyan);
+		Deliver->SetContent(Label);
+		ContractsList->AddChildToVerticalBox(Deliver)->SetPadding(FMargin(0, 5));
 	}
 }
 
@@ -379,7 +457,10 @@ void UTraderPanelWidget::RefreshActiveContracts()
 	if (ContractState.State == ESTPContractState::None || !ContractSubsystem->GetSelectedContract(OfferId, TierId))
 	{
 		ContractsPanel->SetVisibility(ESlateVisibility::Collapsed);
-		ContractsList->ClearChildren();
+		if (!ActiveOfferId.IsNone()) ContractsList->ClearChildren();
+		ActiveOfferId = NAME_None; ActiveTierId = NAME_None;
+		ActiveProgressText = nullptr; ActiveDeadlineText = nullptr; ActiveDeliveryStatusText = nullptr;
+		ActiveRewardText = nullptr; ActiveDeliverButton = nullptr;
 		return;
 	}
 
@@ -399,29 +480,11 @@ void UTraderPanelWidget::RefreshActiveContracts()
 
 
 	ContractsPanel->SetVisibility(ESlateVisibility::Visible);
-	ContractsList->ClearChildren();
-	UHorizontalBox* ContractRow = WidgetTree->ConstructWidget<UHorizontalBox>();
-	ContractRow->SetToolTipText(Offer.Title);
-
-	USizeBox* IconSize = WidgetTree->ConstructWidget<USizeBox>();
-	IconSize->SetWidthOverride(34.0f);
-	IconSize->SetHeightOverride(34.0f);
-	if (UTexture2D* Texture = Offer.Icon.LoadSynchronous())
+	if (ActiveOfferId != OfferId || ActiveTierId != TierId || !ActiveProgressText)
 	{
-		UImage* Icon = WidgetTree->ConstructWidget<UImage>();
-		Icon->SetBrushFromTexture(Texture, true);
-		IconSize->SetContent(Icon);
+		BuildActiveContractWidgets(Offer, *Tier);
+		ActiveOfferId = OfferId; ActiveTierId = TierId;
 	}
-	else
-	{
-		UTextBlock* Fallback = WidgetTree->ConstructWidget<UTextBlock>();
-		Fallback->SetText(FText::FromString(TEXT("◆")));
-		Fallback->SetJustification(ETextJustify::Center);
-		STPTraderUI::StyleText(Fallback, 20, Tier->AccentColor);
-		IconSize->SetContent(Fallback);
-	}
-	ContractRow->AddChildToHorizontalBox(IconSize)->SetPadding(FMargin(0.0f, 3.0f, 9.0f, 3.0f));
-
 	int32 CurrentAmount = 0;
 	if (const UEnum* ResourceEnum = StaticEnum<EResourceType>())
 	{
@@ -431,61 +494,54 @@ void UTraderPanelWidget::RefreshActiveContracts()
 			CurrentAmount = ResourceManager->GetResourceAmount(static_cast<EResourceType>(ResourceValue));
 		}
 	}
-	UTextBlock* Progress = WidgetTree->ConstructWidget<UTextBlock>();
-	Progress->SetText(FText::FromString(FString::Printf(TEXT("%d / %d"), CurrentAmount, Tier->DeliveryAmount)));
-	if (ContractState.State != ESTPContractState::Active) Progress->SetText(FText::FromString(ContractState.State == ESTPContractState::Completed ? TEXT("FULFILLED") : TEXT("ENDED")));
+	UTextBlock* Progress = ActiveProgressText;
+	UTextBlock* Deadline = ActiveDeadlineText;
+	UTextBlock* DeliveryStatus = ActiveDeliveryStatusText;
+	UTextBlock* ProgressReward = ActiveRewardText;
+	const bool bActive = ContractState.State == ESTPContractState::Active;
+	STPTraderUI::SetTextIfChanged(Progress, bActive
+		? FText::FromString(FString::Printf(TEXT("%d / %d"), CurrentAmount, Tier->DeliveryAmount))
+		: FText::FromString(ContractState.State == ESTPContractState::Completed ? TEXT("FULFILLED") : TEXT("ENDED")));
 	Progress->SetToolTipText(Offer.Title);
-	STPTraderUI::StyleText(Progress, 14,
-		CurrentAmount >= Tier->DeliveryAmount ? STPTraderUI::Ready : STPTraderUI::MainText);
-	UHorizontalBoxSlot* ProgressSlot = ContractRow->AddChildToHorizontalBox(Progress);
-	ProgressSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
-	ProgressSlot->SetVerticalAlignment(VAlign_Center);
-
-	UTextBlock* Deadline = WidgetTree->ConstructWidget<UTextBlock>();
-	Deadline->SetText(FText::Format(NSLOCTEXT("SurviveThePlanet", "NextContractDelivery", "◷  {0}"),
-		FormatOfferTime(ContractState.SecondsUntilDelivery)));
-	if (ContractState.State != ESTPContractState::Active) Deadline->SetText(FText::GetEmpty());
-	Deadline->SetJustification(ETextJustify::Right);
+	STPTraderUI::SetColorIfChanged(Progress, CurrentAmount >= Tier->DeliveryAmount ? STPTraderUI::Ready : STPTraderUI::MainText);
+	STPTraderUI::SetTextIfChanged(Deadline, bActive
+		? FText::Format(NSLOCTEXT("SurviveThePlanet", "NextContractDelivery", "\u25F7  {0}"), FormatOfferTime(ContractState.SecondsUntilDelivery))
+		: FText::GetEmpty());
 	Deadline->SetToolTipText(Tier->DisplayName);
-	STPTraderUI::StyleText(Deadline, 13,
-		ContractState.SecondsUntilDelivery <= 60.0f ? STPTraderUI::Missing : STPTraderUI::MainText);
-	UHorizontalBoxSlot* DeadlineSlot = ContractRow->AddChildToHorizontalBox(Deadline);
-	DeadlineSlot->SetVerticalAlignment(VAlign_Center);
-	DeadlineSlot->SetHorizontalAlignment(HAlign_Right);
-	ContractsList->AddChildToVerticalBox(ContractRow)->SetPadding(FMargin(0.0f, 2.0f));
-	UTextBlock* DeliveryStatus = WidgetTree->ConstructWidget<UTextBlock>();
-	DeliveryStatus->SetText(FText::FromString(FString::Printf(TEXT("%d / %d DELIVERIES%s"), ContractState.DeliveriesMade,
+	STPTraderUI::SetColorIfChanged(Deadline, ContractState.SecondsUntilDelivery <= 60.0f ? STPTraderUI::Missing : STPTraderUI::MainText);
+	STPTraderUI::SetTextIfChanged(DeliveryStatus, FText::FromString(FString::Printf(TEXT("%d / %d DELIVERIES%s"), ContractState.DeliveriesMade,
 		Tier->DeliveryCount, ContractState.State == ESTPContractState::Completed ? TEXT(" - COMPLETE") :
 		ContractState.State == ESTPContractState::Failed ? TEXT(" - FAILED") : TEXT(""))));
-	STPTraderUI::StyleText(DeliveryStatus, 12, STPTraderUI::MainText);
-	ContractsList->AddChildToVerticalBox(DeliveryStatus);
-	UTextBlock* ProgressReward = WidgetTree->ConstructWidget<UTextBlock>();
-	ProgressReward->SetAutoWrapText(true);
-	ProgressReward->SetText(FText::FromString(FString::Printf(TEXT("+%d MISSION PROGRESSION ON COMPLETION"), Tier->GetMissionProgressReward())));
-	if (ContractState.State == ESTPContractState::Completed)
-		ProgressReward->SetText(FText::FromString(FString::Printf(TEXT("+%d MISSION PROGRESSION RECEIVED"), Tier->GetMissionProgressReward())));
-	else if (ContractState.State == ESTPContractState::Failed)
-		ProgressReward->SetText(NSLOCTEXT("SurviveThePlanet", "NoAgreementCompletionReward", "NO COMPLETION REWARD"));
-	STPTraderUI::StyleText(ProgressReward, 11, STPTraderUI::Cyan);
-	ContractsList->AddChildToVerticalBox(ProgressReward)->SetPadding(FMargin(0, 3));
-	if (ContractState.State == ESTPContractState::Active)
+	FText RewardText;
+	if (ContractState.State == ESTPContractState::Failed)
+		RewardText = NSLOCTEXT("SurviveThePlanet", "NoAgreementCompletionReward", "NO COMPLETION REWARD");
+	else
+		RewardText = FText::Format(ContractState.State == ESTPContractState::Completed
+			? NSLOCTEXT("SurviveThePlanet", "ContractProgressReceived", "+{0} MISSION PROGRESSION RECEIVED")
+			: NSLOCTEXT("SurviveThePlanet", "ContractProgressOnCompletion", "+{0} MISSION PROGRESSION ON COMPLETION"),
+			FText::AsNumber(Tier->GetMissionProgressReward()));
+	STPTraderUI::SetTextIfChanged(ProgressReward, RewardText);
+	ActiveDeliverButton->SetVisibility(ContractState.State == ESTPContractState::Active ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
+	ActiveDeliverButton->SetIsEnabled(ContractSubsystem->CanDeliverSelectedContract());
+
+}
+
+void UTraderPanelWidget::UpdateTraderResourceTexts(EResourceType Resource)
+{
+	const int32 Amount = ResourceManager ? ResourceManager->GetResourceAmount(Resource) : 0;
+	for (const auto& Binding : TraderResourceTexts)
 	{
-		UButton* Deliver = WidgetTree->ConstructWidget<UButton>();
-		Deliver->OnClicked.AddUniqueDynamic(this, &UTraderPanelWidget::HandleDeliverContractClicked);
-		Deliver->SetIsEnabled(ContractSubsystem->CanDeliverSelectedContract());
-		UTextBlock* Label = WidgetTree->ConstructWidget<UTextBlock>();
-		Label->SetText(NSLOCTEXT("SurviveThePlanet", "DeliverAgreementShipment", "DELIVER SHIPMENT"));
-		Label->SetJustification(ETextJustify::Center);
-		STPTraderUI::StyleText(Label, 12, STPTraderUI::Cyan);
-		Deliver->SetContent(Label);
-		ContractsList->AddChildToVerticalBox(Deliver)->SetPadding(FMargin(0, 5));
+		if (Binding.Resource != Resource || !Binding.Text) continue;
+		STPTraderUI::SetTextIfChanged(Binding.Text, FText::FromString(FString::Printf(TEXT("%d / %d"), Amount, Binding.RequiredAmount)));
+		STPTraderUI::SetColorIfChanged(Binding.Text, Amount >= Binding.RequiredAmount ? STPTraderUI::Ready : STPTraderUI::Missing);
 	}
 }
 
 void UTraderPanelWidget::HandleResourceAmountChanged(EResourceType ResourceType, int32 NewAmount)
 {
-	UpdateOfferStates(0.0f);
-	RefreshTraders();
+	bTraderStructureDirty |= UpdateOfferStates(0.0f);
+	UpdateTraderResourceTexts(ResourceType);
+	RefreshActiveContracts();
 }
 
 void UTraderPanelWidget::HandleCollapseClicked()

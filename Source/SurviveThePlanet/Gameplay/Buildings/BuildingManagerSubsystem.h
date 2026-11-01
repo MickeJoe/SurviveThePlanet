@@ -18,6 +18,10 @@ class SURVIVETHEPLANET_API UBuildingManagerSubsystem : public UWorldSubsystem
 	GENERATED_BODY()
 
 public:
+	/** Extraction-only unlocks must never create an ordinary ground-placement preview. */
+	static bool IsStandalonePlacementEnabled(ESTPBuildTool Tool) { return Tool != ESTPBuildTool::SilicaExtractor; }
+	/** Identifies a silica extractor without a deposit; deposit-bound mines remain valid. */
+	static bool IsRetiredStandaloneBuilding(const ABaseBuilding* Building);
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 
 	UFUNCTION(BlueprintCallable, Category = "Buildings")

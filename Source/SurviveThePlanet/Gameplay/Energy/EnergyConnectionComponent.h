@@ -22,6 +22,8 @@ public:
  UEnergyConnectionComponent();
  void UpdateRoute(bool bPreview, bool bValidPlacement);
  void CopyPlacedRoute(const UEnergyConnectionComponent* Preview);
+ /** Rebuild transient poles and spans after saved source references have been restored. */
+ void RestorePlacedRoute();
  AActor* GetSourceActor() const;
  float GetConnectionDistanceMeters() const;
  UEnergyCoverageComponent* GetSourceCoverage() const { return Source.Get(); }
@@ -30,19 +32,19 @@ public:
  int32 GetPoleCount() const { return ActivePoleCount; }
  int32 GetRouteRebuildCount() const { return RouteRebuildCount; }
 
- UPROPERTY(EditAnywhere, Category="Energy Connection", meta=(ClampMin="100", Units="cm"))
+ UPROPERTY(SaveGame, EditAnywhere, Category="Energy Connection", meta=(ClampMin="100", Units="cm"))
  float PoleSpacing = 600.0f;
- UPROPERTY(EditAnywhere, Category="Energy Connection", meta=(ClampMin="75", Units="cm"))
+ UPROPERTY(SaveGame, EditAnywhere, Category="Energy Connection", meta=(ClampMin="75", Units="cm"))
  float BuildingClearance = 125.0f;
- UPROPERTY(EditAnywhere, Category="Energy Connection", meta=(ClampMin="0", Units="cm"))
+ UPROPERTY(SaveGame, EditAnywhere, Category="Energy Connection", meta=(ClampMin="0", Units="cm"))
  float CableSag = 35.0f;
- UPROPERTY(EditAnywhere, Category="Energy Connection", meta=(ClampMin="0", Units="cm"))
+ UPROPERTY(SaveGame, EditAnywhere, Category="Energy Connection", meta=(ClampMin="0", Units="cm"))
  float SourceSwitchMargin = 150.0f;
- UPROPERTY(EditAnywhere, Category="Energy Connection")
+ UPROPERTY(SaveGame, EditAnywhere, Category="Energy Connection")
  TObjectPtr<UStaticMesh> PoleMesh;
- UPROPERTY(EditAnywhere, Category="Energy Connection")
+ UPROPERTY(SaveGame, EditAnywhere, Category="Energy Connection")
  TObjectPtr<UStaticMesh> CableMesh;
- UPROPERTY(EditAnywhere, Category="Energy Connection")
+ UPROPERTY(SaveGame, EditAnywhere, Category="Energy Connection")
  TObjectPtr<UStaticMesh> TerminalMesh;
 
 protected:
@@ -62,6 +64,7 @@ private:
  UPROPERTY(Transient) TArray<TObjectPtr<UStaticMeshComponent>> Terminals;
  UPROPERTY(Transient) TObjectPtr<UMaterialInstanceDynamic> GhostMaterial;
  UPROPERTY() TObjectPtr<UMaterialInterface> GhostMaterialBase;
+	UPROPERTY(SaveGame)
  TWeakObjectPtr<UEnergyCoverageComponent> Source;
  TArray<FVector> RoutePoints;
  FIntVector LastPosition = FIntVector(MAX_int32);

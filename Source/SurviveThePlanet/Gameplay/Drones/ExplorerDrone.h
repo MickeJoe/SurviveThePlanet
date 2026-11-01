@@ -42,10 +42,13 @@ private:
 	void DrawActivationPreview() const;
 	void FinishExploration();
 
-	UPROPERTY(Transient) TObjectPtr<AHexSectorGrid> SectorGrid;
-	UPROPERTY(Transient) TArray<int32> TargetSectorIds;
+	UPROPERTY(SaveGame, Transient) TObjectPtr<AHexSectorGrid> SectorGrid;
+	UPROPERTY(SaveGame, Transient) TArray<int32> TargetSectorIds;
+	UPROPERTY(SaveGame)
 	int32 CurrentTargetIndex = 0;
+	UPROPERTY(SaveGame)
 	int32 ScannedSectorCount = 0;
+	UPROPERTY(SaveGame)
 	bool bIsExploring = false;
 	bool bShowActivationPreview = false;
 };

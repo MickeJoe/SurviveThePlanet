@@ -20,6 +20,7 @@ UCLASS()
 class SURVIVETHEPLANET_API UGameTimeSaveGame : public USaveGame
 {
 	GENERATED_BODY()
+	friend class UColonySaveSubsystem;
 
 public:
 	UPROPERTY(SaveGame)
@@ -51,6 +52,8 @@ UCLASS(Blueprintable)
 class SURVIVETHEPLANET_API UResourceDisplayWidget : public UUserWidget
 {
 	GENERATED_BODY()
+	friend class FMissionPopupTest;
+	friend class UColonySaveSubsystem;
 
 public:
 	UResourceDisplayWidget(const FObjectInitializer& ObjectInitializer);
@@ -208,8 +211,11 @@ private:
 
 	float RateRefreshAccumulator = 0.0f;
 	float TimeSaveAccumulator = 0.0f;
+	UPROPERTY(SaveGame)
 	double TotalGameMinutes = 480.0;
+	UPROPERTY(SaveGame)
 	float TimeScale = 1.0f;
+	UPROPERTY(SaveGame)
 	bool bTimePaused = true;
 	bool bTradingPaused = false;
 	bool bMenuPaused = false;

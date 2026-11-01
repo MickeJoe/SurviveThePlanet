@@ -15,4 +15,5 @@ void APlanetSelectionGameMode::StartPlay()
 	FInputModeUIOnly Input;
 	Input.SetWidgetToFocus(Widget->TakeWidget());
 	PC->SetInputMode(Input);
+	Widget->SetKeyboardFocus();
 }

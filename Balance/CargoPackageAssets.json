@@ -1,0 +1,141 @@
+{
+  "passed": true,
+  "assets": [
+    {
+      "building": "Glassworks",
+      "class": "/Game/Units/Buildings/BlueprintCatalog/Glassworks/BP_GlassworksBuilding.BP_GlassworksBuilding_C",
+      "settings": {
+        "recipe": "GLASS",
+        "inputs": {
+          "Silica": 2
+        },
+        "output": "Glass",
+        "outputAmount": 1,
+        "cycleSeconds": 20,
+        "energy": 12,
+        "costs": {
+          "Iron": 15,
+          "Concrete": 5,
+          "ControlChip": 1
+        },
+        "drone": true
+      },
+      "effectiveCosts": {
+        "<ResourceType.IRON: 1>": 15,
+        "<ResourceType.CONCRETE: 6>": 5,
+        "<ResourceType.CONTROL_CHIP: 2>": 1
+      }
+    },
+    {
+      "building": "FuelProcessor",
+      "class": "/Game/Units/Buildings/BlueprintCatalog/FuelProcessor/BP_FuelProcessorBuilding.BP_FuelProcessorBuilding_C",
+      "settings": {
+        "recipe": "SYNTHETIC_FUEL",
+        "inputs": {
+          "Coal": 2,
+          "Water": 1
+        },
+        "output": "SyntheticFuel",
+        "outputAmount": 1,
+        "cycleSeconds": 20,
+        "energy": 12,
+        "costs": {
+          "Iron": 15,
+          "Concrete": 5,
+          "ControlChip": 1
+        },
+        "drone": true
+      },
+      "effectiveCosts": {
+        "<ResourceType.IRON: 1>": 15,
+        "<ResourceType.CONCRETE: 6>": 5,
+        "<ResourceType.CONTROL_CHIP: 2>": 1
+      }
+    },
+    {
+      "building": "WaterPurifier",
+      "class": "/Game/Units/Buildings/BlueprintCatalog/WaterPurifier/BP_WaterPurifierBuilding.BP_WaterPurifierBuilding_C",
+      "settings": {
+        "recipe": "WATER_PURIFICATION",
+        "inputs": {
+          "Water": 2
+        },
+        "output": "PurifiedWater",
+        "outputAmount": 1,
+        "cycleSeconds": 20,
+        "energy": 12,
+        "costs": {
+          "Iron": 15,
+          "Concrete": 5,
+          "ControlChip": 1
+        },
+        "drone": true
+      },
+      "effectiveCosts": {
+        "<ResourceType.IRON: 1>": 15,
+        "<ResourceType.CONCRETE: 6>": 5,
+        "<ResourceType.CONTROL_CHIP: 2>": 1
+      }
+    },
+    {
+      "building": "GroundwaterPump",
+      "class": "/Game/Units/Buildings/BlueprintCatalog/GroundwaterPump/BP_GroundwaterPumpBuilding.BP_GroundwaterPumpBuilding_C",
+      "settings": {
+        "recipe": "GROUNDWATER",
+        "inputs": {},
+        "output": "Water",
+        "outputAmount": 2,
+        "cycleSeconds": 20,
+        "energy": 10,
+        "costs": {
+          "Iron": 10,
+          "Concrete": 5
+        },
+        "drone": true
+      },
+      "effectiveCosts": {
+        "<ResourceType.IRON: 1>": 10,
+        "<ResourceType.CONCRETE: 6>": 5
+      }
+    },
+    {
+      "building": "PolymerPlant",
+      "class": "/Game/BluePrints/Buildings/PolymerPlant/BP_PolymerPlant.BP_PolymerPlant_C",
+      "settings": {
+        "inputs": {
+          "Coal": 2,
+          "Water": 1
+        },
+        "output": "Polymer",
+        "outputAmount": 3,
+        "cycleSeconds": 20,
+        "energy": 12,
+        "costs": {
+          "Iron": 15,
+          "Concrete": 5,
+          "ControlChip": 1
+        },
+        "drone": false
+      },
+      "effectiveCosts": {
+        "<ResourceType.IRON: 1>": 15,
+        "<ResourceType.CONCRETE: 6>": 5,
+        "<ResourceType.CONTROL_CHIP: 2>": 1
+      }
+    },
+    {
+      "building": "SilicaExtractor",
+      "class": "/Game/Units/Buildings/BlueprintCatalog/SilicaExtractor/BP_SilicaExtractorBuilding.BP_SilicaExtractorBuilding_C",
+      "settings": {
+        "output": "Silica",
+        "costs": {
+          "Iron": 10
+        },
+        "energy": 10
+      },
+      "effectiveCosts": {
+        "<ResourceType.IRON: 1>": 10
+      }
+    }
+  ]
+}

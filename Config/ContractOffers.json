@@ -1,50 +1,49 @@
 {
   "contractOffers": [
     {
-      "id": "helix_advanced_components",
+      "id": "supply_iron",
       "traderId": "helix_industrial",
-      "itemId": "ControlChip",
-      "title": "Circuit Board Supply Agreement",
-      "iconReference": "/Game/UI/ControlChipResourceIcon.ControlChipResourceIcon",
+      "itemId": "Iron",
+      "title": "Hull Repair Ore",
+      "iconReference": "/Game/UI/IronResourceIcon.IronResourceIcon",
       "tiers": [
         {
           "id": "standard",
           "displayName": "STANDARD",
           "accentColor": "00BDEB",
-          "deliveryAmount": 8,
-          "deliveryCount": 4,
+          "deliveryAmount": 35,
+          "deliveryCount": 3,
           "deliveryIntervalHours": 8,
           "deliveryRewards": [
             {
               "type": "credits",
-              "amount": 150,
+              "amount": 154,
               "iconReference": "/Game/UI/Contracts/Icons/T_Credits.T_Credits"
             },
             {
-              "type": "resource",
-              "id": "Iron",
-              "amount": 20,
-              "iconReference": "/Game/UI/IronResourceIcon.IronResourceIcon"
-            },
-            {
-              "type": "resource",
-              "id": "Water",
-              "amount": 5,
-              "iconReference": "/Game/UI/Images/WaterCollectorBuildIcon.WaterCollectorBuildIcon"
+              "type": "missionConfidence",
+              "amount": 8,
+              "iconReference": "/Game/UI/Contracts/Icons/T_MissionConfidence.T_MissionConfidence"
             }
           ],
           "missedDeliveryPenalties": [
             {
               "type": "missionConfidence",
-              "amount": -2,
+              "amount": -3,
               "iconReference": "/Game/UI/Contracts/Icons/T_MissionConfidence.T_MissionConfidence"
             }
           ],
           "completionBonus": [
             {
               "type": "credits",
-              "amount": 300,
+              "amount": 77,
               "iconReference": "/Game/UI/Contracts/Icons/T_Credits.T_Credits"
+            },
+            {
+              "type": "resource",
+              "amount": 1,
+              "iconReference": "/Game/UI/ControlChipResourceIcon.ControlChipResourceIcon",
+              "id": "ControlChip"
             },
             {
               "type": "missionProgress",
@@ -57,8 +56,8 @@
           "id": "priority",
           "displayName": "PRIORITY",
           "accentColor": "FFC128",
-          "deliveryAmount": 12,
-          "deliveryCount": 5,
+          "deliveryAmount": 55,
+          "deliveryCount": 4,
           "deliveryIntervalHours": 6,
           "deliveryRewards": [
             {
@@ -67,35 +66,29 @@
               "iconReference": "/Game/UI/Contracts/Icons/T_Credits.T_Credits"
             },
             {
-              "type": "resource",
-              "id": "Iron",
-              "amount": 40,
-              "iconReference": "/Game/UI/IronResourceIcon.IronResourceIcon"
-            },
-            {
-              "type": "resource",
-              "id": "Water",
-              "amount": 10,
-              "iconReference": "/Game/UI/Images/WaterCollectorBuildIcon.WaterCollectorBuildIcon"
+              "type": "missionConfidence",
+              "amount": 7,
+              "iconReference": "/Game/UI/Contracts/Icons/T_MissionConfidence.T_MissionConfidence"
             }
           ],
           "missedDeliveryPenalties": [
             {
               "type": "missionConfidence",
-              "amount": -4,
+              "amount": -5,
               "iconReference": "/Game/UI/Contracts/Icons/T_MissionConfidence.T_MissionConfidence"
-            },
-            {
-              "type": "traderReputation",
-              "amount": -20,
-              "iconReference": "/Game/UI/Contracts/Icons/T_TraderReputation.T_TraderReputation"
             }
           ],
           "completionBonus": [
             {
               "type": "credits",
-              "amount": 500,
+              "amount": 138,
               "iconReference": "/Game/UI/Contracts/Icons/T_Credits.T_Credits"
+            },
+            {
+              "type": "resource",
+              "amount": 2,
+              "iconReference": "/Game/UI/ControlChipResourceIcon.ControlChipResourceIcon",
+              "id": "ControlChip"
             },
             {
               "type": "missionProgress",
@@ -108,26 +101,19 @@
           "id": "high_stakes",
           "displayName": "HIGH STAKES",
           "accentColor": "FF4A2F",
-          "deliveryAmount": 16,
-          "deliveryCount": 6,
-          "deliveryIntervalHours": 5,
+          "deliveryAmount": 75,
+          "deliveryCount": 5,
+          "deliveryIntervalHours": 4,
           "deliveryRewards": [
             {
               "type": "credits",
-              "amount": 450,
+              "amount": 420,
               "iconReference": "/Game/UI/Contracts/Icons/T_Credits.T_Credits"
             },
             {
-              "type": "resource",
-              "id": "Iron",
-              "amount": 60,
-              "iconReference": "/Game/UI/IronResourceIcon.IronResourceIcon"
-            },
-            {
-              "type": "resource",
-              "id": "Water",
-              "amount": 15,
-              "iconReference": "/Game/UI/Images/WaterCollectorBuildIcon.WaterCollectorBuildIcon"
+              "type": "missionConfidence",
+              "amount": 7,
+              "iconReference": "/Game/UI/Contracts/Icons/T_MissionConfidence.T_MissionConfidence"
             }
           ],
           "missedDeliveryPenalties": [
@@ -135,24 +121,595 @@
               "type": "missionConfidence",
               "amount": -7,
               "iconReference": "/Game/UI/Contracts/Icons/T_MissionConfidence.T_MissionConfidence"
-            },
-            {
-              "type": "traderReputation",
-              "amount": -30,
-              "iconReference": "/Game/UI/Contracts/Icons/T_TraderReputation.T_TraderReputation"
-            },
-            {
-              "type": "traderCooldownHours",
-              "amount": 24,
-              "iconReference": "/Game/UI/Contracts/Icons/T_TraderCooldown.T_TraderCooldown"
             }
           ],
           "completionBonus": [
             {
-              "type": "blueprint",
-              "poolId": "rare_industrial_blueprints",
+              "type": "credits",
+              "amount": 210,
+              "iconReference": "/Game/UI/Contracts/Icons/T_Credits.T_Credits"
+            },
+            {
+              "type": "resource",
+              "amount": 3,
+              "iconReference": "/Game/UI/ControlChipResourceIcon.ControlChipResourceIcon",
+              "id": "ControlChip"
+            },
+            {
+              "type": "missionProgress",
+              "amount": 3,
+              "iconReference": "/Game/UI/Contracts/Icons/T_MissionProgress.T_MissionProgress"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "supply_stone",
+      "traderId": "xeno_research",
+      "itemId": "Stone",
+      "title": "Foundation Material",
+      "iconReference": "/Game/UI/StoneResourceIcon.StoneResourceIcon",
+      "tiers": [
+        {
+          "id": "standard",
+          "displayName": "STANDARD",
+          "accentColor": "00BDEB",
+          "deliveryAmount": 40,
+          "deliveryCount": 3,
+          "deliveryIntervalHours": 8,
+          "deliveryRewards": [
+            {
+              "type": "credits",
+              "amount": 176,
+              "iconReference": "/Game/UI/Contracts/Icons/T_Credits.T_Credits"
+            },
+            {
+              "type": "missionConfidence",
+              "amount": 8,
+              "iconReference": "/Game/UI/Contracts/Icons/T_MissionConfidence.T_MissionConfidence"
+            }
+          ],
+          "missedDeliveryPenalties": [
+            {
+              "type": "missionConfidence",
+              "amount": -3,
+              "iconReference": "/Game/UI/Contracts/Icons/T_MissionConfidence.T_MissionConfidence"
+            }
+          ],
+          "completionBonus": [
+            {
+              "type": "credits",
+              "amount": 88,
+              "iconReference": "/Game/UI/Contracts/Icons/T_Credits.T_Credits"
+            },
+            {
+              "type": "resource",
               "amount": 1,
-              "iconReference": "/Game/UI/Contracts/Icons/T_RareBlueprint.T_RareBlueprint"
+              "iconReference": "/Game/UI/ControlChipResourceIcon.ControlChipResourceIcon",
+              "id": "ControlChip"
+            },
+            {
+              "type": "missionProgress",
+              "amount": 1,
+              "iconReference": "/Game/UI/Contracts/Icons/T_MissionProgress.T_MissionProgress"
+            }
+          ]
+        },
+        {
+          "id": "priority",
+          "displayName": "PRIORITY",
+          "accentColor": "FFC128",
+          "deliveryAmount": 65,
+          "deliveryCount": 4,
+          "deliveryIntervalHours": 6,
+          "deliveryRewards": [
+            {
+              "type": "credits",
+              "amount": 325,
+              "iconReference": "/Game/UI/Contracts/Icons/T_Credits.T_Credits"
+            },
+            {
+              "type": "missionConfidence",
+              "amount": 7,
+              "iconReference": "/Game/UI/Contracts/Icons/T_MissionConfidence.T_MissionConfidence"
+            }
+          ],
+          "missedDeliveryPenalties": [
+            {
+              "type": "missionConfidence",
+              "amount": -5,
+              "iconReference": "/Game/UI/Contracts/Icons/T_MissionConfidence.T_MissionConfidence"
+            }
+          ],
+          "completionBonus": [
+            {
+              "type": "credits",
+              "amount": 162,
+              "iconReference": "/Game/UI/Contracts/Icons/T_Credits.T_Credits"
+            },
+            {
+              "type": "resource",
+              "amount": 2,
+              "iconReference": "/Game/UI/ControlChipResourceIcon.ControlChipResourceIcon",
+              "id": "ControlChip"
+            },
+            {
+              "type": "missionProgress",
+              "amount": 2,
+              "iconReference": "/Game/UI/Contracts/Icons/T_MissionProgress.T_MissionProgress"
+            }
+          ]
+        },
+        {
+          "id": "high_stakes",
+          "displayName": "HIGH STAKES",
+          "accentColor": "FF4A2F",
+          "deliveryAmount": 90,
+          "deliveryCount": 5,
+          "deliveryIntervalHours": 4,
+          "deliveryRewards": [
+            {
+              "type": "credits",
+              "amount": 504,
+              "iconReference": "/Game/UI/Contracts/Icons/T_Credits.T_Credits"
+            },
+            {
+              "type": "missionConfidence",
+              "amount": 7,
+              "iconReference": "/Game/UI/Contracts/Icons/T_MissionConfidence.T_MissionConfidence"
+            }
+          ],
+          "missedDeliveryPenalties": [
+            {
+              "type": "missionConfidence",
+              "amount": -7,
+              "iconReference": "/Game/UI/Contracts/Icons/T_MissionConfidence.T_MissionConfidence"
+            }
+          ],
+          "completionBonus": [
+            {
+              "type": "credits",
+              "amount": 252,
+              "iconReference": "/Game/UI/Contracts/Icons/T_Credits.T_Credits"
+            },
+            {
+              "type": "resource",
+              "amount": 3,
+              "iconReference": "/Game/UI/ControlChipResourceIcon.ControlChipResourceIcon",
+              "id": "ControlChip"
+            },
+            {
+              "type": "missionProgress",
+              "amount": 3,
+              "iconReference": "/Game/UI/Contracts/Icons/T_MissionProgress.T_MissionProgress"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "supply_concrete",
+      "traderId": "helix_industrial",
+      "itemId": "Concrete",
+      "title": "Dock Reconstruction",
+      "iconReference": "/Game/UI/ConcreteResourceIcon.ConcreteResourceIcon",
+      "tiers": [
+        {
+          "id": "standard",
+          "displayName": "STANDARD",
+          "accentColor": "00BDEB",
+          "deliveryAmount": 6,
+          "deliveryCount": 3,
+          "deliveryIntervalHours": 8,
+          "deliveryRewards": [
+            {
+              "type": "credits",
+              "amount": 53,
+              "iconReference": "/Game/UI/Contracts/Icons/T_Credits.T_Credits"
+            },
+            {
+              "type": "missionConfidence",
+              "amount": 8,
+              "iconReference": "/Game/UI/Contracts/Icons/T_MissionConfidence.T_MissionConfidence"
+            }
+          ],
+          "missedDeliveryPenalties": [
+            {
+              "type": "missionConfidence",
+              "amount": -3,
+              "iconReference": "/Game/UI/Contracts/Icons/T_MissionConfidence.T_MissionConfidence"
+            }
+          ],
+          "completionBonus": [
+            {
+              "type": "credits",
+              "amount": 26,
+              "iconReference": "/Game/UI/Contracts/Icons/T_Credits.T_Credits"
+            },
+            {
+              "type": "resource",
+              "amount": 1,
+              "iconReference": "/Game/UI/ControlChipResourceIcon.ControlChipResourceIcon",
+              "id": "ControlChip"
+            },
+            {
+              "type": "missionProgress",
+              "amount": 1,
+              "iconReference": "/Game/UI/Contracts/Icons/T_MissionProgress.T_MissionProgress"
+            }
+          ]
+        },
+        {
+          "id": "priority",
+          "displayName": "PRIORITY",
+          "accentColor": "FFC128",
+          "deliveryAmount": 10,
+          "deliveryCount": 4,
+          "deliveryIntervalHours": 6,
+          "deliveryRewards": [
+            {
+              "type": "credits",
+              "amount": 100,
+              "iconReference": "/Game/UI/Contracts/Icons/T_Credits.T_Credits"
+            },
+            {
+              "type": "missionConfidence",
+              "amount": 7,
+              "iconReference": "/Game/UI/Contracts/Icons/T_MissionConfidence.T_MissionConfidence"
+            }
+          ],
+          "missedDeliveryPenalties": [
+            {
+              "type": "missionConfidence",
+              "amount": -5,
+              "iconReference": "/Game/UI/Contracts/Icons/T_MissionConfidence.T_MissionConfidence"
+            }
+          ],
+          "completionBonus": [
+            {
+              "type": "credits",
+              "amount": 50,
+              "iconReference": "/Game/UI/Contracts/Icons/T_Credits.T_Credits"
+            },
+            {
+              "type": "resource",
+              "amount": 2,
+              "iconReference": "/Game/UI/ControlChipResourceIcon.ControlChipResourceIcon",
+              "id": "ControlChip"
+            },
+            {
+              "type": "missionProgress",
+              "amount": 2,
+              "iconReference": "/Game/UI/Contracts/Icons/T_MissionProgress.T_MissionProgress"
+            }
+          ]
+        },
+        {
+          "id": "high_stakes",
+          "displayName": "HIGH STAKES",
+          "accentColor": "FF4A2F",
+          "deliveryAmount": 14,
+          "deliveryCount": 5,
+          "deliveryIntervalHours": 4,
+          "deliveryRewards": [
+            {
+              "type": "credits",
+              "amount": 157,
+              "iconReference": "/Game/UI/Contracts/Icons/T_Credits.T_Credits"
+            },
+            {
+              "type": "missionConfidence",
+              "amount": 7,
+              "iconReference": "/Game/UI/Contracts/Icons/T_MissionConfidence.T_MissionConfidence"
+            }
+          ],
+          "missedDeliveryPenalties": [
+            {
+              "type": "missionConfidence",
+              "amount": -7,
+              "iconReference": "/Game/UI/Contracts/Icons/T_MissionConfidence.T_MissionConfidence"
+            }
+          ],
+          "completionBonus": [
+            {
+              "type": "credits",
+              "amount": 78,
+              "iconReference": "/Game/UI/Contracts/Icons/T_Credits.T_Credits"
+            },
+            {
+              "type": "resource",
+              "amount": 3,
+              "iconReference": "/Game/UI/ControlChipResourceIcon.ControlChipResourceIcon",
+              "id": "ControlChip"
+            },
+            {
+              "type": "missionProgress",
+              "amount": 3,
+              "iconReference": "/Game/UI/Contracts/Icons/T_MissionProgress.T_MissionProgress"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "supply_steel",
+      "traderId": "nomad_shipwrights",
+      "itemId": "Steel",
+      "title": "Structural Supply",
+      "iconReference": "/Game/UI/Icons/Resources/T_Steel.T_Steel",
+      "tiers": [
+        {
+          "id": "standard",
+          "displayName": "STANDARD",
+          "accentColor": "00BDEB",
+          "deliveryAmount": 5,
+          "deliveryCount": 3,
+          "deliveryIntervalHours": 8,
+          "deliveryRewards": [
+            {
+              "type": "credits",
+              "amount": 44,
+              "iconReference": "/Game/UI/Contracts/Icons/T_Credits.T_Credits"
+            },
+            {
+              "type": "missionConfidence",
+              "amount": 8,
+              "iconReference": "/Game/UI/Contracts/Icons/T_MissionConfidence.T_MissionConfidence"
+            }
+          ],
+          "missedDeliveryPenalties": [
+            {
+              "type": "missionConfidence",
+              "amount": -3,
+              "iconReference": "/Game/UI/Contracts/Icons/T_MissionConfidence.T_MissionConfidence"
+            }
+          ],
+          "completionBonus": [
+            {
+              "type": "credits",
+              "amount": 22,
+              "iconReference": "/Game/UI/Contracts/Icons/T_Credits.T_Credits"
+            },
+            {
+              "type": "resource",
+              "amount": 1,
+              "iconReference": "/Game/UI/ControlChipResourceIcon.ControlChipResourceIcon",
+              "id": "ControlChip"
+            },
+            {
+              "type": "missionProgress",
+              "amount": 1,
+              "iconReference": "/Game/UI/Contracts/Icons/T_MissionProgress.T_MissionProgress"
+            }
+          ]
+        },
+        {
+          "id": "priority",
+          "displayName": "PRIORITY",
+          "accentColor": "FFC128",
+          "deliveryAmount": 8,
+          "deliveryCount": 4,
+          "deliveryIntervalHours": 6,
+          "deliveryRewards": [
+            {
+              "type": "credits",
+              "amount": 80,
+              "iconReference": "/Game/UI/Contracts/Icons/T_Credits.T_Credits"
+            },
+            {
+              "type": "missionConfidence",
+              "amount": 7,
+              "iconReference": "/Game/UI/Contracts/Icons/T_MissionConfidence.T_MissionConfidence"
+            }
+          ],
+          "missedDeliveryPenalties": [
+            {
+              "type": "missionConfidence",
+              "amount": -5,
+              "iconReference": "/Game/UI/Contracts/Icons/T_MissionConfidence.T_MissionConfidence"
+            }
+          ],
+          "completionBonus": [
+            {
+              "type": "credits",
+              "amount": 40,
+              "iconReference": "/Game/UI/Contracts/Icons/T_Credits.T_Credits"
+            },
+            {
+              "type": "resource",
+              "amount": 2,
+              "iconReference": "/Game/UI/ControlChipResourceIcon.ControlChipResourceIcon",
+              "id": "ControlChip"
+            },
+            {
+              "type": "missionProgress",
+              "amount": 2,
+              "iconReference": "/Game/UI/Contracts/Icons/T_MissionProgress.T_MissionProgress"
+            }
+          ]
+        },
+        {
+          "id": "high_stakes",
+          "displayName": "HIGH STAKES",
+          "accentColor": "FF4A2F",
+          "deliveryAmount": 11,
+          "deliveryCount": 5,
+          "deliveryIntervalHours": 4,
+          "deliveryRewards": [
+            {
+              "type": "credits",
+              "amount": 123,
+              "iconReference": "/Game/UI/Contracts/Icons/T_Credits.T_Credits"
+            },
+            {
+              "type": "missionConfidence",
+              "amount": 7,
+              "iconReference": "/Game/UI/Contracts/Icons/T_MissionConfidence.T_MissionConfidence"
+            }
+          ],
+          "missedDeliveryPenalties": [
+            {
+              "type": "missionConfidence",
+              "amount": -7,
+              "iconReference": "/Game/UI/Contracts/Icons/T_MissionConfidence.T_MissionConfidence"
+            }
+          ],
+          "completionBonus": [
+            {
+              "type": "credits",
+              "amount": 62,
+              "iconReference": "/Game/UI/Contracts/Icons/T_Credits.T_Credits"
+            },
+            {
+              "type": "resource",
+              "amount": 3,
+              "iconReference": "/Game/UI/ControlChipResourceIcon.ControlChipResourceIcon",
+              "id": "ControlChip"
+            },
+            {
+              "type": "missionProgress",
+              "amount": 3,
+              "iconReference": "/Game/UI/Contracts/Icons/T_MissionProgress.T_MissionProgress"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "supply_copper",
+      "traderId": "nomad_shipwrights",
+      "itemId": "CopperMetal",
+      "title": "Power Cable Supply",
+      "iconReference": "/Game/UI/Icons/Resources/T_CopperMetal.T_CopperMetal",
+      "tiers": [
+        {
+          "id": "standard",
+          "displayName": "STANDARD",
+          "accentColor": "00BDEB",
+          "deliveryAmount": 6,
+          "deliveryCount": 3,
+          "deliveryIntervalHours": 8,
+          "deliveryRewards": [
+            {
+              "type": "credits",
+              "amount": 53,
+              "iconReference": "/Game/UI/Contracts/Icons/T_Credits.T_Credits"
+            },
+            {
+              "type": "missionConfidence",
+              "amount": 8,
+              "iconReference": "/Game/UI/Contracts/Icons/T_MissionConfidence.T_MissionConfidence"
+            }
+          ],
+          "missedDeliveryPenalties": [
+            {
+              "type": "missionConfidence",
+              "amount": -3,
+              "iconReference": "/Game/UI/Contracts/Icons/T_MissionConfidence.T_MissionConfidence"
+            }
+          ],
+          "completionBonus": [
+            {
+              "type": "credits",
+              "amount": 26,
+              "iconReference": "/Game/UI/Contracts/Icons/T_Credits.T_Credits"
+            },
+            {
+              "type": "resource",
+              "amount": 1,
+              "iconReference": "/Game/UI/ControlChipResourceIcon.ControlChipResourceIcon",
+              "id": "ControlChip"
+            },
+            {
+              "type": "missionProgress",
+              "amount": 1,
+              "iconReference": "/Game/UI/Contracts/Icons/T_MissionProgress.T_MissionProgress"
+            }
+          ]
+        },
+        {
+          "id": "priority",
+          "displayName": "PRIORITY",
+          "accentColor": "FFC128",
+          "deliveryAmount": 9,
+          "deliveryCount": 4,
+          "deliveryIntervalHours": 6,
+          "deliveryRewards": [
+            {
+              "type": "credits",
+              "amount": 90,
+              "iconReference": "/Game/UI/Contracts/Icons/T_Credits.T_Credits"
+            },
+            {
+              "type": "missionConfidence",
+              "amount": 7,
+              "iconReference": "/Game/UI/Contracts/Icons/T_MissionConfidence.T_MissionConfidence"
+            }
+          ],
+          "missedDeliveryPenalties": [
+            {
+              "type": "missionConfidence",
+              "amount": -5,
+              "iconReference": "/Game/UI/Contracts/Icons/T_MissionConfidence.T_MissionConfidence"
+            }
+          ],
+          "completionBonus": [
+            {
+              "type": "credits",
+              "amount": 45,
+              "iconReference": "/Game/UI/Contracts/Icons/T_Credits.T_Credits"
+            },
+            {
+              "type": "resource",
+              "amount": 2,
+              "iconReference": "/Game/UI/ControlChipResourceIcon.ControlChipResourceIcon",
+              "id": "ControlChip"
+            },
+            {
+              "type": "missionProgress",
+              "amount": 2,
+              "iconReference": "/Game/UI/Contracts/Icons/T_MissionProgress.T_MissionProgress"
+            }
+          ]
+        },
+        {
+          "id": "high_stakes",
+          "displayName": "HIGH STAKES",
+          "accentColor": "FF4A2F",
+          "deliveryAmount": 12,
+          "deliveryCount": 5,
+          "deliveryIntervalHours": 4,
+          "deliveryRewards": [
+            {
+              "type": "credits",
+              "amount": 134,
+              "iconReference": "/Game/UI/Contracts/Icons/T_Credits.T_Credits"
+            },
+            {
+              "type": "missionConfidence",
+              "amount": 7,
+              "iconReference": "/Game/UI/Contracts/Icons/T_MissionConfidence.T_MissionConfidence"
+            }
+          ],
+          "missedDeliveryPenalties": [
+            {
+              "type": "missionConfidence",
+              "amount": -7,
+              "iconReference": "/Game/UI/Contracts/Icons/T_MissionConfidence.T_MissionConfidence"
+            }
+          ],
+          "completionBonus": [
+            {
+              "type": "credits",
+              "amount": 67,
+              "iconReference": "/Game/UI/Contracts/Icons/T_Credits.T_Credits"
+            },
+            {
+              "type": "resource",
+              "amount": 3,
+              "iconReference": "/Game/UI/ControlChipResourceIcon.ControlChipResourceIcon",
+              "id": "ControlChip"
             },
             {
               "type": "missionProgress",

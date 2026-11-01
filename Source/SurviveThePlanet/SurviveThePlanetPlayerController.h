@@ -47,6 +47,7 @@ UCLASS()
 class ASurviveThePlanetPlayerController : public APlayerController
 {
 	GENERATED_BODY()
+	friend class UColonySaveSubsystem;
     void UpdateWorldHoverTooltip();
     UPROPERTY(Transient) TObjectPtr<UWorldHoverTooltipWidget> WorldHoverTooltip;
     TWeakObjectPtr<AActor> HoveredWorldActor;

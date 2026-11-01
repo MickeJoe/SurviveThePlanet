@@ -1,4 +1,6 @@
 #include "PlanetSelectorWidget.h"
+#include "Gameplay/UI/PauseMenuWidget.h"
+#include "InputCoreTypes.h"
 #include "Gameplay/Planet/PlanetDefinition.h"
 #include "Components/Button.h"
 #include "Components/TextBlock.h"
@@ -47,4 +49,32 @@ void UPlanetSelectorWidget::Land()
 	GetOwningPlayer()->SetInputMode(FInputModeGameAndUI());
 	UGameplayStatics::SetGlobalTimeDilation(this, 1.0f);
 	UGameplayStatics::OpenLevel(this, FName(*Package));
+}
+
+FReply UPlanetSelectorWidget::NativeOnPreviewKeyDown(const FGeometry& Geometry, const FKeyEvent& Event)
+{
+	if (Event.GetKey() == EKeys::Escape) { OpenPauseMenu(); return FReply::Handled(); }
+	return Super::NativeOnPreviewKeyDown(Geometry, Event);
+}
+void UPlanetSelectorWidget::OpenPauseMenu()
+{
+	if (PauseMenu && PauseMenu->IsInViewport()) return;
+	UClass* Class = LoadClass<UPauseMenuWidget>(nullptr, TEXT("/Game/UI/WBP_PauseMenu.WBP_PauseMenu_C"));
+	if (!Class || !GetOwningPlayer()) return;
+	PauseMenu = CreateWidget<UPauseMenuWidget>(GetOwningPlayer(), Class);
+	if (!PauseMenu) return;
+	PauseMenu->SetPlanetSelectionContext(this);
+	bWorldWasPaused = UGameplayStatics::IsGamePaused(this);
+	UGameplayStatics::SetGamePaused(this, true);
+	PauseMenu->AddToViewport(2000);
+	GetOwningPlayer()->SetInputMode(FInputModeUIOnly().SetWidgetToFocus(PauseMenu->TakeWidget()));
+	PauseMenu->SetKeyboardFocus();
+}
+void UPlanetSelectorWidget::ClosePauseMenu()
+{
+	if (PauseMenu) PauseMenu->RemoveFromParent();
+	PauseMenu = nullptr;
+	UGameplayStatics::SetGamePaused(this, bWorldWasPaused);
+	if (GetOwningPlayer()) GetOwningPlayer()->SetInputMode(FInputModeUIOnly().SetWidgetToFocus(TakeWidget()));
+	SetKeyboardFocus();
 }

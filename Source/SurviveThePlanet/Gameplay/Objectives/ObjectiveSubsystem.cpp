@@ -1,4 +1,5 @@
 #include "Gameplay/Objectives/ObjectiveSubsystem.h"
+#include "Gameplay/Buildings/CargoBay.h"
 
 #include "Dom/JsonObject.h"
 #include "Engine/GameInstance.h"
@@ -109,7 +110,9 @@ bool UObjectiveSubsystem::ReloadObjectives()
 	InitialObjectiveIds.Reset();
 	MissionChoiceGroups.Reset();
 	MissionChoiceStates.Reset();
-	MaxActiveObjectives = 8;
+	CargoPackages.Reset();
+	SelectedCargoPackage = NAME_None;
+	MaxActiveObjectives = 32;
 	NextActivationSequence = 0;
 
 	const FString Path = FPaths::Combine(FPaths::ProjectConfigDir(), TEXT("Objectives.json"));
@@ -357,6 +360,45 @@ bool UObjectiveSubsystem::LoadFromJson(const FString& FilePath)
 		}
 	}
 
+ const TArray<TSharedPtr<FJsonValue>>* Packages = nullptr;
+ if (Root->TryGetArrayField(TEXT("cargoPackages"), Packages))
+ {
+  TSet<FName> PackageIds;
+  for (const auto& Value : *Packages)
+  {
+   const auto Object = Value.IsValid() ? Value->AsObject() : nullptr;
+   FString Id;
+   const TArray<TSharedPtr<FJsonValue>>* Blueprints = nullptr;
+   const TArray<TSharedPtr<FJsonValue>>* Objectives = nullptr;
+   if (!Object.IsValid() || !Object->TryGetStringField(TEXT("id"), Id) || Id.IsEmpty()
+    || PackageIds.Contains(FName(*Id))
+    || !Object->TryGetArrayField(TEXT("blueprints"), Blueprints) || Blueprints->Num() != 3
+    || !Object->TryGetArrayField(TEXT("objectives"), Objectives) || Objectives->Num() != 3)
+   {
+    UE_LOG(LogObjectives, Error, TEXT("Cargo packages require a unique id, three blueprints and three requests."));
+    bValid = false;
+    continue;
+   }
+   FCargoPackage Package;
+   Package.Id = FName(*Id);
+   for (const auto& Entry : *Blueprints)
+   {
+    FString Name;
+    if (!Entry->TryGetString(Name) || Name.IsEmpty()) { bValid = false; continue; }
+    Package.BlueprintIds.AddUnique(FName(*Name));
+   }
+   for (const auto& Entry : *Objectives)
+   {
+    FString Name;
+    if (!Entry->TryGetString(Name) || !Definitions.Contains(FName(*Name))) { bValid = false; continue; }
+    Package.ObjectiveIds.AddUnique(FName(*Name));
+   }
+   if (Package.BlueprintIds.Num() != 3 || Package.ObjectiveIds.Num() != 3) bValid = false;
+   PackageIds.Add(Package.Id);
+   CargoPackages.Add(MoveTemp(Package));
+  }
+ }
+
 	const TArray<TSharedPtr<FJsonValue>>* ChoiceGroupValues = nullptr;
 	if (Root->TryGetArrayField(TEXT("missionChoiceGroups"), ChoiceGroupValues))
 	{
@@ -378,6 +420,15 @@ bool UObjectiveSubsystem::LoadFromJson(const FString& FilePath)
 			Group.Id = FName(*GroupIdText);
 			Group.Title = FText::FromString(GroupTitle);
 			Group.Description = FText::FromString(GroupDescription);
+			FString Prerequisite;
+			GroupObject->TryGetStringField(TEXT("activateAfterObjective"), Prerequisite);
+			Group.ActivateAfterObjective = FName(*Prerequisite);
+			GroupObject->TryGetBoolField(TEXT("randomAssignment"), Group.bRandomAssignment);
+			if (!Group.ActivateAfterObjective.IsNone() && !Definitions.Contains(Group.ActivateAfterObjective))
+			{
+				bValid = false;
+				continue;
+			}
 			if (MissionChoiceStates.Contains(Group.Id))
 			{
 				bValid = false;
@@ -464,6 +515,58 @@ void UObjectiveSubsystem::SubmitResourceDelivered(EResourceType ResourceType, FN
 	ApplyProgressEvent(ESTPObjectiveConditionType::DeliverResource, ESTPBuildingType::Other, ResourceType, Destination, Amount);
 }
 
+bool UObjectiveSubsystem::GetDeliveryCosts(FName ObjectiveId, TArray<FResourceCost>& OutCosts) const
+{
+	OutCosts.Reset();
+	const auto* State = RuntimeStates.Find(ObjectiveId);
+	const auto* Definition = Definitions.Find(ObjectiveId);
+	const auto* Mission = GetWorld() ? GetWorld()->GetSubsystem<UMissionConfidenceSubsystem>() : nullptr;
+	if (bDeliveringObjective || !Mission || Mission->GetMissionOutcome() != EMissionOutcome::InProgress
+		|| !State || !Definition || State->State != ESTPObjectiveState::Active) return false;
+	bool bCargoReady = false;
+	for (TActorIterator<ACargoBay> It(GetWorld()); It; ++It)
+		if (!It->IsPlacementPreview() && It->GetConstructionProgress() >= 1.0f) { bCargoReady = true; break; }
+	if (!bCargoReady) return false;
+	TMap<EResourceType, int32> Totals;
+	for (int32 Index = 0; Index < Definition->Conditions.Num(); ++Index)
+	{
+		const auto& Condition = Definition->Conditions[Index];
+		if (Condition.Type != ESTPObjectiveConditionType::DeliverResource || Condition.Destination != TEXT("HomeBase")
+			|| !State->ConditionProgress.IsValidIndex(Index)) return false;
+		const int32 Remaining = FMath::Max(0, Condition.RequiredAmount - State->ConditionProgress[Index]);
+		int32& Total = Totals.FindOrAdd(Condition.ResourceType);
+		if (Remaining > MAX_int32 - Total) return false;
+		Total += Remaining;
+	}
+	for (const auto& Pair : Totals) if (Pair.Value > 0) OutCosts.Add({Pair.Key, Pair.Value});
+	return !OutCosts.IsEmpty();
+}
+
+bool UObjectiveSubsystem::CanDeliverObjective(FName ObjectiveId) const
+{
+	TArray<FResourceCost> Costs;
+	const auto* Resources = FindResourceManager();
+	return Resources && GetDeliveryCosts(ObjectiveId, Costs) && Resources->CanAffordCosts(Costs);
+}
+
+bool UObjectiveSubsystem::DeliverObjective(FName ObjectiveId)
+{
+	TArray<FResourceCost> Costs;
+	auto* Resources = FindResourceManager();
+	if (!Resources || !GetDeliveryCosts(ObjectiveId, Costs)) return false;
+	TGuardValue<bool> DeliveryGuard(bDeliveringObjective, true);
+	if (!Resources->TrySpendCosts(Costs)) return false;
+	auto& State = RuntimeStates.FindChecked(ObjectiveId);
+	const auto& Definition = Definitions.FindChecked(ObjectiveId);
+	for (int32 Index = 0; Index < Definition.Conditions.Num(); ++Index)
+	{
+		State.ConditionProgress[Index] = Definition.Conditions[Index].RequiredAmount;
+		OnObjectiveProgressChanged.Broadcast(ObjectiveId, Index, State.ConditionProgress[Index], State.ConditionProgress[Index]);
+	}
+	CompleteObjective(ObjectiveId);
+	return true;
+}
+
 void UObjectiveSubsystem::ApplyProgressEvent(ESTPObjectiveConditionType EventType, ESTPBuildingType BuildingType,
 	EResourceType ResourceType, FName Destination, int32 Amount)
 {
@@ -530,7 +633,40 @@ void UObjectiveSubsystem::CompleteObjective(FName ObjectiveId)
 	State->State = ESTPObjectiveState::Completed;
 	State->RemainingTimeSeconds = -1.0f;
 	OnObjectiveStateChanged.Broadcast(ObjectiveId, State->State);
-	GrantRewards(*Definition, *State);
+ // Keep the choice for the entire run and grant the complete package atomically
+ // through the same reward path as ordinary objectives.
+ FSTPObjectiveDefinition Completion = *Definition;
+ if (ObjectiveId == TEXT("mission_build_cargo_bay") && SelectedCargoPackage.IsNone() && !CargoPackages.IsEmpty())
+ {
+  const FCargoPackage& Package = CargoPackages[FMath::RandRange(0, CargoPackages.Num() - 1)];
+  SelectedCargoPackage = Package.Id;
+  for (FName Id : Package.BlueprintIds)
+  {
+   FSTPObjectiveRewardDefinition Reward;
+   Reward.Type = ESTPObjectiveRewardType::GiveBuildingBlueprint;
+   Reward.BlueprintId = Id;
+   Completion.Rewards.Add(Reward);
+  }
+  for (FName Id : Package.ObjectiveIds)
+  {
+   FSTPObjectiveRewardDefinition Reward;
+   Reward.Type = ESTPObjectiveRewardType::UnlockObjective;
+   Reward.ObjectiveId = Id;
+   Completion.Rewards.Add(Reward);
+  }
+  UE_LOG(LogObjectives, Log, TEXT("Mother Base assigned Cargo package %s."), *SelectedCargoPackage.ToString());
+ }
+ GrantRewards(Completion, *State);
+	// Assignment is permanent for this run; reopening the panel never rerolls it.
+	for (const FSTPMissionChoiceGroupDefinition& Group : MissionChoiceGroups)
+	{
+		if (!Group.bRandomAssignment || Group.ActivateAfterObjective != ObjectiveId) continue;
+		for (int32 SlotIndex = 0; SlotIndex < Group.Slots.Num(); ++SlotIndex)
+		{
+			const TArray<FName>& Candidates = Group.Slots[SlotIndex].ObjectiveIds;
+			ConfirmMissionChoiceSlot(Group.Id, SlotIndex, Candidates[FMath::RandRange(0, Candidates.Num() - 1)]);
+		}
+	}
 	ActivateAvailableObjectives();
 }
 
@@ -695,7 +831,14 @@ void UObjectiveSubsystem::ActivateAvailableObjectives()
 
 TArray<FSTPMissionChoiceGroupDefinition> UObjectiveSubsystem::GetMissionChoiceGroups() const
 {
-	return MissionChoiceGroups;
+	TArray<FSTPMissionChoiceGroupDefinition> Available;
+	for (const auto& Group : MissionChoiceGroups)
+	{
+		const auto* Prerequisite = RuntimeStates.Find(Group.ActivateAfterObjective);
+		if (Group.ActivateAfterObjective.IsNone() || (Prerequisite && Prerequisite->State == ESTPObjectiveState::Completed))
+			Available.Add(Group);
+	}
+	return Available;
 }
 
 bool UObjectiveSubsystem::GetMissionChoiceGroupState(FName ChoiceGroupId, FSTPMissionChoiceGroupState& OutState) const
@@ -713,6 +856,10 @@ bool UObjectiveSubsystem::ConfirmMissionChoices(FName ChoiceGroupId, const TArra
 	FSTPMissionChoiceGroupState* ChoiceState = MissionChoiceStates.Find(ChoiceGroupId);
 	const FSTPMissionChoiceGroupDefinition* Group = MissionChoiceGroups.FindByPredicate(
 		[ChoiceGroupId](const FSTPMissionChoiceGroupDefinition& Item) { return Item.Id == ChoiceGroupId; });
+	const auto* Prerequisite = Group ? RuntimeStates.Find(Group->ActivateAfterObjective) : nullptr;
+	if (Group && !Group->ActivateAfterObjective.IsNone()
+		&& (!Prerequisite || Prerequisite->State != ESTPObjectiveState::Completed)) return false;
+
 	if (!ChoiceState || !Group || ChoiceState->bLocked || SelectedObjectiveIds.Num() != Group->Slots.Num()
 		|| CountActiveObjectives() + SelectedObjectiveIds.Num() > MaxActiveObjectives)
 	{
@@ -745,6 +892,10 @@ bool UObjectiveSubsystem::ConfirmMissionChoiceSlot(FName ChoiceGroupId, int32 Sl
 	FSTPMissionChoiceGroupState* ChoiceState = MissionChoiceStates.Find(ChoiceGroupId);
 	const FSTPMissionChoiceGroupDefinition* Group = MissionChoiceGroups.FindByPredicate(
 		[ChoiceGroupId](const FSTPMissionChoiceGroupDefinition& Item) { return Item.Id == ChoiceGroupId; });
+	const auto* Prerequisite = Group ? RuntimeStates.Find(Group->ActivateAfterObjective) : nullptr;
+	if (Group && !Group->ActivateAfterObjective.IsNone()
+		&& (!Prerequisite || Prerequisite->State != ESTPObjectiveState::Completed)) return false;
+
 	if (!ChoiceState || !Group || !Group->Slots.IsValidIndex(SlotIndex)
 		|| !Group->Slots[SlotIndex].ObjectiveIds.Contains(ObjectiveId)
 		|| CountActiveObjectives() >= MaxActiveObjectives)

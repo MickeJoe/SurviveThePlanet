@@ -17,6 +17,7 @@ UCLASS()
 class SURVIVETHEPLANET_API UMissionConfidenceSubsystem : public UTickableWorldSubsystem
 {
 	GENERATED_BODY()
+	friend class UColonySaveSubsystem;
 
 public:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
@@ -63,13 +64,19 @@ public:
 	float GetMissionElapsedSeconds() const { return MissionElapsedSeconds; }
 
 private:
+	UPROPERTY(SaveGame)
 	EMissionOutcome Outcome = EMissionOutcome::InProgress;
+	UPROPERTY(SaveGame)
 	int32 MissionProgress = 0;
+	UPROPERTY(SaveGame)
 	float MissionElapsedSeconds = 0.0f;
 	void EvaluateMissionOutcome();
+	UPROPERTY(SaveGame)
 	float MissionConfidence = 100.0f;
+	UPROPERTY(SaveGame)
 	float DecayPerGameHour = 2.5f;
 	bool bSettingsResolved = false;
+	UPROPERTY(SaveGame)
 	bool bDecayPaused = false;
 
 	void ResolvePlanetSettings();

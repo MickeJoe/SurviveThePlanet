@@ -1,0 +1,129 @@
+﻿{
+	"devices": [
+		{
+			"deviceName": "MICKEJOE26",
+			"instance": "6B6C4E62465C6F5B91557B9ECAABE61E",
+			"instanceName": "MICKEJOE26-7696",
+			"platform": "WindowsEditor",
+			"oSVersion": "Windows 11 (25H2) [10.0.26200.9711] ",
+			"model": "Default",
+			"gPU": "Intel(R) UHD Graphics",
+			"cPUModel": "13th Gen Intel(R) Core(TM) i7-13700HX",
+			"rAMInGB": 32,
+			"renderMode": "SM6",
+			"rHI": "",
+			"appInstanceLog": ""
+		}
+	],
+	"reportCreatedOn": "2026.10.18-07.37.09",
+	"succeeded": 0,
+	"succeededWithWarnings": 1,
+	"failed": 0,
+	"notRun": 0,
+	"inProcess": 0,
+	"totalDuration": 0.02321070060133934,
+	"comparisonExported": false,
+	"comparisonExportDirectory": "",
+	"tests": [
+		{
+			"testDisplayName": "ProgressionRewards",
+			"fullTestPath": "SurviveThePlanet.Mission.ProgressionRewards",
+			"tags": [],
+			"state": "Success",
+			"deviceInstance": [
+				"6B6C4E62465C6F5B91557B9ECAABE61E"
+			],
+			"duration": 0.02321070060133934,
+			"dateTime": "2026.10.18-07.37.09",
+			"entries": [
+				{
+					"event":
+					{
+						"type": "Warning",
+						"message": "LogObjectives: Objective 'mission_build_communication' could not grant building blueprint 'CargoBay' (missing or already owned).",
+						"context": "log",
+						"artifact": "00000000000000000000000000000000"
+					},
+					"filename": "",
+					"lineNumber": -1,
+					"timestamp": "2026.10.18-07.37.09"
+				},
+				{
+					"event":
+					{
+						"type": "Warning",
+						"message": "LogObjectives: Objective 'mission_build_communication' could not grant building blueprint 'WaterCollector' (missing or already owned).",
+						"context": "log",
+						"artifact": "00000000000000000000000000000000"
+					},
+					"filename": "",
+					"lineNumber": -1,
+					"timestamp": "2026.10.18-07.37.09"
+				},
+				{
+					"event":
+					{
+						"type": "Warning",
+						"message": "LogObjectives: Objective 'mission_build_communication' could not grant building blueprint 'ConcretePlant' (missing or already owned).",
+						"context": "log",
+						"artifact": "00000000000000000000000000000000"
+					},
+					"filename": "",
+					"lineNumber": -1,
+					"timestamp": "2026.10.18-07.37.09"
+				},
+				{
+					"event":
+					{
+						"type": "Warning",
+						"message": "LogObjectives: Objective 'mission_build_communication' could not grant building blueprint 'EnergyStorage' (missing or already owned).",
+						"context": "log",
+						"artifact": "00000000000000000000000000000000"
+					},
+					"filename": "",
+					"lineNumber": -1,
+					"timestamp": "2026.10.18-07.37.09"
+				},
+				{
+					"event":
+					{
+						"type": "Warning",
+						"message": "LogObjectives: Objective 'mother_base_copper' could not grant building blueprint 'GroundwaterPump' (missing or already owned).",
+						"context": "log",
+						"artifact": "00000000000000000000000000000000"
+					},
+					"filename": "",
+					"lineNumber": -1,
+					"timestamp": "2026.10.18-07.37.09"
+				},
+				{
+					"event":
+					{
+						"type": "Warning",
+						"message": "LogObjectives: Objective 'mother_base_copper' could not grant building blueprint 'RemoteBase' (missing or already owned).",
+						"context": "log",
+						"artifact": "00000000000000000000000000000000"
+					},
+					"filename": "",
+					"lineNumber": -1,
+					"timestamp": "2026.10.18-07.37.09"
+				},
+				{
+					"event":
+					{
+						"type": "Warning",
+						"message": "LogSpawn: UWorld::DestroyActor: World has no context! World: World_0, Actor: /Engine/Transient.World_0:PersistentLevel.CargoBay_0",
+						"context": "log",
+						"artifact": "00000000000000000000000000000000"
+					},
+					"filename": "",
+					"lineNumber": -1,
+					"timestamp": "2026.10.18-07.37.09"
+				}
+			],
+			"warnings": 7,
+			"errors": 0,
+			"artifacts": []
+		}
+	]
+}

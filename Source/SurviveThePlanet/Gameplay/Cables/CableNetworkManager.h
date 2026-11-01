@@ -28,6 +28,7 @@ UCLASS(Blueprintable)
 class SURVIVETHEPLANET_API ACableNetworkManager : public AActor
 {
 	GENERATED_BODY()
+	friend class UColonySaveSubsystem;
 
 public:
 	ACableNetworkManager();
@@ -125,6 +126,7 @@ private:
 	TObjectPtr<APlanetSurfaceManager> SurfaceManager;
 
 	float GridRefreshAccumulator = 0.0f;
+	UPROPERTY(SaveGame)
 	float PendingEnergyDelta = 0.0f;
 
 	UPROPERTY(VisibleInstanceOnly, Category = "Cable|Power")

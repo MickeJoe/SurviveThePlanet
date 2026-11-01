@@ -1,6 +1,7 @@
 #include "PlanetWeatherManager.h"
 
 #include "PlanetDefinition.h"
+#include "Misc/App.h"
 
 FPlanetWeatherState FPlanetWeatherState::Lerp(const FPlanetWeatherState& From, const FPlanetWeatherState& To, float Alpha)
 {
@@ -35,7 +36,9 @@ void APlanetWeatherManager::BeginPlay()
 void APlanetWeatherManager::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
-	UpdateRain(DeltaSeconds);
+	// Weather and precipitation use real time, independent of the simulation speed.
+	const float RealDeltaSeconds = static_cast<float>(FApp::GetDeltaTime());
+	UpdateRain(RealDeltaSeconds);
 
 	if (!bSimulateWeather || !PlanetDefinition)
 	{
@@ -43,7 +46,7 @@ void APlanetWeatherManager::Tick(float DeltaSeconds)
 	}
 
 	const FPlanetWeatherSettings& Settings = PlanetDefinition->Weather;
-	PhaseElapsed += DeltaSeconds;
+	PhaseElapsed += RealDeltaSeconds;
 
 	if (bTransitioning)
 	{

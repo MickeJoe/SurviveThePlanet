@@ -139,6 +139,12 @@ void UEnergyConnectionComponent::UpdateRoute(bool bPreview,bool bValidPlacement)
  ApplyAppearance(bPreview,bValidPlacement);
  if (!bPreview) System->RefreshPoweredCoverageVisualization();
 }
+void UEnergyConnectionComponent::RestorePlacedRoute()
+{
+ LastPosition = FIntVector(MAX_int32);
+ LastSourceRevision = MAX_uint32;
+ UpdateRoute(false, true);
+}
 void UEnergyConnectionComponent::CopyPlacedRoute(const UEnergyConnectionComponent* Preview)
 {
  if (!Preview) return;

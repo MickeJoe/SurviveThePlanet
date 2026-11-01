@@ -152,96 +152,131 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FProgressionRewardsTest, "SurviveThePlanet.Miss
 
 bool FProgressionRewardsTest::RunTest(const FString& Parameters)
 {
-	UWorld* World = UWorld::CreateWorld(EWorldType::Game, false, MakeUniqueObjectName(nullptr, UWorld::StaticClass()), GetTransientPackage());
-	if (!TestNotNull(TEXT("Test world"), World)) return false;
-	auto* Mission = World->GetSubsystem<UMissionConfidenceSubsystem>();
-	auto* Objectives = World->GetSubsystem<UObjectiveSubsystem>();
-	auto* Contracts = World->GetSubsystem<UContractOfferSubsystem>();
-	auto* Resources = World->SpawnActor<AResourceManager>();
-	Resources->SetCredits(0);
-	Objectives->SubmitBuildingBuilt(ESTPBuildingType::CommunicationModule);
-	TestEqual(TEXT("Initial objective grants configured progression"), Mission->GetMissionProgress(), 1);
-	FSTPObjectiveRuntimeState ObjectiveState;
-	Objectives->GetObjectiveState(TEXT("mission_build_communication"), ObjectiveState);
-	TestTrue(TEXT("Objective reward guarded before notification"), ObjectiveState.bRewardsGranted);
-	Objectives->SubmitBuildingBuilt(ESTPBuildingType::CommunicationModule);
-	TestEqual(TEXT("Repeated build event does not grant twice"), Mission->GetMissionProgress(), 1);
-	const TArray<FName> Choices = { TEXT("mission_deliver_water"), TEXT("mission_build_storage"), TEXT("mission_expand_mining") };
-	TestTrue(TEXT("Select existing objective route"), Objectives->ConfirmMissionChoices(TEXT("mother_base_directives"), Choices));
-	Objectives->SubmitResourceDelivered(EResourceType::Water, TEXT("HomeBase"), 199);
-	TestEqual(TEXT("Partial objective gives no progression"), Mission->GetMissionProgress(), 1);
-	Objectives->SubmitResourceDelivered(EResourceType::Water, TEXT("HomeBase"), 1);
-	TestEqual(TEXT("Water objective grants +1"), Mission->GetMissionProgress(), 2);
-	Objectives->SubmitBuildingBuilt(ESTPBuildingType::EnergyStorage, 2);
-	TestEqual(TEXT("Storage objective grants +1"), Mission->GetMissionProgress(), 3);
-	Objectives->SubmitBuildingBuilt(ESTPBuildingType::MiningMachine, 2);
-	TestEqual(TEXT("Mining objective grants a different amount (+2)"), Mission->GetMissionProgress(), 5);
-	TestFalse(TEXT("Contracts require a Cargo Bay after uplink"), Contracts->AreContractsAvailable());
-	auto* CargoBay = World->SpawnActor<ACargoBay>();
-	CargoBay->SetConstructionProgress(0.5f);
-	TestFalse(TEXT("Unfinished Cargo Bay keeps contracts locked"), Contracts->AreContractsAvailable());
-	CargoBay->SetConstructionProgress(1.0f);
-	TestTrue(TEXT("Finished Cargo Bay unlocks contracts"), Contracts->AreContractsAvailable());
-	const auto Offers = Contracts->GetContractOffers();
-	if (!TestEqual(TEXT("Existing agreement loads"), Offers.Num(), 1)) { World->DestroyWorld(false); return false; }
-	const auto& Offer = Offers[0];
-	for (const auto& Tier : Offer.Tiers)
-	{
-		TestTrue(TEXT("Select agreement tier"), Contracts->ToggleContractSelection(Offer.Id, Tier.Id));
-		const int32 Before = Mission->GetMissionProgress();
-		TestTrue(TEXT("Accept agreement"), Contracts->ConfirmSelectedContract());
-		TestEqual(TEXT("Accepting gives no reward"), Mission->GetMissionProgress(), Before);
-		Resources->SetResourceAmount(EResourceType::ControlChip, 0);
-		const int32 CreditsBefore = Resources->GetCredits();
-		TestFalse(TEXT("Insufficient resources cannot deliver"), Contracts->DeliverSelectedContract());
-		TestEqual(TEXT("Invalid delivery does not grant credits"), Resources->GetCredits(), CreditsBefore);
-		Resources->SetResourceAmount(EResourceType::ControlChip, Tier.DeliveryAmount * Tier.DeliveryCount);
-		for (int32 Delivery = 0; Delivery < Tier.DeliveryCount; ++Delivery)
-		{
-			TestTrue(TEXT("Real resource shipment delivered"), Contracts->DeliverSelectedContract());
-			if (Delivery + 1 < Tier.DeliveryCount) TestEqual(TEXT("Partial agreement gives no completion progression"), Mission->GetMissionProgress(), Before);
-		}
-		TestTrue(TEXT("All shipments complete agreement"), Contracts->GetSelectedContractState().State == ESTPContractState::Completed);
-		TestEqual(TEXT("All shipment resources consumed"), Resources->GetResourceAmount(EResourceType::ControlChip), 0);
-		TestEqual(TEXT("Configured tier reward applied"), Mission->GetMissionProgress(), FMath::Min(10, Before + Tier.GetMissionProgressReward()));
-		const int32 CreditsAfter = Resources->GetCredits();
-		int32 ExpectedCredits = CreditsBefore;
-		for (const auto& Effect : Tier.DeliveryRewards) if (Effect.Type == ESTPContractEffectType::Credits) ExpectedCredits += Effect.Amount * Tier.DeliveryCount;
-		for (const auto& Effect : Tier.CompletionBonus) if (Effect.Type == ESTPContractEffectType::Credits) ExpectedCredits += Effect.Amount;
-		TestEqual(TEXT("All monetary rewards settle before progression can end mission"), CreditsAfter, ExpectedCredits);
-		TestFalse(TEXT("Completed agreement cannot deliver again"), Contracts->DeliverSelectedContract());
-		TestEqual(TEXT("Duplicate completion does not grant credits"), Resources->GetCredits(), CreditsAfter);
-	}
-	TestTrue(TEXT("Combined objective and agreement rewards can win"), Mission->GetMissionOutcome() == EMissionOutcome::Complete);
-	TestEqual(TEXT("Progression clamps to full bar"), Mission->GetMissionProgress(), 10);
-	World->DestroyWorld(false);
+    UWorld* World = UWorld::CreateWorld(EWorldType::Game, false, MakeUniqueObjectName(nullptr, UWorld::StaticClass()), GetTransientPackage());
+    if (!TestNotNull(TEXT("Test world"), World)) return false;
+    auto* Mission = World->GetSubsystem<UMissionConfidenceSubsystem>();
+    auto* Objectives = World->GetSubsystem<UObjectiveSubsystem>();
+    auto* Contracts = World->GetSubsystem<UContractOfferSubsystem>();
+    auto* Resources = World->SpawnActor<AResourceManager>();
+    Resources->SetCredits(0);
+    TestTrue(TEXT("Supply requests hidden before Cargo Bay"), Objectives->GetMissionChoiceGroups().IsEmpty());
+    TestFalse(TEXT("Cannot bypass progression gate"), Objectives->ConfirmMissionChoiceSlot(TEXT("mother_base_directives"), 0, TEXT("mother_base_iron")));
+    Objectives->SubmitBuildingBuilt(ESTPBuildingType::CommunicationModule);
+    TestEqual(TEXT("Uplink grants progression"), Mission->GetMissionProgress(), 1);
+    Objectives->SubmitBuildingBuilt(ESTPBuildingType::CommunicationModule);
+    TestEqual(TEXT("Uplink rewards cannot repeat"), Mission->GetMissionProgress(), 1);
+    Objectives->SubmitBuildingBuilt(ESTPBuildingType::CargoBay);
+    TestEqual(TEXT("Cargo grants progression"), Mission->GetMissionProgress(), 2);
+    const FName Package = Objectives->GetSelectedCargoPackage();
+    TestTrue(TEXT("Cargo assigns A or B"), Package == TEXT("A") || Package == TEXT("B"));
+    const auto Active = Objectives->GetActiveObjectives();
+    if (!TestEqual(TEXT("Three parallel requests"), Active.Num(), 3)) { World->DestroyWorld(false); return false; }
+    FSTPObjectiveDefinition Request;
+    Objectives->GetObjectiveDefinition(Active[0].ObjectiveId, Request);
+    const auto Condition = Request.Conditions[0];
+    TestTrue(TEXT("Mother Base demands inventory delivery"), Condition.Type == ESTPObjectiveConditionType::DeliverResource);
+    TestEqual(TEXT("Demand destination"), Condition.Destination, FName(TEXT("HomeBase")));
+    Objectives->SubmitResourceDelivered(Condition.ResourceType, Condition.Destination, Condition.RequiredAmount - 1);
+    TestEqual(TEXT("Partial delivery gives no progression"), Mission->GetMissionProgress(), 2);
+    const int32 ChipsBefore = Resources->GetResourceAmount(EResourceType::ControlChip);
+    TestFalse(TEXT("Delivery requires physical Cargo Bay"), Objectives->CanDeliverObjective(Request.Id));
+    auto* DeliveryBay = World->SpawnActor<ACargoBay>();
+    DeliveryBay->SetConstructionProgress(1);
+    Resources->SetResourceAmount(Condition.ResourceType, 0);
+    TestFalse(TEXT("Delivery rejects insufficient inventory"), Objectives->DeliverObjective(Request.Id));
+    Resources->SetResourceAmount(Condition.ResourceType, 1);
+    TestTrue(TEXT("Remaining one-unit shipment is affordable"), Objectives->CanDeliverObjective(Request.Id));
+    TestTrue(TEXT("Real Mother Base shipment succeeds"), Objectives->DeliverObjective(Request.Id));
+    TestEqual(TEXT("Mother Base shipment consumes inventory"), Resources->GetResourceAmount(Condition.ResourceType), 0);
+    TestFalse(TEXT("Completed objective cannot spend or reward again"), Objectives->DeliverObjective(Request.Id));
+    DeliveryBay->Destroy();
+    TestEqual(TEXT("Completed request grants +2"), Mission->GetMissionProgress(), 4);
+    TestTrue(TEXT("Imported boards replenished"), Resources->GetResourceAmount(EResourceType::ControlChip) > ChipsBefore);
+    Objectives->SubmitResourceDelivered(Condition.ResourceType, Condition.Destination, Condition.RequiredAmount);
+    TestEqual(TEXT("Duplicate delivery event cannot reward twice"), Mission->GetMissionProgress(), 4);
+    Objectives->SubmitBuildingBuilt(ESTPBuildingType::CargoBay);
+    TestEqual(TEXT("Repeated cargo never rerolls package"), Objectives->GetSelectedCargoPackage(), Package);
+    Objectives->Tick(7200);
+    TestEqual(TEXT("Unfinished requests retained without expiry or replacement"), Objectives->GetActiveObjectives().Num(), 2);
+    TestFalse(TEXT("Contracts gated without actual completed Cargo Bay"), Contracts->AreContractsAvailable());
+    auto* CargoBay = World->SpawnActor<ACargoBay>();
+    CargoBay->SetConstructionProgress(0.5f);
+    TestFalse(TEXT("Unfinished Cargo Bay keeps contracts locked"), Contracts->AreContractsAvailable());
+    CargoBay->SetConstructionProgress(1.0f);
+    const auto Offers = Contracts->GetContractOffers();
+    TestEqual(TEXT("Five contract families"), Offers.Num(), 5);
+    int32 TierCount = 0;
+    for (const auto& Offer : Offers)
+    {
+        TestEqual(TEXT("Three tiers per family"), Offer.Tiers.Num(), 3);
+        TierCount += Offer.Tiers.Num();
+        TestTrue(TEXT("Boards are rewards, never early contract inputs"), Offer.ItemId != TEXT("ControlChip"));
+    }
+    TestEqual(TEXT("Fifteen contract commitments"), TierCount, 15);
+    const auto Available = Contracts->GetContractOffersForTrader(TEXT("helix_industrial"));
+    if (!TestEqual(TEXT("One stable offer per faction"), Available.Num(), 1)) { World->DestroyWorld(false); return false; }
+    const auto Offer = Available[0];
+    TestTrue(TEXT("Reload keeps current run's offer"), Contracts->ReloadContractOffers());
+    TestEqual(TEXT("Panel reopen/reload cannot reroll"), Contracts->GetContractOffersForTrader(Offer.TraderId)[0].Id, Offer.Id);
+    for (const auto& Candidate : Offers)
+        if (Candidate.TraderId == Offer.TraderId && Candidate.Id != Offer.Id)
+            TestFalse(TEXT("Hidden variant cannot be accepted directly"), Contracts->ToggleContractSelection(Candidate.Id, TEXT("standard")));
+    const auto Resource = static_cast<EResourceType>(StaticEnum<EResourceType>()->GetValueByNameString(Offer.ItemId.ToString()));
+    for (const auto& Tier : Offer.Tiers)
+    {
+        TestTrue(TEXT("Select visible tier"), Contracts->ToggleContractSelection(Offer.Id, Tier.Id));
+        const int32 Before = Mission->GetMissionProgress();
+        TestTrue(TEXT("Accept agreement"), Contracts->ConfirmSelectedContract());
+        TestEqual(TEXT("Acceptance grants no rewards"), Mission->GetMissionProgress(), Before);
+        Resources->SetResourceAmount(Resource, 0);
+        TestFalse(TEXT("Cannot deliver nonexistent inventory"), Contracts->DeliverSelectedContract());
+        Resources->SetResourceAmount(Resource, Tier.DeliveryAmount * Tier.DeliveryCount);
+        const int32 CreditsBefore = Resources->GetCredits();
+        for (int32 I = 0; I < Tier.DeliveryCount; ++I)
+        {
+            TestTrue(TEXT("Real inventory consumed"), Contracts->DeliverSelectedContract());
+            if (I + 1 < Tier.DeliveryCount) TestEqual(TEXT("No partial progression reward"), Mission->GetMissionProgress(), Before);
+        }
+        TestTrue(TEXT("Agreement completes"), Contracts->GetSelectedContractState().State == ESTPContractState::Completed);
+        TestEqual(TEXT("All shipment goods consumed"), Resources->GetResourceAmount(Resource), 0);
+        TestEqual(TEXT("Configured completion progression"), Mission->GetMissionProgress(), FMath::Min(10, Before + Tier.GetMissionProgressReward()));
+        int32 ExpectedCredits = CreditsBefore;
+        for (const auto& E : Tier.DeliveryRewards) if (E.Type == ESTPContractEffectType::Credits) ExpectedCredits += E.Amount * Tier.DeliveryCount;
+        for (const auto& E : Tier.CompletionBonus) if (E.Type == ESTPContractEffectType::Credits) ExpectedCredits += E.Amount;
+        TestEqual(TEXT("Credits settle before victory"), Resources->GetCredits(), ExpectedCredits);
+        TestFalse(TEXT("Cannot duplicate completion rewards"), Contracts->DeliverSelectedContract());
+    }
+    TestTrue(TEXT("Progression remains winnable"), Mission->GetMissionOutcome() == EMissionOutcome::Complete);
+    World->DestroyWorld(false);
 
-	World = UWorld::CreateWorld(EWorldType::Game, false, MakeUniqueObjectName(nullptr, UWorld::StaticClass()), GetTransientPackage());
-	Mission = World->GetSubsystem<UMissionConfidenceSubsystem>();
-	Contracts = World->GetSubsystem<UContractOfferSubsystem>();
-	Resources = World->SpawnActor<AResourceManager>();
-	Resources->SetCredits(0);
-	Resources->SetResourceAmount(EResourceType::ControlChip, 0);
-	World->SpawnActor<ACargoBay>()->SetConstructionProgress(1.0f);
-	Contracts->ToggleContractSelection(Offer.Id, TEXT("standard"));
-	Contracts->ConfirmSelectedContract();
-	const float Interval = Contracts->GetSelectedContractState().SecondsUntilDelivery;
-	UGameplayStatics::SetGlobalTimeDilation(World, 0.0001f);
-	Contracts->Tick(Interval);
-	TestEqual(TEXT("Simulation pause freezes delivery timer"), Contracts->GetSelectedContractState().SecondsUntilDelivery, Interval);
-	UGameplayStatics::SetGlobalTimeDilation(World, 1.0f);
-	Contracts->Tick(Interval);
-	TestEqual(TEXT("Missed deadline recorded"), Contracts->GetSelectedContractState().DeliveriesMissed, 1);
-	TestEqual(TEXT("Missed deadline grants no progression"), Mission->GetMissionProgress(), 0);
-	TestEqual(TEXT("Missed deadline applies configured confidence penalty"), Mission->GetMissionConfidence(), 98.0f);
-	Resources->SetResourceAmount(EResourceType::ControlChip, 24);
-	for (int32 I = 0; I < 3; ++I) TestTrue(TEXT("Remaining shipment can still be delivered"), Contracts->DeliverSelectedContract());
-	TestTrue(TEXT("Agreement with a missed shipment fails"), Contracts->GetSelectedContractState().State == ESTPContractState::Failed);
-	TestEqual(TEXT("Failed agreement receives no completion progression"), Mission->GetMissionProgress(), 0);
-	TestEqual(TEXT("Failed agreement gets delivery credits only"), Resources->GetCredits(), 450);
-	Mission->SetMissionConfidence(0.0f);
-	TestFalse(TEXT("Cannot accept agreements after mission failure"), Contracts->ConfirmSelectedContract());
-	World->DestroyWorld(false);
-	return true;
+    // A separate run verifies deadlines and recovery without prior rewards.
+    World = UWorld::CreateWorld(EWorldType::Game, false, MakeUniqueObjectName(nullptr, UWorld::StaticClass()), GetTransientPackage());
+    Mission = World->GetSubsystem<UMissionConfidenceSubsystem>();
+    Contracts = World->GetSubsystem<UContractOfferSubsystem>();
+    Resources = World->SpawnActor<AResourceManager>();
+    Resources->SetCredits(0);
+    World->SpawnActor<ACargoBay>()->SetConstructionProgress(1);
+    const auto FailureOffer = Contracts->GetContractOffersForTrader(TEXT("helix_industrial"))[0];
+    const auto Tier = FailureOffer.Tiers[0];
+    const auto FailureResource = static_cast<EResourceType>(StaticEnum<EResourceType>()->GetValueByNameString(FailureOffer.ItemId.ToString()));
+    Resources->SetResourceAmount(FailureResource, 0);
+    TestTrue(TEXT("Select failure scenario"), Contracts->ToggleContractSelection(FailureOffer.Id, Tier.Id));
+    TestTrue(TEXT("Accept failure scenario"), Contracts->ConfirmSelectedContract());
+    const float Interval = Contracts->GetSelectedContractState().SecondsUntilDelivery;
+    UGameplayStatics::SetGlobalTimeDilation(World, 0.0001f);
+    Contracts->Tick(Interval);
+    TestEqual(TEXT("Pause freezes deadline"), Contracts->GetSelectedContractState().SecondsUntilDelivery, Interval);
+    UGameplayStatics::SetGlobalTimeDilation(World, 1);
+    Contracts->Tick(Interval);
+    TestEqual(TEXT("Miss recorded"), Contracts->GetSelectedContractState().DeliveriesMissed, 1);
+    TestEqual(TEXT("Configured standard miss penalty"), Mission->GetMissionConfidence(), 97.0f);
+    Resources->SetResourceAmount(FailureResource, Tier.DeliveryAmount * (Tier.DeliveryCount - 1));
+    for (int32 I = 1; I < Tier.DeliveryCount; ++I) TestTrue(TEXT("Can recover remaining deliveries"), Contracts->DeliverSelectedContract());
+    TestTrue(TEXT("Missed agreement receives no completion bonus"), Contracts->GetSelectedContractState().State == ESTPContractState::Failed);
+    TestEqual(TEXT("Failed agreement grants no progression"), Mission->GetMissionProgress(), 0);
+    Mission->SetMissionConfidence(0);
+    TestFalse(TEXT("Cannot accept after mission failure"), Contracts->ConfirmSelectedContract());
+    World->DestroyWorld(false);
+    return true;
 }
 #endif

@@ -106,7 +106,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Hex Sector|Debug") FLinearColor EstablishedColor = FLinearColor(0.15f, 1.0f, 0.25f, 1.0f);
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Hex Sector|Fog", meta=(ClampMin="0.0", ClampMax="1.0")) float UndiscoveredFogOpacity = 1.0f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Hex Sector|Fog", meta=(ClampMin="0.0", ClampMax="1.0")) float DiscoveredFogOpacity = 0.55f;
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Hex Sector") TArray<FHexSector> Sectors;
+	UPROPERTY(SaveGame, VisibleAnywhere, BlueprintReadOnly, Category="Hex Sector") TArray<FHexSector> Sectors;
 
 	UFUNCTION(BlueprintCallable, Category="Hex Sector") void RebuildGrid();
 	UFUNCTION(BlueprintPure, Category="Hex Sector") int32 GetSectorAtWorldLocation(FVector WorldLocation) const;
@@ -135,6 +135,11 @@ private:
 	FVector AxialToWorld(int32 Q, int32 R) const;
 	FColor GetDebugColor(ESectorState State) const;
 	void DrawGrid() const;
+	void UpdateVisibilityOverlay(float DeltaSeconds);
+	UPROPERTY(Transient) TArray<TObjectPtr<class UInstancedStaticMeshComponent>> SectorOverlays;
+	UPROPERTY(Transient) TObjectPtr<class UInstancedStaticMeshComponent> BuildHints;
+	uint32 OverlaySignature = 0;
+	float BuildHintElapsed = 0.0f;
 	void EnsureDefaultTemplates();
 	void AssignTemplates(int32 Seed);
 	FVector TransformTemplatePoint(const FHexSector& Sector, FVector2D Point) const;

@@ -1,0 +1,92 @@
+{
+  "result": {
+    "seed": 10000,
+    "planet": "Nexaris",
+    "style": "expansion",
+    "policy": "objective_first",
+    "objective": "mother_base_iron",
+    "contract": "supply_stone",
+    "tier": "priority",
+    "cargo_seconds": 1200,
+    "objective_seconds": 1680,
+    "objective_after_cargo": 480,
+    "success": false,
+    "objective_complete": true,
+    "missed": 0,
+    "shipments": 3,
+    "elapsed": 3585,
+    "confidence": 0,
+    "min_confidence": 0,
+    "credits": 1975,
+    "trade_spend": 0,
+    "blackout_seconds": 0
+  },
+  "events": [
+    {
+      "seconds": 20,
+      "event": "built IronMine",
+      "confidence": 99.17,
+      "energy": 1000.0
+    },
+    {
+      "seconds": 50,
+      "event": "built Solar",
+      "confidence": 97.92,
+      "energy": 995.0
+    },
+    {
+      "seconds": 180,
+      "event": "built Workshop",
+      "confidence": 92.5,
+      "energy": 1000.0
+    },
+    {
+      "seconds": 210,
+      "event": "built StoneMine",
+      "confidence": 91.25,
+      "energy": 1000.0
+    },
+    {
+      "seconds": 535,
+      "event": "uplink complete",
+      "confidence": 100,
+      "energy": 1000.0
+    },
+    {
+      "seconds": 535,
+      "event": "built Uplink",
+      "confidence": 100,
+      "energy": 1000.0
+    },
+    {
+      "seconds": 615,
+      "event": "built Wind",
+      "confidence": 96.67,
+      "energy": 1000.0
+    },
+    {
+      "seconds": 1200,
+      "event": "cargo complete; Mother Base request assigned",
+      "confidence": 72.29,
+      "energy": 1000.0
+    },
+    {
+      "seconds": 1200,
+      "event": "built Cargo",
+      "confidence": 72.29,
+      "energy": 1000.0
+    },
+    {
+      "seconds": 1680,
+      "event": "Mother Base delivery complete",
+      "confidence": 70.29,
+      "energy": 1000.0
+    },
+    {
+      "seconds": 1710,
+      "event": "contract accepted",
+      "confidence": 69.04,
+      "energy": 1000.0
+    }
+  ]
+}

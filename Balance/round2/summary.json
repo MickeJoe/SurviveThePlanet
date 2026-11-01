@@ -1,0 +1,200 @@
+{
+  "runs": 2025,
+  "wall_seconds": 6.45,
+  "production_scale": 1.0,
+  "config_sha256": {
+    "Config/Objectives.json": "a04c67dc91f394ba45d4a24b2b0348177f5319fee9cf531a3a5e5c9586da3ba7",
+    "Config/ContractOffers.json": "e591f5959cb0784149a76a6a0c7aee679a6dc25850a304fecf4d8738c9af092e",
+    "Config/Traders.json": "f88b63431d8bcdfa3eda43b34681ecee820473e53a9f762c6d8d6528c66e9bcf"
+  },
+  "summary": {
+    "style": {
+      "careful": {
+        "runs": 675,
+        "success_pct": 89.9,
+        "objective_complete_pct": 100.0,
+        "median_objective_minutes": 7.75,
+        "median_end_confidence": 49.1,
+        "missed_shipments": 74
+      },
+      "expansion": {
+        "runs": 675,
+        "success_pct": 82.2,
+        "objective_complete_pct": 100.0,
+        "median_objective_minutes": 8.58,
+        "median_end_confidence": 43.6,
+        "missed_shipments": 144
+      },
+      "inexperienced": {
+        "runs": 675,
+        "success_pct": 56.4,
+        "objective_complete_pct": 98.7,
+        "median_objective_minutes": 11.83,
+        "median_end_confidence": 18.1,
+        "missed_shipments": 297
+      }
+    },
+    "planet": {
+      "Aridus": {
+        "runs": 675,
+        "success_pct": 76.6,
+        "objective_complete_pct": 99.6,
+        "median_objective_minutes": 9.58,
+        "median_end_confidence": 37.5,
+        "missed_shipments": 164
+      },
+      "Borealis": {
+        "runs": 675,
+        "success_pct": 76.0,
+        "objective_complete_pct": 99.6,
+        "median_objective_minutes": 9.42,
+        "median_end_confidence": 38.3,
+        "missed_shipments": 175
+      },
+      "Nexaris": {
+        "runs": 675,
+        "success_pct": 76.0,
+        "objective_complete_pct": 99.6,
+        "median_objective_minutes": 9.5,
+        "median_end_confidence": 38.5,
+        "missed_shipments": 176
+      }
+    },
+    "objective": {
+      "mother_base_concrete": {
+        "runs": 405,
+        "success_pct": 76.5,
+        "objective_complete_pct": 100.0,
+        "median_objective_minutes": 8.75,
+        "median_end_confidence": 41.7,
+        "missed_shipments": 122
+      },
+      "mother_base_copper": {
+        "runs": 405,
+        "success_pct": 75.3,
+        "objective_complete_pct": 99.3,
+        "median_objective_minutes": 9.92,
+        "median_end_confidence": 37.9,
+        "missed_shipments": 105
+      },
+      "mother_base_iron": {
+        "runs": 405,
+        "success_pct": 77.5,
+        "objective_complete_pct": 100.0,
+        "median_objective_minutes": 7.83,
+        "median_end_confidence": 35.2,
+        "missed_shipments": 94
+      },
+      "mother_base_steel": {
+        "runs": 405,
+        "success_pct": 75.1,
+        "objective_complete_pct": 99.3,
+        "median_objective_minutes": 11.0,
+        "median_end_confidence": 42.6,
+        "missed_shipments": 96
+      },
+      "mother_base_stone": {
+        "runs": 405,
+        "success_pct": 76.5,
+        "objective_complete_pct": 99.3,
+        "median_objective_minutes": 8.25,
+        "median_end_confidence": 35.5,
+        "missed_shipments": 98
+      }
+    },
+    "tier": {
+      "high_stakes": {
+        "runs": 675,
+        "success_pct": 60.0,
+        "objective_complete_pct": 98.7,
+        "median_objective_minutes": 9.5,
+        "median_end_confidence": 47.4,
+        "missed_shipments": 360
+      },
+      "priority": {
+        "runs": 675,
+        "success_pct": 84.1,
+        "objective_complete_pct": 100.0,
+        "median_objective_minutes": 9.58,
+        "median_end_confidence": 36.5,
+        "missed_shipments": 107
+      },
+      "standard": {
+        "runs": 675,
+        "success_pct": 84.4,
+        "objective_complete_pct": 100.0,
+        "median_objective_minutes": 9.5,
+        "median_end_confidence": 34.5,
+        "missed_shipments": 48
+      }
+    },
+    "contract": {
+      "supply_concrete": {
+        "runs": 405,
+        "success_pct": 82.0,
+        "objective_complete_pct": 100.0,
+        "median_objective_minutes": 9.42,
+        "median_end_confidence": 31.5,
+        "missed_shipments": 77
+      },
+      "supply_copper": {
+        "runs": 405,
+        "success_pct": 72.1,
+        "objective_complete_pct": 99.3,
+        "median_objective_minutes": 9.42,
+        "median_end_confidence": 29.3,
+        "missed_shipments": 91
+      },
+      "supply_iron": {
+        "runs": 405,
+        "success_pct": 83.0,
+        "objective_complete_pct": 100.0,
+        "median_objective_minutes": 10.0,
+        "median_end_confidence": 49.6,
+        "missed_shipments": 88
+      },
+      "supply_steel": {
+        "runs": 405,
+        "success_pct": 71.1,
+        "objective_complete_pct": 99.3,
+        "median_objective_minutes": 9.42,
+        "median_end_confidence": 29.8,
+        "missed_shipments": 130
+      },
+      "supply_stone": {
+        "runs": 405,
+        "success_pct": 72.8,
+        "objective_complete_pct": 99.3,
+        "median_objective_minutes": 9.92,
+        "median_end_confidence": 47.2,
+        "missed_shipments": 129
+      }
+    },
+    "policy": {
+      "contract_first": {
+        "runs": 675,
+        "success_pct": 87.4,
+        "objective_complete_pct": 100.0,
+        "median_objective_minutes": 9.5,
+        "median_end_confidence": 40.6,
+        "missed_shipments": 82
+      },
+      "no_trade": {
+        "runs": 675,
+        "success_pct": 65.0,
+        "objective_complete_pct": 98.7,
+        "median_objective_minutes": 9.5,
+        "median_end_confidence": 36.8,
+        "missed_shipments": 276
+      },
+      "objective_first": {
+        "runs": 675,
+        "success_pct": 76.1,
+        "objective_complete_pct": 100.0,
+        "median_objective_minutes": 9.83,
+        "median_end_confidence": 37.3,
+        "missed_shipments": 157
+      }
+    }
+  }
+}

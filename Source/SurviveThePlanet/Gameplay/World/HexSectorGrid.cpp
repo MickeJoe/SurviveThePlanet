@@ -2,6 +2,10 @@
 
 #include "Components/SceneComponent.h"
 #include "DrawDebugHelpers.h"
+#include "Components/InstancedStaticMeshComponent.h"
+#include "Materials/MaterialInstanceDynamic.h"
+#include "Gameplay/Planet/PlanetSurfaceManager.h"
+#include "SurviveThePlanetPlayerController.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
 #include "Gameplay/Base/BaseBuilding.h"
@@ -60,7 +64,8 @@ void AHexSectorGrid::BeginPlay()
 void AHexSectorGrid::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
-	if (bShowWorldGrid) DrawGrid();
+	UpdateVisibilityOverlay(DeltaSeconds);
+	if (bShowTemplateDebug) DrawGrid();
 }
 
 void AHexSectorGrid::RebuildGrid()
@@ -420,4 +425,97 @@ bool AHexSectorGrid::CanPlaceBuilding(const ABaseBuilding* Building, const FVect
 		}
 	}
 	return true;
+}
+
+
+void AHexSectorGrid::UpdateVisibilityOverlay(float DeltaSeconds)
+{
+	if (!GetWorld()->IsGameWorld()) return;
+	if (SectorOverlays.IsEmpty())
+	{
+		auto CreateOverlay = [&](FLinearColor Color)
+		{
+			auto* Mesh = NewObject<UInstancedStaticMeshComponent>(this);
+			Mesh->SetStaticMesh(LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Cube.Cube")));
+			Mesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+			Mesh->SetCastShadow(false);
+			Mesh->SetCanEverAffectNavigation(false);
+			if (auto* Parent = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/UI/Materials/M_BuildPlacement.M_BuildPlacement")))
+			{
+				auto* Material = UMaterialInstanceDynamic::Create(Parent, this);
+				Material->SetVectorParameterValue(TEXT("PlacementColor"), Color);
+				Material->SetScalarParameterValue(TEXT("PlacementOpacity"), 0.75f);
+				Mesh->SetMaterial(0, Material);
+			}
+			Mesh->RegisterComponent();
+			return Mesh;
+		};
+		SectorOverlays.Add(CreateOverlay(FLinearColor(0.08f, 0.22f, 0.38f)));
+		SectorOverlays.Add(CreateOverlay(FLinearColor(0.1f, 0.75f, 1.0f)));
+		SectorOverlays.Add(CreateOverlay(FLinearColor(0.2f, 0.9f, 0.45f)));
+		BuildHints = CreateOverlay(FLinearColor(0.12f, 0.6f, 0.3f));
+	}
+	uint32 Signature = HashCombine(GetTypeHash(bShowWorldGrid), GetTypeHash(ExplorationSectorRadius));
+	for (const FHexSector& Sector : Sectors)
+	{
+		Signature = HashCombine(Signature, GetTypeHash(Sector.WorldCenter));
+		Signature = HashCombine(Signature, GetTypeHash(static_cast<uint8>(Sector.State)));
+	}
+	if (Signature != OverlaySignature)
+	{
+		OverlaySignature = Signature;
+		for (const auto& Mesh : SectorOverlays) Mesh->ClearInstances();
+		if (bShowWorldGrid) for (const FHexSector& Sector : Sectors)
+		{
+			const int32 StateIndex = Sector.State == ESectorState::Established ? 2 : Sector.State == ESectorState::Discovered ? 1 : 0;
+			auto AddLine = [&](FVector A, FVector B, float Width)
+			{
+				A.Z += 8.0f; B.Z += 8.0f;
+				SectorOverlays[StateIndex]->AddInstance(FTransform((B-A).Rotation(), (A+B)*0.5f, FVector(FVector::Distance(A,B)/100.0f, Width/100.0f, 0.015f)), true);
+			};
+			FVector Corners[6];
+			for (int32 Corner = 0; Corner < 6; ++Corner)
+			{
+				const float Angle = FMath::DegreesToRadians(30.0f + Corner*60.0f);
+				Corners[Corner] = Sector.WorldCenter + GetActorTransform().TransformVectorNoScale(FVector(FMath::Cos(Angle)*ExplorationSectorRadius, FMath::Sin(Angle)*ExplorationSectorRadius, 0));
+			}
+			for (int32 Edge = 0; Edge < 6; ++Edge)
+			{
+				const FVector A = Corners[Edge], B = Corners[(Edge+1)%6];
+				const int32 Segments = StateIndex == 2 ? 1 : StateIndex == 1 ? 16 : 32;
+				for (int32 Segment = 0; Segment < Segments; ++Segment)
+				{
+					const float Start = static_cast<float>(Segment)/Segments;
+					const float End = (Segment + (StateIndex == 2 ? 1.0f : StateIndex == 1 ? 0.6f : 0.2f))/Segments;
+					AddLine(FMath::Lerp(A,B,Start), FMath::Lerp(A,B,End), StateIndex == 0 ? 5.0f : 9.0f);
+				}
+			}
+			if (StateIndex == 0) for (int32 Stripe = 1; Stripe < 8; ++Stripe)
+			{
+				const float Alpha = Stripe/8.0f;
+				AddLine(FMath::Lerp(Corners[0],Corners[2],Alpha), FMath::Lerp(Corners[5],Corners[3],Alpha), 2.0f);
+			}
+		}
+	}
+	BuildHintElapsed += DeltaSeconds;
+	const auto* Controller = Cast<ASurviveThePlanetPlayerController>(GetWorld()->GetFirstPlayerController());
+	const ABaseBuilding* Preview = Controller ? Controller->GetActivePlacementPreview() : nullptr;
+	if (!Preview || Preview->IsHidden()) { BuildHints->ClearInstances(); return; }
+	if (BuildHintElapsed < 0.2f) return;
+	BuildHintElapsed = 0.0f;
+	BuildHints->ClearInstances();
+	for (TActorIterator<APlanetSurfaceManager> It(GetWorld()); It; ++It)
+	{
+		const float Spacing = It->GetTileSpacing();
+		const FIntPoint Footprint = Preview->GetGridFootprint();
+		for (int32 Y = -2; Y <= 2; ++Y) for (int32 X = -2; X <= 2; ++X)
+		{
+			const FVector Candidate = Preview->GetActorLocation() + It->GetActorTransform().TransformVector(FVector(X*Spacing*2, Y*Spacing*2, 0));
+			const auto Placement = It->GetBuildingPlacementForWorldLocation(Candidate, Footprint);
+			if (!Placement.bValid || !It->CanBuildInSector(Preview, Placement.WorldLocation)) continue;
+			// Spatial hints; the placement preview checks tool-specific requirements.
+			BuildHints->AddInstance(FTransform(FRotator::ZeroRotator, Placement.WorldLocation + FVector(0,0,14), FVector(0.35f,0.35f,0.015f)), true);
+		}
+		break;
+	}
 }

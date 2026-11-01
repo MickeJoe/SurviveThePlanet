@@ -173,6 +173,13 @@ struct FSTPMissionChoiceGroupDefinition
 
 	UPROPERTY(BlueprintReadOnly, Category = "Mission Choices")
 	TArray<FSTPMissionChoiceSlotDefinition> Slots;
+
+	/** Optional progression gate; automatic groups assign one candidate per slot. */
+	UPROPERTY(BlueprintReadOnly, Category = "Mission Choices")
+	FName ActivateAfterObjective;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Mission Choices")
+	bool bRandomAssignment = false;
 };
 
 USTRUCT(BlueprintType)
@@ -198,6 +205,7 @@ UCLASS()
 class SURVIVETHEPLANET_API UObjectiveSubsystem : public UTickableWorldSubsystem
 {
 	GENERATED_BODY()
+	friend class UColonySaveSubsystem;
 
 public:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
@@ -218,6 +226,14 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Objectives|Events")
 	void SubmitResourceDelivered(EResourceType ResourceType, FName Destination, int32 Amount);
+
+	/** Checks a completed Cargo Bay and the remaining inventory cost. */
+	UFUNCTION(BlueprintPure, Category = "Objectives")
+	bool CanDeliverObjective(FName ObjectiveId) const;
+
+	/** Pays the remaining Home Base shipment, then completes it through normal rewards. */
+	UFUNCTION(BlueprintCallable, Category = "Objectives")
+	bool DeliverObjective(FName ObjectiveId);
 
 	UFUNCTION(BlueprintPure, Category = "Objectives")
 	TArray<FSTPObjectiveRuntimeState> GetActiveObjectives() const;
@@ -242,6 +258,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Mission Choices")
 	bool ConfirmMissionChoiceSlot(FName ChoiceGroupId, int32 SlotIndex, FName ObjectiveId);
 
+	UFUNCTION(BlueprintPure, Category="Objectives")
+	FName GetSelectedCargoPackage() const { return SelectedCargoPackage; }
+
 	/** Development helper that completes an active objective through its normal reward path. */
 	bool DebugCompleteObjective(FName ObjectiveId);
 
@@ -258,12 +277,25 @@ public:
 	FSTPMissionChoiceConfirmedSignature OnMissionChoiceConfirmed;
 
 private:
-	TMap<FName, FSTPObjectiveDefinition> Definitions;
+ struct FCargoPackage
+ {
+  FName Id;
+  TArray<FName> BlueprintIds;
+  TArray<FName> ObjectiveIds;
+ };
+ TArray<FCargoPackage> CargoPackages;
+	UPROPERTY(SaveGame)
+ FName SelectedCargoPackage;
+
+ TMap<FName, FSTPObjectiveDefinition> Definitions;
+	UPROPERTY(SaveGame)
 	TMap<FName, FSTPObjectiveRuntimeState> RuntimeStates;
 	TArray<FName> InitialObjectiveIds;
 	TArray<FSTPMissionChoiceGroupDefinition> MissionChoiceGroups;
+	UPROPERTY(SaveGame)
 	TMap<FName, FSTPMissionChoiceGroupState> MissionChoiceStates;
 	int32 MaxActiveObjectives = 8;
+	UPROPERTY(SaveGame)
 	int32 NextActivationSequence = 0;
 
 	bool LoadFromJson(const FString& FilePath);
@@ -278,5 +310,7 @@ private:
 	bool IsMissionChoiceCandidate(FName ObjectiveId) const;
 	bool IsConfirmedMissionChoice(FName ObjectiveId) const;
 	AResourceManager* FindResourceManager() const;
+	bool bDeliveringObjective = false;
+	bool GetDeliveryCosts(FName ObjectiveId, TArray<FResourceCost>& OutCosts) const;
 	bool SpawnRewardDrone(const FSTPObjectiveRewardDefinition& Reward, FName SourceObjectiveId) const;
 };

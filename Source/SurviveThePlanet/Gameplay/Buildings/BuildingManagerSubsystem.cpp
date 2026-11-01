@@ -127,13 +127,13 @@ TArray<UBuildingDataAsset*> UBuildingManagerSubsystem::GetToolbarDefinitions() c
 	{
 		for (UBuildingDataAsset* Definition : Catalog->Buildings)
 		{
-			if (IsValid(Definition) && Definition->bShowInBuildToolbar) Result.Add(Definition);
+			if (IsValid(Definition) && Definition->bShowInBuildToolbar && IsStandalonePlacementEnabled(Definition->BuildTool)) Result.Add(Definition);
 		}
 	}
 	else
 	{
 		for (const TPair<ESTPBuildTool, TObjectPtr<UBuildingDataAsset>>& Pair : DefinitionsByTool)
-			if (IsValid(Pair.Value) && Pair.Value->bShowInBuildToolbar) Result.Add(Pair.Value);
+			if (IsValid(Pair.Value) && Pair.Value->bShowInBuildToolbar && IsStandalonePlacementEnabled(Pair.Key)) Result.Add(Pair.Value);
 	}
 	Result.Sort([](const UBuildingDataAsset& A, const UBuildingDataAsset& B) { return A.ToolbarSortOrder < B.ToolbarSortOrder; });
 	return Result;
@@ -146,4 +146,14 @@ TArray<UBuildingDataAsset*> UBuildingManagerSubsystem::GetAllDefinitions() const
 		if (IsValid(Pair.Value)) Result.Add(Pair.Value);
 	Result.Sort([](const UBuildingDataAsset& A, const UBuildingDataAsset& B) { return A.ToolbarSortOrder < B.ToolbarSortOrder; });
 	return Result;
+}
+
+bool UBuildingManagerSubsystem::IsRetiredStandaloneBuilding(const ABaseBuilding* Building)
+{
+	if (!Building) return false;
+	if (const auto* Mine = Cast<AMiningMachine>(Building))
+		if (Mine->GetResourceSource()) return false;
+	const UBuildingDataAsset* Definition = Building->GetBuildingData();
+	return (Definition && Definition->BuildTool == ESTPBuildTool::SilicaExtractor)
+		|| Building->GetClass()->GetFName() == TEXT("BP_SilicaExtractorBuilding_C");
 }

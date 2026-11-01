@@ -7,9 +7,14 @@
       "iconReference": "/Game/UI/Traders/T_HelixIndustrial.T_HelixIndustrial",
       "offerDurationHours": 8,
       "goods": [
-        { "resource": "Iron", "productionThreshold": 250 },
-        { "resource": "Copper", "productionThreshold": 150 },
-        { "resource": "Concrete", "productionThreshold": 100 }
+        {
+          "resource": "Iron",
+          "productionThreshold": 35
+        },
+        {
+          "resource": "Concrete",
+          "productionThreshold": 6
+        }
       ]
     },
     {
@@ -19,9 +24,10 @@
       "iconReference": "/Game/UI/Traders/T_XenoResearch.T_XenoResearch",
       "offerDurationHours": 12,
       "goods": [
-        { "resource": "Water", "productionThreshold": 300 },
-        { "resource": "ControlChip", "productionThreshold": 15 },
-        { "resource": "Concrete", "productionThreshold": 80 }
+        {
+          "resource": "Stone",
+          "productionThreshold": 40
+        }
       ]
     },
     {
@@ -31,9 +37,14 @@
       "iconReference": "/Game/UI/Traders/T_NomadShipwrights.T_NomadShipwrights",
       "offerDurationHours": 6,
       "goods": [
-        { "resource": "Iron", "productionThreshold": 100 },
-        { "resource": "ControlChip", "productionThreshold": 8 },
-        { "resource": "Concrete", "productionThreshold": 60 }
+        {
+          "resource": "Steel",
+          "productionThreshold": 5
+        },
+        {
+          "resource": "CopperMetal",
+          "productionThreshold": 6
+        }
       ]
     }
   ]

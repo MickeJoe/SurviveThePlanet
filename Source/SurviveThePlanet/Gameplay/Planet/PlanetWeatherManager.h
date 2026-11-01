@@ -75,22 +75,24 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Planet Weather")
 	TObjectPtr<UPlanetDefinition> PlanetDefinition;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Planet Weather")
+	UPROPERTY(SaveGame, EditAnywhere, BlueprintReadOnly, Category = "Planet Weather")
 	bool bSimulateWeather = true;
 
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Planet Weather")
+	UPROPERTY(SaveGame, VisibleInstanceOnly, BlueprintReadOnly, Category = "Planet Weather")
 	FPlanetWeatherState CurrentWeather; // Atmospheric state, independent of the day/night cycle.
 
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Planet Weather")
+	UPROPERTY(SaveGame, VisibleInstanceOnly, BlueprintReadOnly, Category = "Planet Weather")
 	FPlanetWeatherState TargetWeather;
 
 private:
 	UPROPERTY(Transient) TObjectPtr<class UInstancedStaticMeshComponent> RainStreaks;
 	UPROPERTY(Transient) TObjectPtr<class UDirectionalLightComponent> SunLight;
+	UPROPERTY(Transient) TObjectPtr<class UDirectionalLightComponent> MoonLight;
 	UPROPERTY(Transient) TObjectPtr<class USkyLightComponent> SkyLight;
 	UPROPERTY(Transient) TObjectPtr<class UExponentialHeightFogComponent> Fog;
 	UPROPERTY(Transient) TObjectPtr<class UWindDirectionalSourceComponent> WindSource;
 	TArray<FVector> RainPositions;
+	UPROPERTY(SaveGame)
 	double LastPresentationMinutes = 480.0;
 	float ClearSkySunIntensity = 10.0f;
 	float ClearSkyAmbientIntensity = 1.0f;
@@ -101,9 +103,13 @@ private:
 	void InitializePresentation();
 	void UpdateRain(float DeltaSeconds);
 	FRandomStream RainRandomStream;
+	UPROPERTY(SaveGame)
 	FRandomStream WeatherRandomStream;
+	UPROPERTY(SaveGame)
 	FPlanetWeatherState TransitionStartWeather;
+	UPROPERTY(SaveGame)
 	float PhaseElapsed = 0.0f;
+	UPROPERTY(SaveGame)
 	bool bTransitioning = false;
 
 	void BroadcastWeather();

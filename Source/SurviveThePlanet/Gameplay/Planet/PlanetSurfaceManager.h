@@ -65,6 +65,7 @@ UCLASS()
 class SURVIVETHEPLANET_API APlanetSurfaceManager : public AActor
 {
 	GENERATED_BODY()
+	friend class UColonySaveSubsystem;
 
 public:
 	APlanetSurfaceManager();

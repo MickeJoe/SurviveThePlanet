@@ -1,0 +1,256 @@
+﻿{
+	"devices": [
+		{
+			"deviceName": "MICKEJOE26",
+			"instance": "776FE93B4C23592AB50D8BB77603EB54",
+			"instanceName": "MICKEJOE26-50352",
+			"platform": "WindowsEditor",
+			"oSVersion": "Windows 11 (25H2) [10.0.26200.9711] ",
+			"model": "Default",
+			"gPU": "Intel(R) UHD Graphics",
+			"cPUModel": "13th Gen Intel(R) Core(TM) i7-13700HX",
+			"rAMInGB": 32,
+			"renderMode": "SM6",
+			"rHI": "",
+			"appInstanceLog": ""
+		}
+	],
+	"reportCreatedOn": "2026.10.18-16.27.23",
+	"succeeded": 1,
+	"succeededWithWarnings": 1,
+	"failed": 1,
+	"notRun": 0,
+	"inProcess": 0,
+	"totalDuration": 30.832082748413086,
+	"comparisonExported": false,
+	"comparisonExportDirectory": "",
+	"tests": [
+		{
+			"testDisplayName": "Outcome",
+			"fullTestPath": "SurviveThePlanet.Mission.Outcome",
+			"tags": [],
+			"state": "Success",
+			"deviceInstance": [
+				"776FE93B4C23592AB50D8BB77603EB54"
+			],
+			"duration": 0.072683297097682953,
+			"dateTime": "2026.10.18-16.26.52",
+			"entries": [],
+			"warnings": 0,
+			"errors": 0,
+			"artifacts": []
+		},
+		{
+			"testDisplayName": "ProgressionRewards",
+			"fullTestPath": "SurviveThePlanet.Mission.ProgressionRewards",
+			"tags": [],
+			"state": "Success",
+			"deviceInstance": [
+				"776FE93B4C23592AB50D8BB77603EB54"
+			],
+			"duration": 0.10678519308567047,
+			"dateTime": "2026.10.18-16.26.52",
+			"entries": [
+				{
+					"event":
+					{
+						"type": "Warning",
+						"message": "LogObjectives: Objective 'mission_build_communication' could not grant building blueprint 'CargoBay' (missing or already owned).",
+						"context": "log",
+						"artifact": "00000000000000000000000000000000"
+					},
+					"filename": "",
+					"lineNumber": -1,
+					"timestamp": "2026.10.18-16.26.52"
+				},
+				{
+					"event":
+					{
+						"type": "Warning",
+						"message": "LogObjectives: Objective 'mission_build_communication' could not grant building blueprint 'WaterCollector' (missing or already owned).",
+						"context": "log",
+						"artifact": "00000000000000000000000000000000"
+					},
+					"filename": "",
+					"lineNumber": -1,
+					"timestamp": "2026.10.18-16.26.52"
+				},
+				{
+					"event":
+					{
+						"type": "Warning",
+						"message": "LogObjectives: Objective 'mission_build_communication' could not grant building blueprint 'ConcretePlant' (missing or already owned).",
+						"context": "log",
+						"artifact": "00000000000000000000000000000000"
+					},
+					"filename": "",
+					"lineNumber": -1,
+					"timestamp": "2026.10.18-16.26.52"
+				},
+				{
+					"event":
+					{
+						"type": "Warning",
+						"message": "LogObjectives: Objective 'mission_build_communication' could not grant building blueprint 'EnergyStorage' (missing or already owned).",
+						"context": "log",
+						"artifact": "00000000000000000000000000000000"
+					},
+					"filename": "",
+					"lineNumber": -1,
+					"timestamp": "2026.10.18-16.26.52"
+				},
+				{
+					"event":
+					{
+						"type": "Warning",
+						"message": "LogObjectives: Objective 'mission_build_communication' could not grant building blueprint 'RemoteBase' (missing or already owned).",
+						"context": "log",
+						"artifact": "00000000000000000000000000000000"
+					},
+					"filename": "",
+					"lineNumber": -1,
+					"timestamp": "2026.10.18-16.26.52"
+				},
+				{
+					"event":
+					{
+						"type": "Warning",
+						"message": "LogObjectives: Objective 'mission_build_communication' could not grant building blueprint 'GroundwaterPump' (missing or already owned).",
+						"context": "log",
+						"artifact": "00000000000000000000000000000000"
+					},
+					"filename": "",
+					"lineNumber": -1,
+					"timestamp": "2026.10.18-16.26.52"
+				},
+				{
+					"event":
+					{
+						"type": "Warning",
+						"message": "LogObjectives: Objective 'mission_build_communication' could not grant building blueprint 'SilicaExtractor' (missing or already owned).",
+						"context": "log",
+						"artifact": "00000000000000000000000000000000"
+					},
+					"filename": "",
+					"lineNumber": -1,
+					"timestamp": "2026.10.18-16.26.52"
+				},
+				{
+					"event":
+					{
+						"type": "Warning",
+						"message": "LogObjectives: Objective 'mission_build_cargo_bay' could not grant building blueprint 'PolymerPlant' (missing or already owned).",
+						"context": "log",
+						"artifact": "00000000000000000000000000000000"
+					},
+					"filename": "",
+					"lineNumber": -1,
+					"timestamp": "2026.10.18-16.26.52"
+				},
+				{
+					"event":
+					{
+						"type": "Warning",
+						"message": "LogObjectives: Objective 'mission_build_cargo_bay' could not grant building blueprint 'FuelProcessor' (missing or already owned).",
+						"context": "log",
+						"artifact": "00000000000000000000000000000000"
+					},
+					"filename": "",
+					"lineNumber": -1,
+					"timestamp": "2026.10.18-16.26.52"
+				},
+				{
+					"event":
+					{
+						"type": "Warning",
+						"message": "LogObjectives: Objective 'mission_build_cargo_bay' could not grant building blueprint 'WaterPurifier' (missing or already owned).",
+						"context": "log",
+						"artifact": "00000000000000000000000000000000"
+					},
+					"filename": "",
+					"lineNumber": -1,
+					"timestamp": "2026.10.18-16.26.52"
+				},
+				{
+					"event":
+					{
+						"type": "Warning",
+						"message": "LogSpawn: UWorld::DestroyActor: World has no context! World: World_2, Actor: /Engine/Transient.World_2:PersistentLevel.CargoBay_0",
+						"context": "log",
+						"artifact": "00000000000000000000000000000000"
+					},
+					"filename": "",
+					"lineNumber": -1,
+					"timestamp": "2026.10.18-16.26.52"
+				}
+			],
+			"warnings": 11,
+			"errors": 0,
+			"artifacts": []
+		},
+		{
+			"testDisplayName": "RetryInputPIE",
+			"fullTestPath": "SurviveThePlanet.Mission.RetryInputPIE",
+			"tags": [],
+			"state": "Fail",
+			"deviceInstance": [
+				"776FE93B4C23592AB50D8BB77603EB54"
+			],
+			"duration": 30.652614593505859,
+			"dateTime": "2026.10.18-16.26.52",
+			"entries": [
+				{
+					"event":
+					{
+						"type": "Info",
+						"message": "LogStreaming: FlushAsyncLoading(387): 1 QueuedPackages, 0 AsyncPackages",
+						"context": "log",
+						"artifact": "00000000000000000000000000000000"
+					},
+					"filename": "",
+					"lineNumber": -1,
+					"timestamp": "2026.10.18-16.26.52"
+				},
+				{
+					"event":
+					{
+						"type": "Info",
+						"message": "LogViewport: Viewport MouseLockMode Changed, DoNotLock -> LockInFullscreen",
+						"context": "log",
+						"artifact": "00000000000000000000000000000000"
+					},
+					"filename": "",
+					"lineNumber": -1,
+					"timestamp": "2026.10.18-16.26.52"
+				},
+				{
+					"event":
+					{
+						"type": "Error",
+						"message": "Timed out waiting for Play Again to restore gameplay input",
+						"context": "",
+						"artifact": "00000000000000000000000000000000"
+					},
+					"filename": "C:\\UE5\\SurviveThePlanet 5.8\\Source\\SurviveThePlanet\\Tests\\MissionOutcomeTest.cpp",
+					"lineNumber": 75,
+					"timestamp": "2026.10.18-16.27.22"
+				},
+				{
+					"event":
+					{
+						"type": "Info",
+						"message": "LogPlayLevel: Shutting down PIE online subsystems",
+						"context": "log",
+						"artifact": "00000000000000000000000000000000"
+					},
+					"filename": "",
+					"lineNumber": -1,
+					"timestamp": "2026.10.18-16.27.22"
+				}
+			],
+			"warnings": 0,
+			"errors": 1,
+			"artifacts": []
+		}
+	]
+}

@@ -180,15 +180,24 @@ public:
 	bool IsContractSelectionLocked() const { return bSelectionLocked; }
 
 private:
-	UPROPERTY()
+	UPROPERTY(SaveGame)
 	TArray<FSTPContractOfferDefinition> ContractOffers;
+	UPROPERTY(SaveGame)
+	TMap<FName, FName> RunOfferByTrader;
+	UPROPERTY(SaveGame)
 	FName SelectedOfferId;
+	UPROPERTY(SaveGame)
 	FName SelectedTierId;
+	UPROPERTY(SaveGame)
 	bool bSelectionLocked = false;
+	UPROPERTY(SaveGame)
 	bool bCargoBayWasReady = false;
 	bool bSettlingDelivery = false;
+	UPROPERTY(SaveGame)
 	FSTPContractRuntimeState RuntimeState;
+	UPROPERTY(SaveGame)
 	TMap<FName, int32> TraderReputation;
+	UPROPERTY(SaveGame)
 	TMap<FName, float> TraderCooldowns;
 	bool ResolveSelectedContract(FSTPContractOfferDefinition& Offer, FSTPContractTierDefinition& Tier) const;
 	AResourceManager* FindResourceManager() const;

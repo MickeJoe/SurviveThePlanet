@@ -47,6 +47,7 @@ UCLASS()
 class SURVIVETHEPLANET_API UTradeSubsystem : public UTickableWorldSubsystem
 {
 	GENERATED_BODY()
+	friend class UColonySaveSubsystem;
 public:
 
 	virtual void Tick(float DeltaTime) override;
@@ -86,10 +87,14 @@ private:
 	bool bCommitting = false;
 	UPROPERTY(Transient)
 	TObjectPtr<class UPlanetDefinition> Planet;
+	UPROPERTY(SaveGame)
 	FMerchantVisitState VisitState;
+	UPROPERTY(SaveGame)
 	double MinutesSinceCargoBay = 0.0;
+	UPROPERTY(SaveGame)
 	double ActiveArrivalMinute = -1.0;
 	float CargoCheckElapsed = 0.0f;
+	UPROPERTY(SaveGame)
 	bool bCargoBayReady = false;
 	UPROPERTY(Transient) TObjectPtr<AMerchantShip> MerchantShip;
 	TWeakObjectPtr<ACargoBay> DockCargoBay;

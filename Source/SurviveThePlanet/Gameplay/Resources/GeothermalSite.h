@@ -20,5 +20,6 @@ public:
  UPROPERTY(VisibleAnywhere, BlueprintReadOnly) TObjectPtr<UStaticMeshComponent> SiteMesh;
  UPROPERTY(VisibleAnywhere, BlueprintReadOnly) TObjectPtr<UGeothermalEffectsComponent> Effects;
 private:
+	UPROPERTY(SaveGame)
  TWeakObjectPtr<ABaseBuilding> Occupant;
 };

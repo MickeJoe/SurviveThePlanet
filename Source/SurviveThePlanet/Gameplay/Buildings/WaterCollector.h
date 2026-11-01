@@ -42,6 +42,7 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<APlanetWeatherManager> WeatherManager;
 
+	UPROPERTY(SaveGame)
 	float PendingWaterOutput = 0.0f;
 	bool bPlacementPreview = false;
 	bool bPlacementPreviewValid = true;

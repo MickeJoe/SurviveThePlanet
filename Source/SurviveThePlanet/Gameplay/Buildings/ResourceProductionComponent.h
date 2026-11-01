@@ -24,6 +24,7 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<AResourceManager> ResourceManager;
 
+	UPROPERTY(SaveGame)
 	float CycleProgressSeconds = 0.0f;
 	bool bIsProducing = false;
 };

@@ -116,6 +116,7 @@ void UContractOfferSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 void UContractOfferSubsystem::Deinitialize()
 {
 	ContractOffers.Reset();
+	RunOfferByTrader.Reset();
 	SelectedOfferId = NAME_None;
 	SelectedTierId = NAME_None;
 	bSelectionLocked = false;
@@ -136,6 +137,14 @@ bool UContractOfferSubsystem::ReloadContractOffers()
 	TArray<FSTPContractOfferDefinition> LoadedOffers;
 	if (bSelectionLocked || !LoadFromJson(Path, LoadedOffers)) return false;
 	ContractOffers = MoveTemp(LoadedOffers);
+	TMap<FName, TArray<FName>> Candidates;
+	for (const auto& Offer : ContractOffers) Candidates.FindOrAdd(Offer.TraderId).Add(Offer.Id);
+	for (const auto& Pair : Candidates)
+	{
+		const FName* Existing = RunOfferByTrader.Find(Pair.Key);
+		if (!Existing || !Pair.Value.Contains(*Existing))
+			RunOfferByTrader.Add(Pair.Key, Pair.Value[FMath::RandRange(0, Pair.Value.Num() - 1)]);
+	}
 	UE_LOG(LogContractOffers, Log, TEXT("Loaded %d contract offers from %s."), ContractOffers.Num(), *Path);
 	return true;
 }
@@ -167,7 +176,7 @@ TArray<FSTPContractOfferDefinition> UContractOfferSubsystem::GetContractOffersFo
 	if (!AreContractsAvailable()) return Result;
 	for (const FSTPContractOfferDefinition& Offer : ContractOffers)
 	{
-		if (Offer.TraderId == TraderId) Result.Add(Offer);
+		if (Offer.TraderId == TraderId && RunOfferByTrader.FindRef(TraderId) == Offer.Id) Result.Add(Offer);
 	}
 	return Result;
 }
@@ -180,7 +189,7 @@ bool UContractOfferSubsystem::ToggleContractSelection(FName OfferId, FName TierI
 	}
 	const FSTPContractOfferDefinition* Offer = ContractOffers.FindByPredicate(
 		[OfferId](const FSTPContractOfferDefinition& Candidate) { return Candidate.Id == OfferId; });
-	if (!Offer || GetTraderCooldownSeconds(Offer->TraderId) > 0.0f || !Offer->Tiers.ContainsByPredicate(
+	if (!Offer || RunOfferByTrader.FindRef(Offer->TraderId) != OfferId || GetTraderCooldownSeconds(Offer->TraderId) > 0.0f || !Offer->Tiers.ContainsByPredicate(
 		[TierId](const FSTPContractTierDefinition& Candidate) { return Candidate.Id == TierId; }))
 	{
 		return false;
@@ -455,7 +464,7 @@ int32 UContractOfferSubsystem::ApplyEffects(const TArray<FSTPContractEffectDefin
 			if (auto* Mission = GetWorld()->GetSubsystem<UMissionConfidenceSubsystem>()) Mission->AddMissionConfidence(Effect.Amount);
 			break;
 		case ESTPContractEffectType::TraderReputation:
-			TraderReputation.FindOrAdd(TraderId) = static_cast<int32>(FMath::Clamp<int64>(static_cast<int64>(GetTraderReputation(TraderId)) + Effect.Amount, MIN_int32, MAX_int32));
+			// Retain the legacy effect ID for saved contracts, but reputation is no longer a game mechanic.
 			break;
 		case ESTPContractEffectType::TraderCooldownHours:
 			TraderCooldowns.FindOrAdd(TraderId) = FMath::Max(GetTraderCooldownSeconds(TraderId), Effect.Amount * 60.0f);

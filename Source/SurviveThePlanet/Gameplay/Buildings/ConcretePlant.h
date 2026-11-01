@@ -25,6 +25,7 @@ public:
 	float GetConcreteProductionPerMinute() const;
 
 private:
+	UPROPERTY(SaveGame)
 	float CycleProgressSeconds = 0.0f;
 	bool bPlacementPreview = false;
 	bool bPlacementPreviewValid = true;

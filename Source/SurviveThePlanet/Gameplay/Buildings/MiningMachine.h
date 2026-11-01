@@ -80,7 +80,7 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Mining Machine|Placement")
 	FTransform SourceTransformOffset = FTransform::Identity;
 
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Mining Machine")
+	UPROPERTY(SaveGame, VisibleInstanceOnly, BlueprintReadOnly, Category = "Mining Machine")
 	TObjectPtr<ABaseResourceSource> ResourceSource;
 
 private:
@@ -89,6 +89,7 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<ABaseResourceSource> PreviewResourceSource;
+	UPROPERTY(SaveGame)
 	float PendingResourceOutput = 0.0f;
 
 	void RefreshPlacementPreviewVisual();
