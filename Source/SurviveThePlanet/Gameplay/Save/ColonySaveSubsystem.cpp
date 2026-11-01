@@ -407,7 +407,10 @@ bool UColonySaveSubsystem::RestoreWorld(UWorld* World, UColonySaveGame* Save, FT
 	}
 	// Rebuild bound widgets from restored state without completing objectives or granting rewards.
 	if (auto* Objectives = World->GetSubsystem<UObjectiveSubsystem>())
+	{
+		Objectives->ReconcileSavedObjectives();
 		for (const auto& State : Objectives->RuntimeStates) Objectives->OnObjectiveStateChanged.Broadcast(State.Key, State.Value.State);
+	}
 	if (auto* Contracts = World->GetSubsystem<UContractOfferSubsystem>()) Contracts->OnContractStateChanged.Broadcast();
 	if (auto* Inventory = GetGameInstance()->GetSubsystem<UBuildingBlueprintSubsystem>())
 		for (auto Tool : Inventory->GetOwnedBlueprints()) Inventory->OnInventoryChanged.Broadcast(Tool);

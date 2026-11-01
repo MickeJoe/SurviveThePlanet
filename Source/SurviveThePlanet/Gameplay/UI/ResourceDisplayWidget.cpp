@@ -1,4 +1,5 @@
 #include "Gameplay/UI/ResourceDisplayWidget.h"
+#include "Gameplay/Objectives/ObjectiveSubsystem.h"
 #include "Gameplay/Buildings/ProductionBalance.h"
 #include "Gameplay/Buildings/NuclearReactor.h"
 #include "Gameplay/Buildings/UraniumProcessor.h"
@@ -231,6 +232,8 @@ void UResourceDisplayWidget::RefreshGameTimeDisplay()
 	const int64 WholeMinutes = FMath::Max<int64>(0, FMath::FloorToInt64(TotalGameMinutes));
 	const UPlanetDefinition* Planet = PlanetWeatherManager ? PlanetWeatherManager->GetPlanetDefinition() : nullptr;
 	const int64 DayMinutes = Planet ? static_cast<int64>(Planet->GetDayLengthMinutes()) : 1440;
+	if (auto* Objectives = GetWorld()->GetSubsystem<UObjectiveSubsystem>())
+		Objectives->UpdateMissionClock(TotalGameMinutes, static_cast<int32>(DayMinutes));
 	const int32 DayNumber = static_cast<int32>(WholeMinutes / DayMinutes) + 1;
 	const int32 MinuteOfDay = static_cast<int32>(WholeMinutes % DayMinutes);
 	if (PlanetWeatherManager) PlanetWeatherManager->UpdatePresentation(TotalGameMinutes);

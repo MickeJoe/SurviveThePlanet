@@ -36,6 +36,11 @@ bool FMissionPopupTest::RunTest(const FString& Parameters)
  auto* Popup=CreateWidget<UMissionChoiceWidget>(PC,Class); Popup->AddToViewport(20);
  HUD->SetGameTimeScale(4);
  Popup->OpenPopup();
+ if (Objectives->GetActiveObjectives().IsEmpty())
+ {
+  const auto Packet=Objectives->GetMissionChoiceGroups()[0];
+  Popup->HandleCandidateClicked(0,Packet.Slots[0].ObjectiveIds[0]);
+ }
  TestTrue(TEXT("Popup pauses world"),UGameplayStatics::IsGamePaused(World));
  TestTrue(TEXT("Popup pauses real-time simulation clock"),HUD->IsSimulationPaused());
  TestTrue(TEXT("Popup blocks camera input"),PC->IsCameraInputBlocked());
@@ -43,8 +48,11 @@ bool FMissionPopupTest::RunTest(const FString& Parameters)
  TestEqual(TEXT("Clock stays frozen despite UI ticks"),HUD->TotalGameMinutes,Minutes);
  TArray<UWidget*> Widgets; Popup->WidgetTree->GetAllWidgets(Widgets);
  TArray<UMissionChoiceButton*> Deliveries;
- for(auto* Widget:Widgets) if(auto* Button=Cast<UMissionChoiceButton>(Widget);Button&&Button->GetSlotIndex()==INDEX_NONE) Deliveries.Add(Button);
- TestEqual(TEXT("Each active delivery has a button"),Deliveries.Num(),3);
+ for(auto* Widget:Widgets) if(auto* Button=Cast<UMissionChoiceButton>(Widget);Button&&Button->GetSlotIndex()==INDEX_NONE&&!Button->GetObjectiveId().IsNone()) Deliveries.Add(Button);
+ TestEqual(TEXT("Each active delivery has a button"),Deliveries.Num(),1);
+ Popup->NativeTick(FGeometry(),0);
+ for(auto* Widget:Widgets) if(auto* Button=Cast<UMissionChoiceButton>(Widget);Button&&Button->GetObjectiveId().IsNone())
+  TestTrue(TEXT("Packet navigation stays enabled during popup refresh"),Button->GetIsEnabled());
  TestNotNull(TEXT("Full-screen input blocker exists"),Popup->WidgetTree->FindWidget(TEXT("MissionModalBlocker")));
  if(!Deliveries.IsEmpty())
  {
@@ -55,7 +63,7 @@ bool FMissionPopupTest::RunTest(const FString& Parameters)
   Popup->NativeTick(FGeometry(),0); TestTrue(TEXT("Enough goods enables shipment while paused"),Button->GetIsEnabled());
   Button->OnClicked.Broadcast();
   TestEqual(TEXT("UI delivery consumes required goods"),Resources->GetResourceAmount(Cost.ResourceType),0);
-  TestEqual(TEXT("UI delivery completes one request"),Objectives->GetActiveObjectives().Num(),2);
+  TestEqual(TEXT("UI delivery completes one request"),Objectives->GetActiveObjectives().Num(),0);
   TestTrue(TEXT("Delivery keeps popup paused"),UGameplayStatics::IsGamePaused(World));
  }
  Popup->ClosePopupIfOpen();

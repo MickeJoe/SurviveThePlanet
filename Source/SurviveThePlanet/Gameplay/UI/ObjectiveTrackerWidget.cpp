@@ -146,7 +146,7 @@ void UObjectiveTrackerWidget::RefreshObjectives()
 	}
 
 	const TArray<FSTPObjectiveRuntimeState> ActiveObjectives = ObjectiveSubsystem->GetActiveObjectives();
-	for (int32 Index = 0; Index < ActiveObjectives.Num() && Index < 8; ++Index)
+	for (int32 Index = 0; Index < ActiveObjectives.Num() && Index < 10; ++Index)
 	{
 		FSTPObjectiveDefinition Definition;
 		if (ObjectiveSubsystem->GetObjectiveDefinition(ActiveObjectives[Index].ObjectiveId, Definition))
@@ -167,10 +167,14 @@ void UObjectiveTrackerWidget::AddObjectiveRow(const FSTPObjectiveDefinition& Def
 	Marker->SetText(bPrimary ? FText::FromString(TEXT("◆")) : FText::GetEmpty());
 	STPObjectiveUI::StyleText(Marker, 11, STPObjectiveUI::Cyan);
 	Title->SetText(Definition.Title);
-	Title->SetClipping(EWidgetClipping::ClipToBounds);
+	Title->SetAutoWrapText(true);
 	STPObjectiveUI::StyleText(Title, 15, bPrimary ? STPObjectiveUI::MainText : STPObjectiveUI::SecondaryText);
 
-	FString StatusText = FormatProgress(Definition, State).ToString();
+	const bool bDelivery = Definition.Conditions.ContainsByPredicate([](const auto& Condition)
+	{
+		return Condition.Type == ESTPObjectiveConditionType::DeliverResource;
+	});
+	FString StatusText = bDelivery ? FString() : FormatProgress(Definition, State).ToString();
 	if (State.RemainingTimeSeconds >= 0.0f)
 	{
 		StatusText += FString::Printf(TEXT("   %s"), *FormatTime(State.RemainingTimeSeconds).ToString());
@@ -193,6 +197,31 @@ void UObjectiveTrackerWidget::AddObjectiveRow(const FSTPObjectiveDefinition& Def
 
 	UVerticalBox* ObjectiveCard = WidgetTree->ConstructWidget<UVerticalBox>();
 	ObjectiveCard->AddChildToVerticalBox(Row);
+	for (int32 ConditionIndex = 0; ConditionIndex < Definition.Conditions.Num(); ++ConditionIndex)
+	{
+		const auto& Condition = Definition.Conditions[ConditionIndex];
+		if (Condition.Type != ESTPObjectiveConditionType::DeliverResource) continue;
+		FText ResourceName = StaticEnum<EResourceType>()->GetDisplayNameTextByValue(static_cast<int64>(Condition.ResourceType));
+		for (const auto& Resource : UResourceCatalog::GetDefinitions())
+			if (Resource.ResourceType == Condition.ResourceType) { ResourceName = Resource.DisplayName; break; }
+		auto* DeliveryRow = WidgetTree->ConstructWidget<UHorizontalBox>();
+		auto* Icon = WidgetTree->ConstructWidget<UImage>();
+		Icon->SetBrushFromTexture(UResourceCatalog::GetResourceIcon(Condition.ResourceType));
+		auto* IconSize = WidgetTree->ConstructWidget<USizeBox>();
+		IconSize->SetWidthOverride(20); IconSize->SetHeightOverride(20); IconSize->SetContent(Icon);
+		DeliveryRow->AddChildToHorizontalBox(IconSize)->SetPadding(FMargin(0, 0, 6, 0));
+		auto* ResourceText = WidgetTree->ConstructWidget<UTextBlock>();
+		ResourceText->SetText(FText::Format(NSLOCTEXT("STPObjectives", "DeliveryRequirement", "Deliver {0}"), ResourceName));
+		ResourceText->SetAutoWrapText(true);
+		STPObjectiveUI::StyleText(ResourceText, 13, STPObjectiveUI::MainText);
+		DeliveryRow->AddChildToHorizontalBox(ResourceText)->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+		auto* Amount = WidgetTree->ConstructWidget<UTextBlock>();
+		const int32 Delivered = State.ConditionProgress.IsValidIndex(ConditionIndex) ? State.ConditionProgress[ConditionIndex] : 0;
+		Amount->SetText(FText::FromString(FString::Printf(TEXT("%d / %d"), Delivered, Condition.RequiredAmount)));
+		STPObjectiveUI::StyleText(Amount, 13, STPObjectiveUI::Cyan);
+		DeliveryRow->AddChildToHorizontalBox(Amount)->SetPadding(FMargin(6, 0, 0, 0));
+		ObjectiveCard->AddChildToVerticalBox(DeliveryRow)->SetPadding(FMargin(18, 1, 0, 2));
+	}
 	AddRewardIcons(ObjectiveCard, Definition);
 
 	UVerticalBoxSlot* RowSlot = ObjectiveList->AddChildToVerticalBox(ObjectiveCard);

@@ -114,6 +114,8 @@ bool UObjectiveSubsystem::ReloadObjectives()
 	SelectedCargoPackage = NAME_None;
 	MaxActiveObjectives = 32;
 	NextActivationSequence = 0;
+	MissionGameMinutes = 480.0;
+	MissionDayLengthMinutes = 1440;
 
 	const FString Path = FPaths::Combine(FPaths::ProjectConfigDir(), TEXT("Objectives.json"));
 	if (!LoadFromJson(Path))
@@ -424,6 +426,18 @@ bool UObjectiveSubsystem::LoadFromJson(const FString& FilePath)
 			GroupObject->TryGetStringField(TEXT("activateAfterObjective"), Prerequisite);
 			Group.ActivateAfterObjective = FName(*Prerequisite);
 			GroupObject->TryGetBoolField(TEXT("randomAssignment"), Group.bRandomAssignment);
+			double UnlockDay = 1, UnlockMinute = 480;
+			GroupObject->TryGetNumberField(TEXT("unlockDay"), UnlockDay);
+			GroupObject->TryGetNumberField(TEXT("unlockMinuteOfDay"), UnlockMinute);
+			if (MissionChoiceGroups.Num() >= 10 || UnlockDay < 1 || UnlockDay > 365
+				|| UnlockMinute < 0 || UnlockMinute >= 1440
+				|| UnlockDay != FMath::FloorToDouble(UnlockDay) || UnlockMinute != FMath::FloorToDouble(UnlockMinute))
+			{
+				UE_LOG(LogObjectives, Error, TEXT("Mission packets support up to 10 groups with valid unlock dates."));
+				bValid = false; continue;
+			}
+			Group.UnlockDay = static_cast<int32>(UnlockDay);
+			Group.UnlockMinuteOfDay = static_cast<int32>(UnlockMinute);
 			if (!Group.ActivateAfterObjective.IsNone() && !Definitions.Contains(Group.ActivateAfterObjective))
 			{
 				bValid = false;
@@ -489,7 +503,8 @@ bool UObjectiveSubsystem::ActivateObjective(FName ObjectiveId)
 {
 	FSTPObjectiveRuntimeState* State = RuntimeStates.Find(ObjectiveId);
 	const FSTPObjectiveDefinition* Definition = Definitions.Find(ObjectiveId);
-	if (!State || !Definition || State->State != ESTPObjectiveState::Available || CountActiveObjectives() >= MaxActiveObjectives)
+	if (!State || !Definition || State->State != ESTPObjectiveState::Available || CountActiveObjectives() >= MaxActiveObjectives
+		|| (IsMissionChoiceCandidate(ObjectiveId) && !IsConfirmedMissionChoice(ObjectiveId)))
 	{
 		return false;
 	}
@@ -645,13 +660,6 @@ void UObjectiveSubsystem::CompleteObjective(FName ObjectiveId)
    FSTPObjectiveRewardDefinition Reward;
    Reward.Type = ESTPObjectiveRewardType::GiveBuildingBlueprint;
    Reward.BlueprintId = Id;
-   Completion.Rewards.Add(Reward);
-  }
-  for (FName Id : Package.ObjectiveIds)
-  {
-   FSTPObjectiveRewardDefinition Reward;
-   Reward.Type = ESTPObjectiveRewardType::UnlockObjective;
-   Reward.ObjectiveId = Id;
    Completion.Rewards.Add(Reward);
   }
   UE_LOG(LogObjectives, Log, TEXT("Mother Base assigned Cargo package %s."), *SelectedCargoPackage.ToString());
@@ -831,14 +839,48 @@ void UObjectiveSubsystem::ActivateAvailableObjectives()
 
 TArray<FSTPMissionChoiceGroupDefinition> UObjectiveSubsystem::GetMissionChoiceGroups() const
 {
-	TArray<FSTPMissionChoiceGroupDefinition> Available;
+	return MissionChoiceGroups;
+}
+
+double UObjectiveSubsystem::GetMissionUnlockMinutes(const FSTPMissionChoiceGroupDefinition& Group) const
+{
+	return static_cast<double>(Group.UnlockDay - 1) * MissionDayLengthMinutes + Group.UnlockMinuteOfDay;
+}
+
+void UObjectiveSubsystem::UpdateMissionClock(double TotalMinutes, int32 DayLengthMinutes)
+{
+	if (!FMath::IsFinite(TotalMinutes)) return;
+	MissionGameMinutes = FMath::Max(0.0, TotalMinutes);
+	MissionDayLengthMinutes = FMath::Max(1, DayLengthMinutes);
+}
+
+bool UObjectiveSubsystem::IsMissionChoiceGroupUnlocked(FName GroupId) const
+{
+	const auto* Group = MissionChoiceGroups.FindByPredicate([GroupId](const auto& Item) { return Item.Id == GroupId; });
+	if (!Group || MissionGameMinutes < GetMissionUnlockMinutes(*Group)) return false;
+	const auto* Prerequisite = RuntimeStates.Find(Group->ActivateAfterObjective);
+	return Group->ActivateAfterObjective.IsNone() || (Prerequisite && Prerequisite->State == ESTPObjectiveState::Completed);
+}
+
+void UObjectiveSubsystem::ReconcileSavedObjectives()
+{
+	// Older slots do not contain newly introduced packet candidates or choice states.
+	for (const auto& Pair : Definitions) if (!RuntimeStates.Contains(Pair.Key))
+	{
+		auto& State = RuntimeStates.Add(Pair.Key);
+		State.ObjectiveId = Pair.Key;
+		State.ConditionProgress.Init(0, Pair.Value.Conditions.Num());
+	}
+	// Automatic Mother Base requests were replaced by packet choices. Discard their
+	// saved runtime records without completing them or granting their old rewards.
+	for (const FName RetiredId : {FName(TEXT("mother_base_glass")), FName(TEXT("mother_base_polymer")),
+		FName(TEXT("mother_base_water")), FName(TEXT("mother_base_fuel"))})
+		RuntimeStates.Remove(RetiredId);
 	for (const auto& Group : MissionChoiceGroups)
 	{
-		const auto* Prerequisite = RuntimeStates.Find(Group.ActivateAfterObjective);
-		if (Group.ActivateAfterObjective.IsNone() || (Prerequisite && Prerequisite->State == ESTPObjectiveState::Completed))
-			Available.Add(Group);
+		auto& State = MissionChoiceStates.FindOrAdd(Group.Id);
+		State.SelectedObjectiveIds.SetNum(Group.Slots.Num());
 	}
-	return Available;
 }
 
 bool UObjectiveSubsystem::GetMissionChoiceGroupState(FName ChoiceGroupId, FSTPMissionChoiceGroupState& OutState) const
@@ -856,9 +898,7 @@ bool UObjectiveSubsystem::ConfirmMissionChoices(FName ChoiceGroupId, const TArra
 	FSTPMissionChoiceGroupState* ChoiceState = MissionChoiceStates.Find(ChoiceGroupId);
 	const FSTPMissionChoiceGroupDefinition* Group = MissionChoiceGroups.FindByPredicate(
 		[ChoiceGroupId](const FSTPMissionChoiceGroupDefinition& Item) { return Item.Id == ChoiceGroupId; });
-	const auto* Prerequisite = Group ? RuntimeStates.Find(Group->ActivateAfterObjective) : nullptr;
-	if (Group && !Group->ActivateAfterObjective.IsNone()
-		&& (!Prerequisite || Prerequisite->State != ESTPObjectiveState::Completed)) return false;
+	if (!IsMissionChoiceGroupUnlocked(ChoiceGroupId)) return false;
 
 	if (!ChoiceState || !Group || ChoiceState->bLocked || SelectedObjectiveIds.Num() != Group->Slots.Num()
 		|| CountActiveObjectives() + SelectedObjectiveIds.Num() > MaxActiveObjectives)
@@ -892,9 +932,7 @@ bool UObjectiveSubsystem::ConfirmMissionChoiceSlot(FName ChoiceGroupId, int32 Sl
 	FSTPMissionChoiceGroupState* ChoiceState = MissionChoiceStates.Find(ChoiceGroupId);
 	const FSTPMissionChoiceGroupDefinition* Group = MissionChoiceGroups.FindByPredicate(
 		[ChoiceGroupId](const FSTPMissionChoiceGroupDefinition& Item) { return Item.Id == ChoiceGroupId; });
-	const auto* Prerequisite = Group ? RuntimeStates.Find(Group->ActivateAfterObjective) : nullptr;
-	if (Group && !Group->ActivateAfterObjective.IsNone()
-		&& (!Prerequisite || Prerequisite->State != ESTPObjectiveState::Completed)) return false;
+	if (!IsMissionChoiceGroupUnlocked(ChoiceGroupId)) return false;
 
 	if (!ChoiceState || !Group || !Group->Slots.IsValidIndex(SlotIndex)
 		|| !Group->Slots[SlotIndex].ObjectiveIds.Contains(ObjectiveId)
@@ -909,13 +947,13 @@ bool UObjectiveSubsystem::ConfirmMissionChoiceSlot(FName ChoiceGroupId, int32 Sl
 		return false;
 	}
 
+	ChoiceState->SelectedObjectiveIds[SlotIndex] = ObjectiveId;
 	MakeObjectiveAvailable(ObjectiveId);
 	if (!ActivateObjective(ObjectiveId))
 	{
+		ChoiceState->SelectedObjectiveIds[SlotIndex] = NAME_None;
 		return false;
 	}
-
-	ChoiceState->SelectedObjectiveIds[SlotIndex] = ObjectiveId;
 	ChoiceState->bLocked = !ChoiceState->SelectedObjectiveIds.Contains(NAME_None);
 	OnMissionChoiceConfirmed.Broadcast(ChoiceGroupId);
 	return true;

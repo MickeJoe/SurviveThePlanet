@@ -19,6 +19,7 @@ class SURVIVETHEPLANET_API UMissionChoiceButton : public UButton
 
 public:
 	void InitializeChoice(UMissionChoiceWidget* InOwner, int32 InSlotIndex, FName InObjectiveId);
+	void InitializePacket(UMissionChoiceWidget* InOwner, FName InPacketId);
 	FName GetObjectiveId() const { return ObjectiveId; }
 	int32 GetSlotIndex() const { return SlotIndex; }
 
@@ -26,6 +27,8 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<UMissionChoiceWidget> OwnerWidget;
 	FName ObjectiveId;
+	FName PacketId;
+	bool bPacketNavigation = false;
 	int32 SlotIndex = INDEX_NONE;
 
 	UFUNCTION()
@@ -41,6 +44,7 @@ class SURVIVETHEPLANET_API UMissionChoiceWidget : public UUserWidget
 
 public:
 	void HandleCandidateClicked(int32 SlotIndex, FName ObjectiveId);
+	void SelectPacket(FName PacketId);
 	bool ClosePopupIfOpen();
 
 protected:
@@ -70,7 +74,7 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<UObjectiveSubsystem> ObjectiveSubsystem;
 	FSTPMissionChoiceGroupDefinition CurrentGroup;
-	int32 PickerSlotIndex = INDEX_NONE;
+	FName SelectedPacketId;
 	bool bPopupOpen = false;
 	bool bPreviouslyPaused = false;
 	float PreviousTimeDilation = 1.0f;
@@ -81,6 +85,6 @@ private:
 	UFUNCTION() void HandleGroupConfirmed(FName ChoiceGroupId);
 
 	void BuildCurrentGroup();
-	void BuildSlotPicker(int32 SlotIndex);
+	UWidget* BuildObjectiveCard(const FSTPObjectiveDefinition& Definition, const FSTPObjectiveRuntimeState* Runtime, bool bCandidate);
 	void SetPopupVisible(bool bVisible);
 };

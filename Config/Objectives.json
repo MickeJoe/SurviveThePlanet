@@ -3,7 +3,188 @@
   "initialObjectives": [
     "mission_build_communication"
   ],
-  "missionChoiceGroups": [],
+  "missionChoiceGroups": [
+    {
+      "id": "packet_01",
+      "title": "MISSION PACKET 01",
+      "description": "Choose one mission. The other option is discarded. No deadline.",
+      "activateAfterObjective": "mission_build_cargo_bay",
+      "unlockDay": 1,
+      "unlockMinuteOfDay": 480,
+      "slots": [
+        {
+          "id": "mission",
+          "title": "CHOOSE 1 OF 2",
+          "objectives": [
+            "packet_01_1",
+            "packet_01_2"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "packet_02",
+      "title": "MISSION PACKET 02",
+      "description": "Choose one mission. The other option is discarded. No deadline.",
+      "activateAfterObjective": "mission_build_cargo_bay",
+      "unlockDay": 1,
+      "unlockMinuteOfDay": 480,
+      "slots": [
+        {
+          "id": "mission",
+          "title": "CHOOSE 1 OF 2",
+          "objectives": [
+            "packet_02_1",
+            "packet_02_2"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "packet_03",
+      "title": "MISSION PACKET 03",
+      "description": "Choose one mission. The other option is discarded. No deadline.",
+      "activateAfterObjective": "mission_build_cargo_bay",
+      "unlockDay": 2,
+      "unlockMinuteOfDay": 480,
+      "slots": [
+        {
+          "id": "mission",
+          "title": "CHOOSE 1 OF 2",
+          "objectives": [
+            "packet_03_1",
+            "packet_03_2"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "packet_04",
+      "title": "MISSION PACKET 04",
+      "description": "Choose one mission. The other option is discarded. No deadline.",
+      "activateAfterObjective": "mission_build_cargo_bay",
+      "unlockDay": 2,
+      "unlockMinuteOfDay": 480,
+      "slots": [
+        {
+          "id": "mission",
+          "title": "CHOOSE 1 OF 2",
+          "objectives": [
+            "packet_04_1",
+            "packet_04_2"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "packet_05",
+      "title": "MISSION PACKET 05",
+      "description": "Choose one mission. The other option is discarded. No deadline.",
+      "activateAfterObjective": "mission_build_cargo_bay",
+      "unlockDay": 3,
+      "unlockMinuteOfDay": 720,
+      "slots": [
+        {
+          "id": "mission",
+          "title": "CHOOSE 1 OF 2",
+          "objectives": [
+            "packet_05_1",
+            "packet_05_2"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "packet_06",
+      "title": "MISSION PACKET 06",
+      "description": "Choose one mission. The other option is discarded. No deadline.",
+      "activateAfterObjective": "mission_build_cargo_bay",
+      "unlockDay": 3,
+      "unlockMinuteOfDay": 720,
+      "slots": [
+        {
+          "id": "mission",
+          "title": "CHOOSE 1 OF 2",
+          "objectives": [
+            "packet_06_1",
+            "packet_06_2"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "packet_07",
+      "title": "MISSION PACKET 07",
+      "description": "Choose one mission. The other option is discarded. No deadline.",
+      "activateAfterObjective": "mission_build_cargo_bay",
+      "unlockDay": 4,
+      "unlockMinuteOfDay": 480,
+      "slots": [
+        {
+          "id": "mission",
+          "title": "CHOOSE 1 OF 2",
+          "objectives": [
+            "packet_07_1",
+            "packet_07_2"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "packet_08",
+      "title": "MISSION PACKET 08",
+      "description": "Choose one mission. The other option is discarded. No deadline.",
+      "activateAfterObjective": "mission_build_cargo_bay",
+      "unlockDay": 4,
+      "unlockMinuteOfDay": 480,
+      "slots": [
+        {
+          "id": "mission",
+          "title": "CHOOSE 1 OF 2",
+          "objectives": [
+            "packet_08_1",
+            "packet_08_2"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "packet_09",
+      "title": "MISSION PACKET 09",
+      "description": "Choose one mission. The other option is discarded. No deadline.",
+      "activateAfterObjective": "mission_build_cargo_bay",
+      "unlockDay": 5,
+      "unlockMinuteOfDay": 480,
+      "slots": [
+        {
+          "id": "mission",
+          "title": "CHOOSE 1 OF 2",
+          "objectives": [
+            "packet_09_1",
+            "packet_09_2"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "packet_10",
+      "title": "MISSION PACKET 10",
+      "description": "Choose one mission. The other option is discarded. No deadline.",
+      "activateAfterObjective": "mission_build_cargo_bay",
+      "unlockDay": 5,
+      "unlockMinuteOfDay": 480,
+      "slots": [
+        {
+          "id": "mission",
+          "title": "CHOOSE 1 OF 2",
+          "objectives": [
+            "packet_10_1",
+            "packet_10_2"
+          ]
+        }
+      ]
+    }
+  ],
   "objectives": [
     {
       "id": "mission_build_communication",
@@ -83,7 +264,7 @@
     {
       "id": "mission_build_cargo_bay",
       "title": "BUILD CARGO BAY",
-      "description": "Build and complete a Cargo Bay to enable contracts. Construction requires 20 Concrete, 10 Steel and 2 Circuit Boards. Mother Base assigns package A or B: three production blueprints and three independent delivery requests. Includes 40 Coal as a finite startup reserve. Rewards also include +40 Mission Confidence and 2 Worker Drones.",
+      "description": "Build a Cargo Bay to enable contracts and mission choices. New mission packets arrive over time. Rewards: production blueprints, 40 Coal, +40 Mission Confidence and 2 Worker Drones.",
       "timeLimitSeconds": 0,
       "conditions": [
         {
@@ -93,8 +274,15 @@
         }
       ],
       "rewards": [
-        {             "type":  "give_mission_confidence",             "amount":  40         },
-        {             "amount":  2,             "droneClass":  "/Game/BluePrints/WorkingDrone/BP_ConstructionDrone.BP_ConstructionDrone_C",             "type":  "give_drone"         },
+        {
+          "type": "give_mission_confidence",
+          "amount": 40
+        },
+        {
+          "amount": 2,
+          "droneClass": "/Game/BluePrints/WorkingDrone/BP_ConstructionDrone.BP_ConstructionDrone_C",
+          "type": "give_drone"
+        },
         {
           "type": "give_mission_progress",
           "amount": 1
@@ -219,6 +407,586 @@
         {
           "type": "give_mission_progress",
           "amount": 2
+        }
+      ]
+    },
+    {
+      "id": "packet_01_1",
+      "title": "INDUSTRIAL SUPPORT",
+      "description": "Mother Base requests 15 Polymer. Deliver through your Cargo Bay.",
+      "timeLimitSeconds": 0,
+      "conditions": [
+        {
+          "type": "deliver_resource",
+          "resource": "Polymer",
+          "destination": "HomeBase",
+          "amount": 15
+        }
+      ],
+      "rewards": [
+        {
+          "type": "give_mission_progress",
+          "amount": 1
+        },
+        {
+          "type": "give_mission_confidence",
+          "amount": 10
+        },
+        {
+          "type": "give_drone",
+          "droneClass": "/Game/BluePrints/WorkingDrone/BP_ConstructionDrone.BP_ConstructionDrone_C",
+          "amount": 1
+        }
+      ]
+    },
+    {
+      "id": "packet_01_2",
+      "title": "SURVEY SUPPLIES",
+      "description": "Mother Base requests 20 PurifiedWater. Deliver through your Cargo Bay.",
+      "timeLimitSeconds": 0,
+      "conditions": [
+        {
+          "type": "deliver_resource",
+          "resource": "PurifiedWater",
+          "destination": "HomeBase",
+          "amount": 20
+        }
+      ],
+      "rewards": [
+        {
+          "type": "give_mission_progress",
+          "amount": 1
+        },
+        {
+          "type": "give_mission_confidence",
+          "amount": 10
+        },
+        {
+          "type": "give_drone",
+          "droneClass": "/Game/Models/Units/ExplorerDrone/BP_ExplorerDrone.BP_ExplorerDrone_C",
+          "amount": 1
+        }
+      ]
+    },
+    {
+      "id": "packet_02_1",
+      "title": "CONSTRUCTION RESERVE",
+      "description": "Mother Base requests 25 Concrete. Deliver through your Cargo Bay.",
+      "timeLimitSeconds": 0,
+      "conditions": [
+        {
+          "type": "deliver_resource",
+          "resource": "Concrete",
+          "destination": "HomeBase",
+          "amount": 25
+        }
+      ],
+      "rewards": [
+        {
+          "type": "give_mission_progress",
+          "amount": 1
+        },
+        {
+          "type": "give_mission_confidence",
+          "amount": 10
+        },
+        {
+          "type": "give_drone",
+          "droneClass": "/Game/BluePrints/WorkingDrone/BP_ConstructionDrone.BP_ConstructionDrone_C",
+          "amount": 1
+        }
+      ]
+    },
+    {
+      "id": "packet_02_2",
+      "title": "POWER GRID SUPPLIES",
+      "description": "Mother Base requests 25 Connector. Deliver through your Cargo Bay.",
+      "timeLimitSeconds": 0,
+      "conditions": [
+        {
+          "type": "deliver_resource",
+          "resource": "Connector",
+          "destination": "HomeBase",
+          "amount": 25
+        }
+      ],
+      "rewards": [
+        {
+          "type": "give_mission_progress",
+          "amount": 1
+        },
+        {
+          "type": "give_mission_confidence",
+          "amount": 10
+        },
+        {
+          "type": "give_resource",
+          "resource": "ControlChip",
+          "amount": 3
+        }
+      ]
+    },
+    {
+      "id": "packet_03_1",
+      "title": "FACTORY EXPANSION",
+      "description": "Mother Base requests 20 Steel. Deliver through your Cargo Bay.",
+      "timeLimitSeconds": 0,
+      "conditions": [
+        {
+          "type": "deliver_resource",
+          "resource": "Steel",
+          "destination": "HomeBase",
+          "amount": 20
+        }
+      ],
+      "rewards": [
+        {
+          "type": "give_mission_progress",
+          "amount": 1
+        },
+        {
+          "type": "give_mission_confidence",
+          "amount": 10
+        },
+        {
+          "type": "give_drone",
+          "droneClass": "/Game/BluePrints/WorkingDrone/BP_ConstructionDrone.BP_ConstructionDrone_C",
+          "amount": 1
+        }
+      ]
+    },
+    {
+      "id": "packet_03_2",
+      "title": "WATER EXPEDITION",
+      "description": "Mother Base requests 30 PurifiedWater. Deliver through your Cargo Bay.",
+      "timeLimitSeconds": 0,
+      "conditions": [
+        {
+          "type": "deliver_resource",
+          "resource": "PurifiedWater",
+          "destination": "HomeBase",
+          "amount": 30
+        }
+      ],
+      "rewards": [
+        {
+          "type": "give_mission_progress",
+          "amount": 1
+        },
+        {
+          "type": "give_mission_confidence",
+          "amount": 10
+        },
+        {
+          "type": "give_drone",
+          "droneClass": "/Game/Models/Units/ExplorerDrone/BP_ExplorerDrone.BP_ExplorerDrone_C",
+          "amount": 1
+        }
+      ]
+    },
+    {
+      "id": "packet_04_1",
+      "title": "COLONY REPAIRS",
+      "description": "Mother Base requests 30 Polymer. Deliver through your Cargo Bay.",
+      "timeLimitSeconds": 0,
+      "conditions": [
+        {
+          "type": "deliver_resource",
+          "resource": "Polymer",
+          "destination": "HomeBase",
+          "amount": 30
+        }
+      ],
+      "rewards": [
+        {
+          "type": "give_mission_progress",
+          "amount": 1
+        },
+        {
+          "type": "give_mission_confidence",
+          "amount": 10
+        },
+        {
+          "type": "give_drone",
+          "droneClass": "/Game/BluePrints/WorkingDrone/BP_ConstructionDrone.BP_ConstructionDrone_C",
+          "amount": 1
+        }
+      ]
+    },
+    {
+      "id": "packet_04_2",
+      "title": "LANDING INFRASTRUCTURE",
+      "description": "Mother Base requests 40 Concrete. Deliver through your Cargo Bay.",
+      "timeLimitSeconds": 0,
+      "conditions": [
+        {
+          "type": "deliver_resource",
+          "resource": "Concrete",
+          "destination": "HomeBase",
+          "amount": 40
+        }
+      ],
+      "rewards": [
+        {
+          "type": "give_mission_progress",
+          "amount": 1
+        },
+        {
+          "type": "give_mission_confidence",
+          "amount": 10
+        },
+        {
+          "type": "give_resource",
+          "resource": "ControlChip",
+          "amount": 3
+        }
+      ]
+    },
+    {
+      "id": "packet_05_1",
+      "title": "DEEP SURVEY SUPPLIES",
+      "description": "Mother Base requests 40 PurifiedWater. Deliver through your Cargo Bay.",
+      "timeLimitSeconds": 0,
+      "conditions": [
+        {
+          "type": "deliver_resource",
+          "resource": "PurifiedWater",
+          "destination": "HomeBase",
+          "amount": 40
+        }
+      ],
+      "rewards": [
+        {
+          "type": "give_mission_progress",
+          "amount": 1
+        },
+        {
+          "type": "give_mission_confidence",
+          "amount": 10
+        },
+        {
+          "type": "give_drone",
+          "droneClass": "/Game/BluePrints/WorkingDrone/BP_ConstructionDrone.BP_ConstructionDrone_C",
+          "amount": 1
+        }
+      ]
+    },
+    {
+      "id": "packet_05_2",
+      "title": "INDUSTRIAL SHIPMENT",
+      "description": "Mother Base requests 30 Steel. Deliver through your Cargo Bay.",
+      "timeLimitSeconds": 0,
+      "conditions": [
+        {
+          "type": "deliver_resource",
+          "resource": "Steel",
+          "destination": "HomeBase",
+          "amount": 30
+        }
+      ],
+      "rewards": [
+        {
+          "type": "give_mission_progress",
+          "amount": 1
+        },
+        {
+          "type": "give_mission_confidence",
+          "amount": 10
+        },
+        {
+          "type": "give_drone",
+          "droneClass": "/Game/Models/Units/ExplorerDrone/BP_ExplorerDrone.BP_ExplorerDrone_C",
+          "amount": 1
+        }
+      ]
+    },
+    {
+      "id": "packet_06_1",
+      "title": "POWER NETWORK EXPANSION",
+      "description": "Mother Base requests 40 Connector. Deliver through your Cargo Bay.",
+      "timeLimitSeconds": 0,
+      "conditions": [
+        {
+          "type": "deliver_resource",
+          "resource": "Connector",
+          "destination": "HomeBase",
+          "amount": 40
+        }
+      ],
+      "rewards": [
+        {
+          "type": "give_mission_progress",
+          "amount": 1
+        },
+        {
+          "type": "give_mission_confidence",
+          "amount": 10
+        },
+        {
+          "type": "give_drone",
+          "droneClass": "/Game/BluePrints/WorkingDrone/BP_ConstructionDrone.BP_ConstructionDrone_C",
+          "amount": 1
+        }
+      ]
+    },
+    {
+      "id": "packet_06_2",
+      "title": "CONSTRUCTION SHIPMENT",
+      "description": "Mother Base requests 50 Concrete. Deliver through your Cargo Bay.",
+      "timeLimitSeconds": 0,
+      "conditions": [
+        {
+          "type": "deliver_resource",
+          "resource": "Concrete",
+          "destination": "HomeBase",
+          "amount": 50
+        }
+      ],
+      "rewards": [
+        {
+          "type": "give_mission_progress",
+          "amount": 1
+        },
+        {
+          "type": "give_mission_confidence",
+          "amount": 10
+        },
+        {
+          "type": "give_resource",
+          "resource": "ControlChip",
+          "amount": 3
+        }
+      ]
+    },
+    {
+      "id": "packet_07_1",
+      "title": "LONG RANGE EXPEDITION",
+      "description": "Mother Base requests 50 PurifiedWater. Deliver through your Cargo Bay.",
+      "timeLimitSeconds": 0,
+      "conditions": [
+        {
+          "type": "deliver_resource",
+          "resource": "PurifiedWater",
+          "destination": "HomeBase",
+          "amount": 50
+        }
+      ],
+      "rewards": [
+        {
+          "type": "give_mission_progress",
+          "amount": 1
+        },
+        {
+          "type": "give_mission_confidence",
+          "amount": 10
+        },
+        {
+          "type": "give_drone",
+          "droneClass": "/Game/BluePrints/WorkingDrone/BP_ConstructionDrone.BP_ConstructionDrone_C",
+          "amount": 1
+        }
+      ]
+    },
+    {
+      "id": "packet_07_2",
+      "title": "PRODUCTION RESERVE",
+      "description": "Mother Base requests 45 Polymer. Deliver through your Cargo Bay.",
+      "timeLimitSeconds": 0,
+      "conditions": [
+        {
+          "type": "deliver_resource",
+          "resource": "Polymer",
+          "destination": "HomeBase",
+          "amount": 45
+        }
+      ],
+      "rewards": [
+        {
+          "type": "give_mission_progress",
+          "amount": 1
+        },
+        {
+          "type": "give_mission_confidence",
+          "amount": 10
+        },
+        {
+          "type": "give_drone",
+          "droneClass": "/Game/Models/Units/ExplorerDrone/BP_ExplorerDrone.BP_ExplorerDrone_C",
+          "amount": 1
+        }
+      ]
+    },
+    {
+      "id": "packet_08_1",
+      "title": "STRUCTURAL SUPPORT",
+      "description": "Mother Base requests 45 Steel. Deliver through your Cargo Bay.",
+      "timeLimitSeconds": 0,
+      "conditions": [
+        {
+          "type": "deliver_resource",
+          "resource": "Steel",
+          "destination": "HomeBase",
+          "amount": 45
+        }
+      ],
+      "rewards": [
+        {
+          "type": "give_mission_progress",
+          "amount": 1
+        },
+        {
+          "type": "give_mission_confidence",
+          "amount": 10
+        },
+        {
+          "type": "give_drone",
+          "droneClass": "/Game/BluePrints/WorkingDrone/BP_ConstructionDrone.BP_ConstructionDrone_C",
+          "amount": 1
+        }
+      ]
+    },
+    {
+      "id": "packet_08_2",
+      "title": "COLONY EXPANSION",
+      "description": "Mother Base requests 60 Concrete. Deliver through your Cargo Bay.",
+      "timeLimitSeconds": 0,
+      "conditions": [
+        {
+          "type": "deliver_resource",
+          "resource": "Concrete",
+          "destination": "HomeBase",
+          "amount": 60
+        }
+      ],
+      "rewards": [
+        {
+          "type": "give_mission_progress",
+          "amount": 1
+        },
+        {
+          "type": "give_mission_confidence",
+          "amount": 10
+        },
+        {
+          "type": "give_resource",
+          "resource": "ControlChip",
+          "amount": 3
+        }
+      ]
+    },
+    {
+      "id": "packet_09_1",
+      "title": "FINAL SURVEY SUPPLIES",
+      "description": "Mother Base requests 60 PurifiedWater. Deliver through your Cargo Bay.",
+      "timeLimitSeconds": 0,
+      "conditions": [
+        {
+          "type": "deliver_resource",
+          "resource": "PurifiedWater",
+          "destination": "HomeBase",
+          "amount": 60
+        }
+      ],
+      "rewards": [
+        {
+          "type": "give_mission_progress",
+          "amount": 1
+        },
+        {
+          "type": "give_mission_confidence",
+          "amount": 10
+        },
+        {
+          "type": "give_drone",
+          "droneClass": "/Game/BluePrints/WorkingDrone/BP_ConstructionDrone.BP_ConstructionDrone_C",
+          "amount": 1
+        }
+      ]
+    },
+    {
+      "id": "packet_09_2",
+      "title": "FACTORY SUPPORT",
+      "description": "Mother Base requests 60 Polymer. Deliver through your Cargo Bay.",
+      "timeLimitSeconds": 0,
+      "conditions": [
+        {
+          "type": "deliver_resource",
+          "resource": "Polymer",
+          "destination": "HomeBase",
+          "amount": 60
+        }
+      ],
+      "rewards": [
+        {
+          "type": "give_mission_progress",
+          "amount": 1
+        },
+        {
+          "type": "give_mission_confidence",
+          "amount": 10
+        },
+        {
+          "type": "give_drone",
+          "droneClass": "/Game/Models/Units/ExplorerDrone/BP_ExplorerDrone.BP_ExplorerDrone_C",
+          "amount": 1
+        }
+      ]
+    },
+    {
+      "id": "packet_10_1",
+      "title": "MISSION INFRASTRUCTURE",
+      "description": "Mother Base requests 60 Steel. Deliver through your Cargo Bay.",
+      "timeLimitSeconds": 0,
+      "conditions": [
+        {
+          "type": "deliver_resource",
+          "resource": "Steel",
+          "destination": "HomeBase",
+          "amount": 60
+        }
+      ],
+      "rewards": [
+        {
+          "type": "give_mission_progress",
+          "amount": 1
+        },
+        {
+          "type": "give_mission_confidence",
+          "amount": 10
+        },
+        {
+          "type": "give_drone",
+          "droneClass": "/Game/BluePrints/WorkingDrone/BP_ConstructionDrone.BP_ConstructionDrone_C",
+          "amount": 1
+        }
+      ]
+    },
+    {
+      "id": "packet_10_2",
+      "title": "POWER INFRASTRUCTURE",
+      "description": "Mother Base requests 60 Connector. Deliver through your Cargo Bay.",
+      "timeLimitSeconds": 0,
+      "conditions": [
+        {
+          "type": "deliver_resource",
+          "resource": "Connector",
+          "destination": "HomeBase",
+          "amount": 60
+        }
+      ],
+      "rewards": [
+        {
+          "type": "give_mission_progress",
+          "amount": 1
+        },
+        {
+          "type": "give_mission_confidence",
+          "amount": 10
+        },
+        {
+          "type": "give_resource",
+          "resource": "ControlChip",
+          "amount": 3
         }
       ]
     }

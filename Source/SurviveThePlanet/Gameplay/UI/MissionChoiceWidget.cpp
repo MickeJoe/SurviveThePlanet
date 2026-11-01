@@ -8,6 +8,8 @@
 #include "GameFramework/PlayerController.h"
 #include "Kismet/GameplayStatics.h"
 #include "InputCoreTypes.h"
+#include "EngineUtils.h"
+#include "Gameplay/Resources/ResourceManager.h"
 #include "Components/Border.h"
 #include "Components/CanvasPanel.h"
 #include "Components/HorizontalBox.h"
@@ -55,6 +57,11 @@ namespace STPMissionChoices
 		case ESTPObjectiveRewardType::GiveMissionConfidence:
 			return FText::Format(NSLOCTEXT("SurviveThePlanet", "ObjectiveRewardConfidence", "+{0} MISSION CONFIDENCE"),
 				FText::AsNumber(Reward.Amount));
+		case ESTPObjectiveRewardType::GiveDrone:
+			return FText::FromString(FString::Printf(TEXT("+%d %s"), Reward.Amount,
+				Reward.DroneClass.ToString().Contains(TEXT("Explorer")) ? TEXT("Explorer Drone") : TEXT("Worker Drone")));
+		case ESTPObjectiveRewardType::GiveBuildingBlueprint:
+			return FText::FromString(TEXT("BLUEPRINT: ") + Reward.BlueprintId.ToString());
 		case ESTPObjectiveRewardType::UnlockObjective:
 		{
 			FSTPObjectiveDefinition Unlocked;
@@ -105,7 +112,9 @@ void UMissionChoiceButton::InitializeChoice(UMissionChoiceWidget* InOwner, int32
 
 void UMissionChoiceButton::HandleClicked()
 {
-	if (OwnerWidget) OwnerWidget->HandleCandidateClicked(SlotIndex, ObjectiveId);
+	if (!OwnerWidget) return;
+	if (bPacketNavigation) OwnerWidget->SelectPacket(PacketId);
+	else OwnerWidget->HandleCandidateClicked(SlotIndex, ObjectiveId);
 }
 
 void UMissionChoiceWidget::NativeConstruct()
@@ -146,7 +155,7 @@ void UMissionChoiceWidget::NativeTick(const FGeometry& MyGeometry, float InDelta
  TArray<UWidget*> Widgets;
  WidgetTree->GetAllWidgets(Widgets);
  for (UWidget* Widget : Widgets)
-  if (auto* Button = Cast<UMissionChoiceButton>(Widget); Button && Button->GetSlotIndex() == INDEX_NONE)
+  if (auto* Button = Cast<UMissionChoiceButton>(Widget); Button && Button->GetSlotIndex() == INDEX_NONE && !Button->GetObjectiveId().IsNone())
    Button->SetIsEnabled(ObjectiveSubsystem->CanDeliverObjective(Button->GetObjectiveId()));
 }
 
@@ -223,172 +232,223 @@ FReply UMissionChoiceWidget::NativeOnPreviewKeyDown(const FGeometry& Geometry, c
 	return Super::NativeOnPreviewKeyDown(Geometry, Event);
 }
 
+
+void UMissionChoiceButton::InitializePacket(UMissionChoiceWidget* InOwner, FName InPacketId)
+{
+	OwnerWidget = InOwner;
+	PacketId = InPacketId;
+	bPacketNavigation = true;
+	OnClicked.AddUniqueDynamic(this, &UMissionChoiceButton::HandleClicked);
+}
+
+void UMissionChoiceWidget::SelectPacket(FName PacketId)
+{
+	SelectedPacketId = PacketId;
+	BuildCurrentGroup();
+}
+
 void UMissionChoiceWidget::BuildCurrentGroup()
 {
 	ChoiceColumns->ClearChildren();
 	if (!ObjectiveSubsystem) return;
-	const auto Groups = ObjectiveSubsystem->GetMissionChoiceGroups();
-	CurrentGroup = Groups.IsEmpty() ? FSTPMissionChoiceGroupDefinition() : Groups[0];
-	PickerSlotIndex = INDEX_NONE;
 	HeaderText->SetVisibility(ESlateVisibility::Collapsed);
 	DescriptionText->SetVisibility(ESlateVisibility::Collapsed);
 	ChoiceStatusText->SetVisibility(ESlateVisibility::Collapsed);
 	ConfirmChoicesButton->SetVisibility(ESlateVisibility::Collapsed);
-
-	FSTPMissionChoiceGroupState State;
-	ObjectiveSubsystem->GetMissionChoiceGroupState(CurrentGroup.Id, State);
-	State.SelectedObjectiveIds.SetNum(CurrentGroup.Slots.Num());
-
-	UUniformGridPanel* Grid = WidgetTree->ConstructWidget<UUniformGridPanel>();
-	Grid->SetSlotPadding(FMargin(6));
-	UScrollBox* Scroll = WidgetTree->ConstructWidget<UScrollBox>();
-	Scroll->AddChild(Grid);
-	UHorizontalBoxSlot* ContainerSlot = ChoiceColumns->AddChildToHorizontalBox(Scroll);
-	ContainerSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
-	ContainerSlot->SetHorizontalAlignment(HAlign_Center);
-	ContainerSlot->SetVerticalAlignment(VAlign_Fill);
-
-	int32 CardIndex = 0;
-	for (const FSTPObjectiveRuntimeState& Runtime : ObjectiveSubsystem->GetActiveObjectives())
+	const auto Groups = ObjectiveSubsystem->GetMissionChoiceGroups();
+	if (SelectedPacketId.IsNone())
 	{
+		for (const auto& Group : Groups)
+		{
+			FSTPMissionChoiceGroupState State;
+			ObjectiveSubsystem->GetMissionChoiceGroupState(Group.Id, State);
+			if (!State.bLocked && ObjectiveSubsystem->IsMissionChoiceGroupUnlocked(Group.Id))
+			{
+				SelectedPacketId = Group.Id;
+				break;
+			}
+		}
+		if (SelectedPacketId.IsNone() && !Groups.IsEmpty()) SelectedPacketId = Groups[0].Id;
+	}
+	const auto* Selected = Groups.FindByPredicate([this](const auto& Group) { return Group.Id == SelectedPacketId; });
+	CurrentGroup = Selected ? *Selected : FSTPMissionChoiceGroupDefinition();
 
-		FSTPObjectiveDefinition Definition;
-		if (!ObjectiveSubsystem->GetObjectiveDefinition(Runtime.ObjectiveId, Definition)) continue;
-		UBorder* Border = WidgetTree->ConstructWidget<UBorder>();
-		Border->SetBrushColor(STPMissionChoices::DefaultCard);
-		UVerticalBox* Card = WidgetTree->ConstructWidget<UVerticalBox>();
-		UTextBlock* Title = WidgetTree->ConstructWidget<UTextBlock>();
-		Title->SetText(Definition.Title);
-		Title->SetAutoWrapText(true);
-		STPMissionChoices::StyleText(Title, 16, STPMissionChoices::Cyan);
-		Card->AddChildToVerticalBox(Title)->SetPadding(FMargin(10, 8, 10, 3));
-		UTextBlock* Description = WidgetTree->ConstructWidget<UTextBlock>();
-		Description->SetText(Definition.Description);
-		Description->SetWrapTextAt(236.0f);
-		Description->SetAutoWrapText(true);
-		STPMissionChoices::StyleText(Description, 13, STPMissionChoices::White);
-		Card->AddChildToVerticalBox(Description)->SetPadding(FMargin(10, 0, 10, 4));
-		if (!Definition.Conditions.IsEmpty())
+	auto* Layout = WidgetTree->ConstructWidget<UVerticalBox>();
+	auto* Container = ChoiceColumns->AddChildToHorizontalBox(Layout);
+	Container->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+	Container->SetHorizontalAlignment(HAlign_Fill);
+	Container->SetVerticalAlignment(VAlign_Fill);
+	auto AddHeading = [this, Layout](const FString& Value, int32 Size, FLinearColor Color)
+	{
+		auto* Text = WidgetTree->ConstructWidget<UTextBlock>();
+		Text->SetText(FText::FromString(Value));
+		Text->SetAutoWrapText(true);
+		STPMissionChoices::StyleText(Text, Size, Color);
+		Layout->AddChildToVerticalBox(Text)->SetPadding(FMargin(8, 3));
+	};
+	AddHeading(TEXT("MISSION OBJECTIVES  |  GAME PAUSED"), 20, STPMissionChoices::White);
+	auto* Timeline = WidgetTree->ConstructWidget<UUniformGridPanel>();
+	Timeline->SetSlotPadding(FMargin(4));
+	Layout->AddChildToVerticalBox(Timeline);
+	int32 Index = 0;
+	for (const auto& Group : Groups)
+	{
+		FSTPMissionChoiceGroupState State;
+		ObjectiveSubsystem->GetMissionChoiceGroupState(Group.Id, State);
+		const bool bUnlocked = ObjectiveSubsystem->IsMissionChoiceGroupUnlocked(Group.Id);
+		FString Status;
+		if (State.bLocked)
 		{
-			const int32 Current = Runtime.ConditionProgress.IsValidIndex(0) ? Runtime.ConditionProgress[0] : 0;
-			UTextBlock* Progress = WidgetTree->ConstructWidget<UTextBlock>();
-			Progress->SetText(FText::Format(NSLOCTEXT("SurviveThePlanet", "ObjectiveOverviewProgress", "PROGRESS {0} / {1}"),
-				FText::AsNumber(Current), FText::AsNumber(Definition.Conditions[0].RequiredAmount)));
-			STPMissionChoices::StyleText(Progress, 11, STPMissionChoices::Gold);
-			Card->AddChildToVerticalBox(Progress)->SetPadding(FMargin(10, 0, 10, 3));
+			bool bCompleted = true;
+			for (FName Id : State.SelectedObjectiveIds)
+			{
+				FSTPObjectiveRuntimeState Runtime;
+				bCompleted &= ObjectiveSubsystem->GetObjectiveState(Id, Runtime) && Runtime.State == ESTPObjectiveState::Completed;
+			}
+			Status = bCompleted ? TEXT("COMPLETED") : TEXT("ACTIVE");
 		}
-		STPMissionChoices::AddRewards(WidgetTree, Card, Definition, ObjectiveSubsystem, 12);
-		if (!Definition.Conditions.IsEmpty() && Definition.Conditions[0].Type == ESTPObjectiveConditionType::DeliverResource)
-		{
-			UMissionChoiceButton* Deliver = WidgetTree->ConstructWidget<UMissionChoiceButton>();
-			Deliver->InitializeChoice(this, INDEX_NONE, Definition.Id);
-			Deliver->SetIsEnabled(ObjectiveSubsystem->CanDeliverObjective(Definition.Id));
-			UTextBlock* Label = WidgetTree->ConstructWidget<UTextBlock>();
-			Label->SetText(NSLOCTEXT("STP", "DeliverMotherBaseSupply", "DELIVER TO MOTHER BASE"));
-			Label->SetAutoWrapText(true);
-			Label->SetJustification(ETextJustify::Center);
-			STPMissionChoices::StyleText(Label, 11, STPMissionChoices::Cyan);
-			Deliver->SetContent(Label);
-			Card->AddChildToVerticalBox(Deliver)->SetPadding(FMargin(10, 5));
-		}
-		Border->SetContent(Card);
-		Grid->AddChildToUniformGrid(STPMissionChoices::SizeCard(WidgetTree, Border, 260.0f, 400.0f), CardIndex / 3, CardIndex % 3);
-		++CardIndex;
+		else if (bUnlocked) Status = TEXT("CHOOSE NOW");
+		else Status = FString::Printf(TEXT("LOCKED | DAY %d %02d:%02d"), Group.UnlockDay, Group.UnlockMinuteOfDay / 60, Group.UnlockMinuteOfDay % 60);
+		auto* Button = WidgetTree->ConstructWidget<UMissionChoiceButton>();
+		Button->InitializePacket(this, Group.Id);
+		Button->SetBackgroundColor(Group.Id == SelectedPacketId ? FLinearColor(0.05f, 0.35f, 0.42f) : STPMissionChoices::DefaultCard);
+		auto* Label = WidgetTree->ConstructWidget<UTextBlock>();
+		Label->SetText(FText::FromString(FString::Printf(TEXT("%02d\n%s"), Index + 1, *Status)));
+		Label->SetJustification(ETextJustify::Center);
+		Label->SetAutoWrapText(true);
+		STPMissionChoices::StyleText(Label, 11, bUnlocked || State.bLocked ? STPMissionChoices::Cyan : FLinearColor(0.55f, 0.61f, 0.65f));
+		Button->SetContent(Label);
+		Timeline->AddChildToUniformGrid(STPMissionChoices::SizeCard(WidgetTree, Button, 166, 66), Index / 5, Index % 5);
+		++Index;
+	}
+	// Tutorial and pre-packet saved requests remain accessible without occupying a packet.
+	TSet<FName> PacketObjectives;
+	for (const auto& Group : Groups) for (const auto& ChoiceSlot : Group.Slots) PacketObjectives.Append(ChoiceSlot.ObjectiveIds);
+	TArray<FSTPObjectiveRuntimeState> OtherObjectives;
+	for (const auto& Runtime : ObjectiveSubsystem->GetActiveObjectives())
+		if (!PacketObjectives.Contains(Runtime.ObjectiveId)) OtherObjectives.Add(Runtime);
+	if (!OtherObjectives.IsEmpty())
+	{
+		auto* Other = WidgetTree->ConstructWidget<UMissionChoiceButton>();
+		Other->InitializePacket(this, TEXT("other"));
+		auto* Label = WidgetTree->ConstructWidget<UTextBlock>();
+		Label->SetText(FText::FromString(TEXT("OTHER ACTIVE MISSIONS")));
+		STPMissionChoices::StyleText(Label, 11, STPMissionChoices::Gold);
+		Other->SetContent(Label);
+		Layout->AddChildToVerticalBox(Other)->SetPadding(FMargin(8, 3));
 	}
 
-	for (int32 SlotIndex = 0; SlotIndex < CurrentGroup.Slots.Num() && CardIndex < 8; ++SlotIndex)
+	auto* Scroll = WidgetTree->ConstructWidget<UScrollBox>();
+	auto* Cards = WidgetTree->ConstructWidget<UUniformGridPanel>();
+	Cards->SetSlotPadding(FMargin(8));
+	Scroll->AddChild(Cards);
+	if (!Selected)
 	{
-		if (State.SelectedObjectiveIds.IsValidIndex(SlotIndex) && !State.SelectedObjectiveIds[SlotIndex].IsNone()) continue;
-		UMissionChoiceButton* Button = WidgetTree->ConstructWidget<UMissionChoiceButton>();
-		Button->InitializeChoice(this, SlotIndex, NAME_None);
-		Button->SetBackgroundColor(STPMissionChoices::DefaultCard);
-		UVerticalBox* Card = WidgetTree->ConstructWidget<UVerticalBox>();
-		UTextBlock* SlotTitle = WidgetTree->ConstructWidget<UTextBlock>();
-		SlotTitle->SetText(CurrentGroup.Slots[SlotIndex].Title);
-		SlotTitle->SetAutoWrapText(true);
-		SlotTitle->SetJustification(ETextJustify::Center);
-		STPMissionChoices::StyleText(SlotTitle, 13, STPMissionChoices::Gold);
-		Card->AddChildToVerticalBox(SlotTitle)->SetPadding(FMargin(10, 30, 10, 20));
-		UTextBlock* Select = WidgetTree->ConstructWidget<UTextBlock>();
-		Select->SetText(NSLOCTEXT("SurviveThePlanet", "OpenObjectivePickerButton", "VÃƒÆ’Ã¢â‚¬Å¾LJ OBJECTIVE"));
-		Select->SetJustification(ETextJustify::Center);
-		STPMissionChoices::StyleText(Select, 15, STPMissionChoices::Cyan);
-		Card->AddChildToVerticalBox(Select)->SetPadding(FMargin(10, 10, 10, 25));
-		Button->AddChild(Card);
-		Grid->AddChildToUniformGrid(STPMissionChoices::SizeCard(WidgetTree, Button, 205.0f, 250.0f), CardIndex / 4, CardIndex % 4);
-		++CardIndex;
+		AddHeading(TEXT("ACTIVE MISSIONS"), 16, STPMissionChoices::Cyan);
+		int32 CardIndex = 0;
+		for (const auto& Runtime : OtherObjectives)
+		{
+			FSTPObjectiveDefinition Definition;
+			if (ObjectiveSubsystem->GetObjectiveDefinition(Runtime.ObjectiveId, Definition))
+			{
+				Cards->AddChildToUniformGrid(BuildObjectiveCard(Definition, &Runtime, false), CardIndex / 2, CardIndex % 2);
+				++CardIndex;
+			}
+		}
 	}
+	else
+	{
+		FSTPMissionChoiceGroupState State;
+		ObjectiveSubsystem->GetMissionChoiceGroupState(Selected->Id, State);
+		if (!State.bLocked && !ObjectiveSubsystem->IsMissionChoiceGroupUnlocked(Selected->Id))
+		{
+			const int32 Remaining = FMath::Max(0, FMath::CeilToInt(ObjectiveSubsystem->GetMissionUnlockMinutes(*Selected) - ObjectiveSubsystem->GetMissionGameMinutes()));
+			AddHeading(FString::Printf(TEXT("LOCKED | DAY %d %02d:%02d | IN %dh %02dm"), Selected->UnlockDay,
+				Selected->UnlockMinuteOfDay / 60, Selected->UnlockMinuteOfDay % 60, Remaining / 60, Remaining % 60), 16, STPMissionChoices::Gold);
+			AddHeading(TEXT("Requires a completed Cargo Bay. Unlocks with game time; earlier missions do not need to be completed."), 13, STPMissionChoices::White);
+		}
+		else if (!State.bLocked)
+		{
+			AddHeading(Selected->Title.ToString() + TEXT(" | CHOOSE 1 OF 2"), 16, STPMissionChoices::Cyan);
+			AddHeading(TEXT("Choose one mission. The other option is discarded. No deadline."), 12, STPMissionChoices::White);
+			int32 CardIndex = 0;
+			for (FName Id : Selected->Slots[0].ObjectiveIds)
+			{
+				FSTPObjectiveDefinition Definition;
+				if (ObjectiveSubsystem->GetObjectiveDefinition(Id, Definition))
+					Cards->AddChildToUniformGrid(BuildObjectiveCard(Definition, nullptr, true), 0, CardIndex++);
+			}
+		}
+		else
+		{
+			AddHeading(Selected->Title.ToString() + TEXT(" | ACCEPTED MISSION"), 16, STPMissionChoices::Cyan);
+			for (FName Id : State.SelectedObjectiveIds)
+			{
+				FSTPObjectiveDefinition Definition; FSTPObjectiveRuntimeState Runtime;
+				if (ObjectiveSubsystem->GetObjectiveDefinition(Id, Definition) && ObjectiveSubsystem->GetObjectiveState(Id, Runtime))
+					Cards->AddChildToUniformGrid(BuildObjectiveCard(Definition, &Runtime, false), 0, 0);
+			}
+		}
+	}
+	Layout->AddChildToVerticalBox(Scroll)->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+}
+
+UWidget* UMissionChoiceWidget::BuildObjectiveCard(const FSTPObjectiveDefinition& Definition,
+	const FSTPObjectiveRuntimeState* Runtime, bool bCandidate)
+{
+	auto* Border = WidgetTree->ConstructWidget<UBorder>();
+	Border->SetBrushColor(STPMissionChoices::DefaultCard);
+	auto* Card = WidgetTree->ConstructWidget<UVerticalBox>();
+	Border->SetContent(Card);
+	auto AddLine = [this, Card](const FString& Value, int32 Size, FLinearColor Color)
+	{
+		auto* Text = WidgetTree->ConstructWidget<UTextBlock>();
+		Text->SetText(FText::FromString(Value));
+		Text->SetAutoWrapText(true);
+		STPMissionChoices::StyleText(Text, Size, Color);
+		Card->AddChildToVerticalBox(Text)->SetPadding(FMargin(12, 4));
+	};
+	AddLine(Definition.Title.ToString(), 17, STPMissionChoices::Cyan);
+	AddLine(Definition.Description.ToString(), 12, STPMissionChoices::White);
+	const bool bCompleted = Runtime && Runtime->State == ESTPObjectiveState::Completed;
+	if (bCompleted) AddLine(TEXT("MISSION COMPLETED"), 15, FLinearColor(0.5f, 0.85f, 0.3f));
+	for (int32 ConditionIndex = 0; ConditionIndex < Definition.Conditions.Num(); ++ConditionIndex)
+	{
+		const auto& Condition = Definition.Conditions[ConditionIndex];
+		const int32 Progress = Runtime && Runtime->ConditionProgress.IsValidIndex(ConditionIndex) ? Runtime->ConditionProgress[ConditionIndex] : 0;
+		if (Condition.Type == ESTPObjectiveConditionType::DeliverResource && !bCompleted)
+		{
+			int32 Stock = 0;
+			for (TActorIterator<AResourceManager> It(GetWorld()); It; ++It) { Stock = It->GetResourceAmount(Condition.ResourceType); break; }
+			const int32 Remaining = FMath::Max(0, Condition.RequiredAmount - Progress);
+			AddLine(FString::Printf(TEXT("In storage: %d / %d"), Stock, Remaining), 14, STPMissionChoices::White);
+			AddLine(FString::Printf(TEXT("Missing: %d"), FMath::Max(0, Remaining - Stock)), 12, STPMissionChoices::Gold);
+		}
+		if (Runtime) AddLine(FString::Printf(TEXT("PROGRESS %d / %d"), Progress, Condition.RequiredAmount), 12, STPMissionChoices::Gold);
+	}
+	STPMissionChoices::AddRewards(WidgetTree, Card, Definition, ObjectiveSubsystem, 12);
+	const bool bDelivery = !Definition.Conditions.IsEmpty() && Definition.Conditions[0].Type == ESTPObjectiveConditionType::DeliverResource;
+	if (bCandidate || (bDelivery && Runtime && Runtime->State == ESTPObjectiveState::Active))
+	{
+		auto* Button = WidgetTree->ConstructWidget<UMissionChoiceButton>();
+		Button->InitializeChoice(this, bCandidate ? 0 : INDEX_NONE, Definition.Id);
+		Button->SetIsEnabled(bCandidate || ObjectiveSubsystem->CanDeliverObjective(Definition.Id));
+		auto* Label = WidgetTree->ConstructWidget<UTextBlock>();
+		Label->SetText(FText::FromString(bCandidate ? TEXT("ACCEPT MISSION") : TEXT("DELIVER TO MOTHER BASE")));
+		Label->SetJustification(ETextJustify::Center);
+		STPMissionChoices::StyleText(Label, 13, STPMissionChoices::Cyan);
+		Button->SetContent(Label);
+		Card->AddChildToVerticalBox(Button)->SetPadding(FMargin(12, 10));
+	}
+	return STPMissionChoices::SizeCard(WidgetTree, Border, 390, 310);
 }
 
 void UMissionChoiceWidget::HandleCandidateClicked(int32 SlotIndex, FName ObjectiveId)
 {
-	if (SlotIndex == INDEX_NONE && !ObjectiveId.IsNone())
-	{
-		if (ObjectiveSubsystem) ObjectiveSubsystem->DeliverObjective(ObjectiveId);
-		BuildCurrentGroup();
-		return;
-	}
-	if (ObjectiveId.IsNone())
-	{
-		BuildSlotPicker(SlotIndex);
-		return;
-	}
-	if (!ObjectiveSubsystem || !ObjectiveSubsystem->ConfirmMissionChoiceSlot(CurrentGroup.Id, SlotIndex, ObjectiveId))
-	{
-		ChoiceStatusText->SetVisibility(ESlateVisibility::Visible);
-		ChoiceStatusText->SetText(NSLOCTEXT("SurviveThePlanet", "MissionChoiceSlotFailed", "Could not activate this objective."));
-	}
-}
-
-void UMissionChoiceWidget::BuildSlotPicker(int32 SlotIndex)
-{
-	if (!ObjectiveSubsystem || !CurrentGroup.Slots.IsValidIndex(SlotIndex)) return;
-	PickerSlotIndex = SlotIndex;
-	ChoiceColumns->ClearChildren();
-	HeaderText->SetVisibility(ESlateVisibility::Visible);
-	HeaderText->SetText(CurrentGroup.Slots[SlotIndex].Title);
-	DescriptionText->SetVisibility(ESlateVisibility::Visible);
-	DescriptionText->SetText(NSLOCTEXT("SurviveThePlanet", "ObjectivePickerDescription", "Choose one objective. Your choice is permanent."));
-	ChoiceStatusText->SetVisibility(ESlateVisibility::Collapsed);
-	ConfirmChoicesButton->SetVisibility(ESlateVisibility::Collapsed);
-
-	UUniformGridPanel* Grid = WidgetTree->ConstructWidget<UUniformGridPanel>();
-	Grid->SetSlotPadding(FMargin(8));
-	UHorizontalBoxSlot* ContainerSlot = ChoiceColumns->AddChildToHorizontalBox(Grid);
-	ContainerSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
-	ContainerSlot->SetHorizontalAlignment(HAlign_Center);
-	ContainerSlot->SetVerticalAlignment(VAlign_Center);
-
-	int32 Index = 0;
-	for (const FName ObjectiveId : CurrentGroup.Slots[SlotIndex].ObjectiveIds)
-	{
-		FSTPObjectiveDefinition Definition;
-		if (!ObjectiveSubsystem->GetObjectiveDefinition(ObjectiveId, Definition)) continue;
-		UMissionChoiceButton* Button = WidgetTree->ConstructWidget<UMissionChoiceButton>();
-		Button->InitializeChoice(this, SlotIndex, ObjectiveId);
-		Button->SetBackgroundColor(STPMissionChoices::DefaultCard);
-		UVerticalBox* Card = WidgetTree->ConstructWidget<UVerticalBox>();
-		UTextBlock* Title = WidgetTree->ConstructWidget<UTextBlock>();
-		Title->SetText(Definition.Title);
-		Title->SetAutoWrapText(true);
-		STPMissionChoices::StyleText(Title, 16, STPMissionChoices::Cyan);
-		Card->AddChildToVerticalBox(Title)->SetPadding(FMargin(12, 10, 12, 5));
-		UTextBlock* Description = WidgetTree->ConstructWidget<UTextBlock>();
-		Description->SetText(Definition.Description);
-		Description->SetWrapTextAt(236.0f);
-		Description->SetAutoWrapText(true);
-		STPMissionChoices::StyleText(Description, 12, STPMissionChoices::White);
-		Card->AddChildToVerticalBox(Description)->SetPadding(FMargin(12, 0, 12, 6));
-		STPMissionChoices::AddRewards(WidgetTree, Card, Definition, ObjectiveSubsystem, 12);
-		UTextBlock* Select = WidgetTree->ConstructWidget<UTextBlock>();
-		Select->SetText(NSLOCTEXT("SurviveThePlanet", "ConfirmSingleObjective", "VÃƒÆ’Ã¢â‚¬Å¾LJ"));
-		Select->SetJustification(ETextJustify::Center);
-		STPMissionChoices::StyleText(Select, 14, STPMissionChoices::Gold);
-		Card->AddChildToVerticalBox(Select)->SetPadding(FMargin(12, 6, 12, 10));
-		Button->AddChild(Card);
-		Grid->AddChildToUniformGrid(STPMissionChoices::SizeCard(WidgetTree, Button, 260.0f, 240.0f), Index / 3, Index % 3);
-		++Index;
-	}
+	if (!ObjectiveSubsystem || ObjectiveId.IsNone()) return;
+	if (SlotIndex == INDEX_NONE) ObjectiveSubsystem->DeliverObjective(ObjectiveId);
+	else ObjectiveSubsystem->ConfirmMissionChoiceSlot(CurrentGroup.Id, SlotIndex, ObjectiveId);
+	BuildCurrentGroup();
 }
 
 void UMissionChoiceWidget::HandleGroupConfirmed(FName ChoiceGroupId)

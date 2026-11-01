@@ -179,6 +179,11 @@ struct FSTPMissionChoiceGroupDefinition
 	FName ActivateAfterObjective;
 
 	UPROPERTY(BlueprintReadOnly, Category = "Mission Choices")
+	int32 UnlockDay = 1;
+	UPROPERTY(BlueprintReadOnly, Category = "Mission Choices")
+	int32 UnlockMinuteOfDay = 480;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Mission Choices")
 	bool bRandomAssignment = false;
 };
 
@@ -206,6 +211,7 @@ class SURVIVETHEPLANET_API UObjectiveSubsystem : public UTickableWorldSubsystem
 {
 	GENERATED_BODY()
 	friend class UColonySaveSubsystem;
+	friend class FMissionPacketsTest;
 
 public:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
@@ -217,6 +223,13 @@ public:
 	/** Reloads Config/Objectives.json and resets runtime objective state. */
 	UFUNCTION(BlueprintCallable, Category = "Objectives")
 	bool ReloadObjectives();
+
+	/** Receives the same paused/scaled clock used by the HUD. */
+	void UpdateMissionClock(double TotalMinutes, int32 DayLengthMinutes = 1440);
+	bool IsMissionChoiceGroupUnlocked(FName GroupId) const;
+	double GetMissionGameMinutes() const { return MissionGameMinutes; }
+	double GetMissionUnlockMinutes(const FSTPMissionChoiceGroupDefinition& Group) const;
+	void ReconcileSavedObjectives();
 
 	UFUNCTION(BlueprintCallable, Category = "Objectives")
 	bool ActivateObjective(FName ObjectiveId);
@@ -294,7 +307,9 @@ private:
 	TArray<FSTPMissionChoiceGroupDefinition> MissionChoiceGroups;
 	UPROPERTY(SaveGame)
 	TMap<FName, FSTPMissionChoiceGroupState> MissionChoiceStates;
-	int32 MaxActiveObjectives = 8;
+	int32 MaxActiveObjectives = 32;
+	UPROPERTY(SaveGame) double MissionGameMinutes = 480.0;
+	UPROPERTY(SaveGame) int32 MissionDayLengthMinutes = 1440;
 	UPROPERTY(SaveGame)
 	int32 NextActivationSequence = 0;
 

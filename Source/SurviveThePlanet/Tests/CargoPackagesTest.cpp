@@ -36,17 +36,13 @@ bool FCargoPackageOrdersTest::RunTest(const FString& Parameters)
   TestTrue(TEXT("Package unlocks its third blueprint"),Blueprints->OwnsBlueprintById(Package == TEXT("A") ? TEXT("Glassworks") : TEXT("FuelProcessor")));
   TestFalse(TEXT("Other package blueprint stays locked"),Blueprints->OwnsBlueprintById(Package == TEXT("A") ? TEXT("FuelProcessor") : TEXT("Glassworks")));
   TestEqual(TEXT("Finite startup coal reserve"),Resources->GetResourceAmount(EResourceType::Coal),40);
+  TestEqual(TEXT("Cargo does not assign missions without a player choice"),Objectives->GetActiveObjectives().Num(),0);
+  Objectives->UpdateMissionClock(2000);
+  const auto Packets = Objectives->GetMissionChoiceGroups();
+  for (int32 Index=0; Index<3; ++Index)
+   TestTrue(TEXT("Player accepts independent packet"),Objectives->ConfirmMissionChoiceSlot(Packets[Index].Id,0,Packets[Index].Slots[0].ObjectiveIds[0]));
   const auto Active = Objectives->GetActiveObjectives();
   if (!TestEqual(TEXT("Exactly three initial requests"),Active.Num(),3)) { World->DestroyWorld(false); return false; }
-  bool bGlass = false, bFuel = false;
-  for (const auto& State : Active)
-  {
-   FSTPObjectiveDefinition Def;
-   Objectives->GetObjectiveDefinition(State.ObjectiveId,Def);
-   bGlass |= Def.Conditions[0].ResourceType == EResourceType::Glass;
-   bFuel |= Def.Conditions[0].ResourceType == EResourceType::SyntheticFuel;
-  }
-  TestTrue(TEXT("Products match selected package"), Package == TEXT("A") ? bGlass && !bFuel : bFuel && !bGlass);
   World->SpawnActor<ACargoBay>()->SetConstructionProgress(1);
   for (int32 Step = 0; Step < 3; ++Step)
   {
@@ -63,7 +59,7 @@ bool FCargoPackageOrdersTest::RunTest(const FString& Parameters)
    Objectives->Tick(10000);
    TestEqual(TEXT("Other requests retained"),Objectives->GetActiveObjectives().Num(),2-Step);
   }
-  TestEqual(TEXT("Stage does not require extra hidden objectives"),World->GetSubsystem<UMissionConfidenceSubsystem>()->GetMissionProgress(),8);
+  TestEqual(TEXT("Stage does not require extra hidden objectives"),World->GetSubsystem<UMissionConfidenceSubsystem>()->GetMissionProgress(),5);
   Objectives->SubmitBuildingBuilt(ESTPBuildingType::CargoBay);
   TestEqual(TEXT("Package never rerolls"),Objectives->GetSelectedCargoPackage(),Package);
   GameInstance->Shutdown();
